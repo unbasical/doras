@@ -39,13 +39,14 @@ func main() {
 	s := storage.FilesystemStorage{BasePath: ""}
 
 	var dif differ.Differ
-
 	switch *algorithm {
 	case "bsdiff":
 		dif = differ.Bsdiff{}
 	default:
 		log.Fatalf("unknown algorithm: %s", *algorithm)
+		panic("unreachable") // satisfy linter
 	}
+
 	switch cmd {
 	case create.FullCommand():
 		fromArtifact, err := s.LoadArtifact(*fromCreate)
