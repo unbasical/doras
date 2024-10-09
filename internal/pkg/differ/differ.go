@@ -3,7 +3,7 @@ package differ
 import (
 	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
 	"github.com/gabstv/go-bsdiff/pkg/bspatch"
-	"github.com/unbasical/doras-server/pkg/artifact"
+	"github.com/unbasical/doras-server/internal/pkg/artifact"
 )
 
 type Differ interface {

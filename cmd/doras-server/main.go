@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/unbasical/doras-server/pkg/doras"
+	"github.com/unbasical/doras-server/internal/pkg/doras"
 )
 
 func main() {

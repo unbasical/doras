@@ -2,7 +2,7 @@ package storage
 
 import (
 	"bytes"
-	"github.com/unbasical/doras-server/pkg/artifact"
+	"github.com/unbasical/doras-server/internal/pkg/artifact"
 	"os"
 	"path"
 	"testing"

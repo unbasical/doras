@@ -2,8 +2,8 @@ package storage
 
 import (
 	"fmt"
-	"github.com/unbasical/doras-server/pkg/artifact"
-	"github.com/unbasical/doras-server/pkg/delta"
+	"github.com/unbasical/doras-server/internal/pkg/artifact"
+	"github.com/unbasical/doras-server/internal/pkg/delta"
 	"io"
 	"os"
 	"path/filepath"
