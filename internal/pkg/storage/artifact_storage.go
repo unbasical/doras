@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/artifact"
 	"github.com/unbasical/doras-server/internal/pkg/delta"
 	"io"
@@ -58,8 +59,10 @@ func (s *FilesystemStorage) LoadDelta(identifier string) (delta.ArtifactDelta, e
 
 func (s *FilesystemStorage) loadFile(fPath string) ([]byte, error) {
 	fPath = filepath.Join(s.BasePath, fPath)
+	log.Debugf("loading file `%s`", fPath)
 	data, err := os.ReadFile(fPath)
 	if err != nil {
+		log.Errorf("could not read file `%s`: %s", fPath, err)
 		return data, err
 	}
 	return data, nil
@@ -67,7 +70,7 @@ func (s *FilesystemStorage) loadFile(fPath string) ([]byte, error) {
 
 func (s *FilesystemStorage) storeFile(r io.Reader, fPath string) error {
 	fPath = filepath.Join(s.BasePath, fPath)
-
+	log.Debugf("attempting to store file at `%s`", fPath)
 	f, err := os.Create(fPath)
 	if err != nil {
 		return fmt.Errorf("could not create file at `%s`: %w", fPath, err)
@@ -88,5 +91,6 @@ func (s *FilesystemStorage) storeFile(r io.Reader, fPath string) error {
 			return fmt.Errorf("wrote fewer bytes than expected")
 		}
 	}
+	log.Debugf("successfully stored file at `%s`", fPath)
 	return nil
 }

@@ -3,6 +3,7 @@ package differ
 import (
 	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
 	"github.com/gabstv/go-bsdiff/pkg/bspatch"
+	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/artifact"
 )
 
@@ -15,12 +16,8 @@ type Bsdiff struct {
 }
 
 func (b Bsdiff) CreateDiff(from artifact.Artifact, to artifact.Artifact) []byte {
-	//TODO find better solution for readers and make sure entire reader is read
-	fromBuf := make([]byte, 0xffff)
-	nFrom, _ := from.GetReader().Read(fromBuf)
-	toBuf := make([]byte, 0xffff)
-	nTo, _ := to.GetReader().Read(toBuf)
-	patch, err := bsdiff.Bytes(fromBuf[:nFrom], toBuf[:nTo])
+	log.Debug("creating bsdiff")
+	patch, err := bsdiff.Bytes(from.GetBytes(), to.GetBytes())
 	if err != nil {
 		panic(err)
 	}
@@ -28,7 +25,7 @@ func (b Bsdiff) CreateDiff(from artifact.Artifact, to artifact.Artifact) []byte 
 }
 
 func (b Bsdiff) ApplyDiff(from artifact.Artifact, diff []byte) artifact.Artifact {
-	//TODO implement me
+	log.Debug("applying bsdiff")
 	fromBuf := make([]byte, 0xffff)
 	nFrom, _ := from.GetReader().Read(fromBuf)
 	to, err := bspatch.Bytes(fromBuf[:nFrom], diff)

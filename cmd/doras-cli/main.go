@@ -1,13 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"github.com/alecthomas/kingpin/v2"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/delta"
 	"github.com/unbasical/doras-server/internal/pkg/differ"
 	"github.com/unbasical/doras-server/internal/pkg/storage"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -46,7 +46,6 @@ func main() {
 	default:
 		log.Fatalf("unknown algorithm: %s", *algorithm)
 	}
-
 	switch cmd {
 	case create.FullCommand():
 		fromArtifact, err := s.LoadArtifact(*fromCreate)
@@ -101,6 +100,14 @@ func setLogFormat(logFormat string) {
 }
 
 func setLogLevel(logLevel string) {
-	fmt.Errorf("setLogLevel() not implemented")
-
+	switch strings.ToUpper(logLevel) {
+	case "INFO":
+		log.SetLevel(log.InfoLevel)
+	case "DEBUG":
+		log.SetLevel(log.DebugLevel)
+	case "WARN":
+		log.SetLevel(log.WarnLevel)
+	case "ERROR":
+		log.SetLevel(log.ErrorLevel)
+	}
 }
