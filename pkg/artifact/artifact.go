@@ -16,3 +16,7 @@ type RawBytesArtifact struct {
 func (a RawBytesArtifact) GetReader() io.Reader {
 	return bytes.NewReader(a.Data)
 }
+
+func (a RawBytesArtifact) Equals(got RawBytesArtifact) bool {
+	return bytes.Equal(a.Data, got.Data)
+}
