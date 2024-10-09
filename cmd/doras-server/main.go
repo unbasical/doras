@@ -1,11 +1,10 @@
 package main
 
 import (
-	"fmt"
-	"github.com/unbasical/doras-server/internal/pkg/doras"
+	"github.com/unbasical/doras-server/internal/pkg/core"
 )
 
 func main() {
-	msg := doras.Hello("test")
-	fmt.Println(msg)
+	doras := core.Doras{}
+	doras.Start()
 }

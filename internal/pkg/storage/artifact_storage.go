@@ -11,11 +11,11 @@ import (
 )
 
 // ArtifactStorage is an interface that abstracts loading and storing artifacts.
-type ArtifactStorage[A artifact.Artifact, D delta.ArtifactDelta] interface {
-	LoadArtifact(identifier string) (A, error)
-	StoreArtifact(artifact A, identifier string) error
+type ArtifactStorage interface {
+	LoadArtifact(identifier string) (artifact.Artifact, error)
+	StoreArtifact(artifact artifact.Artifact, identifier string) error
 	StoreDelta(d delta.ArtifactDelta, identifier string) error
-	LoadDelta(identifier string) (D, error)
+	LoadDelta(identifier string) (delta.ArtifactDelta, error)
 }
 
 // FilesystemStorage implements the ArtifactStorage interface.
