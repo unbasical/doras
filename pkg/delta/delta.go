@@ -6,6 +6,10 @@ import (
 	"io"
 )
 
+type ArtifactDelta interface {
+	GetReader() io.Reader
+}
+
 type DiffFile struct {
 	data []DiffSlice
 }
