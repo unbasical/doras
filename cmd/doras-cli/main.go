@@ -1,104 +1,106 @@
 package main
 
 import (
-	"flag"
-	"github.com/unbasical/doras-server/pkg/delta"
-	"github.com/unbasical/doras-server/pkg/differ"
-	"github.com/unbasical/doras-server/pkg/storage"
-	"log"
+	"fmt"
+	"github.com/alecthomas/kingpin/v2"
+	log "github.com/sirupsen/logrus"
+	"github.com/unbasical/doras-server/internal/pkg/delta"
+	"github.com/unbasical/doras-server/internal/pkg/differ"
+	"github.com/unbasical/doras-server/internal/pkg/storage"
 	"os"
 )
 
 func main() {
 	var (
-		from      string
-		to        string
-		output    string
-		input     string
-		algorithm string
+		app = kingpin.New("doras-cli", "A command-line tool to work with doras delta patches")
+
+		// commands
+		create     = app.Command("create", "Create a delta patch")
+		apply      = app.Command("apply", "Apply a delta patch")
+		fromCreate = create.Flag("from", "path to first file").ExistingFile()
+		toCreate   = create.Flag("to", "path to second file").ExistingFile()
+		outCreate  = create.Flag("out", "first artifact").String()
+
+		fromApply = apply.Flag("from", "file to apply patch to").ExistingFile()
+		inApply   = apply.Flag("in", "path to patch").ExistingFile()
+		outApply  = apply.Flag("out", "output path").String()
+		algorithm = app.Flag("algorithm", "The algorithm that is used to create the delta patch").Default("bsdiff").Envar("DORAS_ALGORITHM").Enum("bsdiff")
+		// Logging
+		logLevel  = app.Flag("log-level", "Log-Level, must be one of [DEBUG, INFO, WARN, ERROR]").Default("INFO").Envar("LOG_LEVEL").Enum("DEBUG", "INFO", "WARN", "ERROR", "debug", "info", "warn", "error")
+		logFormat = app.Flag("log-format", "Log-Format, must be one of [TEXT, JSON]").Default("TEXT").Envar("LOG_FORMAT").Enum("TEXT", "JSON")
 	)
+	app.HelpFlag.Short('h')
 
-	createCmd := flag.NewFlagSet("create", flag.ExitOnError)
-	createCmd.StringVar(&from, "from", "", "path to the old file")
-	createCmd.StringVar(&to, "to", "", "path to the old file")
-	createCmd.StringVar(&algorithm, "algorithm", "bsdiff", "diffing algorithm")
-	createCmd.StringVar(&output, "output", "", "path to the output file")
-	applyCmd := flag.NewFlagSet("apply", flag.ExitOnError)
-	applyCmd.StringVar(&input, "input", "", "path to the output file")
-	applyCmd.StringVar(&output, "output", "", "path to the output file")
-	applyCmd.StringVar(&from, "from", "", "path to the old file")
-	applyCmd.StringVar(&algorithm, "algorithm", "bsdiff", "diffing algorithm")
+	cmd := kingpin.MustParse(app.Parse(os.Args[1:]))
 
-	flag.Parse()
+	setLogLevel(*logLevel)
+	setLogFormat(*logFormat)
+
 	s := storage.FilesystemStorage{BasePath: ""}
+
 	var dif differ.Differ
-	switch algorithm {
+
+	switch *algorithm {
 	case "bsdiff":
 		dif = differ.Bsdiff{}
 	default:
-		log.Fatalf("unknown algorithm: %s", algorithm)
+		log.Fatalf("unknown algorithm: %s", *algorithm)
 	}
 
-	switch os.Args[1] {
-	case "create":
-		err := createCmd.Parse(os.Args[2:])
-
+	switch cmd {
+	case create.FullCommand():
+		fromArtifact, err := s.LoadArtifact(*fromCreate)
 		if err != nil {
 			log.Fatal(err)
 		}
-		if from == "" {
-			log.Fatalf("--from is required")
-		}
-		if to == "" {
-			log.Fatalf("--to is required")
-		}
-		if output == "" {
-			log.Fatalf("--output is required")
-		}
-		fromArtifact, err := s.LoadArtifact(from)
-		if err != nil {
-			log.Fatal(err)
-		}
-		toArtifact, err := s.LoadArtifact(to)
+		toArtifact, err := s.LoadArtifact(*toCreate)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		patch := dif.CreateDiff(fromArtifact, toArtifact)
-		err = s.StoreDelta(delta.RawDiff{Data: patch}, output)
+		err = s.StoreDelta(delta.RawDiff{Data: patch}, *outCreate)
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("%s patch written to %s", algorithm, output)
-	case "apply":
-		err := applyCmd.Parse(os.Args[2:])
+		log.Printf("%s patch written to %s", *algorithm, *outCreate)
+	case apply.FullCommand():
+		fromArtifact, err := s.LoadArtifact(*fromApply)
 		if err != nil {
 			log.Fatal(err)
 		}
-		if from == "" {
-			log.Fatalf("--from is required")
-		}
-		if input == "" {
-			log.Fatalf("--input is required")
-		}
-		if output == "" {
-			log.Fatalf("--output is required")
-		}
-		fromArtifact, err := s.LoadArtifact(from)
-		if err != nil {
-			log.Fatal(err)
-		}
-		patch, err := s.LoadDelta(input)
+		patch, err := s.LoadDelta(*inApply)
 		if err != nil {
 			log.Fatal(err)
 		}
 		patchBytes, _ := patch.GetBytes()
 		to := dif.ApplyDiff(fromArtifact, patchBytes)
-		err = s.StoreArtifact(to, output)
+		err = s.StoreArtifact(to, *outApply)
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("%s patched file written to %s", algorithm, output)
+		log.Printf("%s patched file written to %s", *algorithm, *outApply)
 	}
+}
+
+type UTCFormatter struct {
+	log.Formatter
+}
+
+func (u UTCFormatter) Format(e *log.Entry) ([]byte, error) {
+	e.Time = e.Time.UTC()
+	return u.Formatter.Format(e)
+}
+func setLogFormat(logFormat string) {
+	switch logFormat {
+	case "JSON":
+		log.SetFormatter(UTCFormatter{Formatter: &log.JSONFormatter{}})
+	default:
+		log.SetFormatter(UTCFormatter{Formatter: &log.TextFormatter{FullTimestamp: true}})
+	}
+}
+
+func setLogLevel(logLevel string) {
+	fmt.Errorf("setLogLevel() not implemented")
 
 }
