@@ -20,7 +20,7 @@ type ArtifactStorage[A artifact.Artifact, D delta.ArtifactDelta] interface {
 // FilesystemStorage implements the ArtifactStorage interface.
 // It loads and stores artifacts from the file system relative to the specified basePath.
 type FilesystemStorage struct {
-	basePath string
+	BasePath string
 }
 
 func (s *FilesystemStorage) LoadArtifact(identifier string) (artifact.RawBytesArtifact, error) {
@@ -31,7 +31,7 @@ func (s *FilesystemStorage) LoadArtifact(identifier string) (artifact.RawBytesAr
 	return artifact.RawBytesArtifact{Data: data}, nil
 }
 
-func (s *FilesystemStorage) StoreArtifact(artifact artifact.RawBytesArtifact, identifier string) error {
+func (s *FilesystemStorage) StoreArtifact(artifact artifact.Artifact, identifier string) error {
 	err := s.storeFile(artifact.GetReader(), identifier)
 	if err != nil {
 		return fmt.Errorf("could not store artifact file at `%s`: %w", identifier, err)
@@ -48,12 +48,16 @@ func (s *FilesystemStorage) StoreDelta(d delta.ArtifactDelta, identifier string)
 }
 
 func (s *FilesystemStorage) LoadDelta(identifier string) (delta.ArtifactDelta, error) {
-	//TODO: implement me
-	panic("implement me")
+	data, err := s.loadFile(identifier)
+	if err != nil {
+		return delta.RawDiff{}, fmt.Errorf("could not read delta file from `%s`: %w", identifier, err)
+	}
+	return delta.RawDiff{Data: data}, nil
+
 }
 
 func (s *FilesystemStorage) loadFile(fPath string) ([]byte, error) {
-	fPath = filepath.Join(s.basePath, fPath)
+	fPath = filepath.Join(s.BasePath, fPath)
 	data, err := os.ReadFile(fPath)
 	if err != nil {
 		return data, err
@@ -62,7 +66,7 @@ func (s *FilesystemStorage) loadFile(fPath string) ([]byte, error) {
 }
 
 func (s *FilesystemStorage) storeFile(r io.Reader, fPath string) error {
-	fPath = filepath.Join(s.basePath, fPath)
+	fPath = filepath.Join(s.BasePath, fPath)
 
 	f, err := os.Create(fPath)
 	if err != nil {

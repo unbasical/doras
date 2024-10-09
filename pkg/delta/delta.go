@@ -7,6 +7,19 @@ import (
 
 type ArtifactDelta interface {
 	GetReader() io.Reader
+	GetBytes() ([]byte, error)
+}
+
+type RawDiff struct {
+	Data []byte
+}
+
+func (r RawDiff) GetBytes() ([]byte, error) {
+	return r.Data, nil
+}
+
+func (r RawDiff) GetReader() io.Reader {
+	return bytes.NewReader(r.Data)
 }
 
 type DiffFile struct {

@@ -7,6 +7,7 @@ import (
 
 type Artifact interface {
 	GetReader() io.Reader
+	GetBytes() []byte
 }
 
 type RawBytesArtifact struct {
@@ -17,6 +18,10 @@ func (a RawBytesArtifact) GetReader() io.Reader {
 	return bytes.NewReader(a.Data)
 }
 
-func (a RawBytesArtifact) Equals(got RawBytesArtifact) bool {
-	return bytes.Equal(a.Data, got.Data)
+func (a RawBytesArtifact) GetBytes() []byte {
+	return a.Data
+}
+
+func (a RawBytesArtifact) Equals(got Artifact) bool {
+	return bytes.Equal(a.Data, got.GetBytes())
 }

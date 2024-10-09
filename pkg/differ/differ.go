@@ -27,7 +27,7 @@ func (b Bsdiff) CreateDiff(from artifact.Artifact, to artifact.Artifact) []byte 
 	return patch
 }
 
-func (b Bsdiff) ApplyDiff(from artifact.Artifact, diff []byte) artifact.RawBytesArtifact {
+func (b Bsdiff) ApplyDiff(from artifact.Artifact, diff []byte) artifact.Artifact {
 	//TODO implement me
 	fromBuf := make([]byte, 0xffff)
 	nFrom, _ := from.GetReader().Read(fromBuf)
