@@ -94,12 +94,20 @@ func CreateArtifact(shared *CloudAPI, c *gin.Context) {
 // CreateArtifactWithName creates an artifact at this location and set it as the alias.
 func CreateArtifactWithName(shared *CloudAPI, c *gin.Context) {
 	identifier := c.Param("identifier")
-
+	// rename to avoid confusion
+	alias := identifier
 	data, err := extractFile(c, "artifact")
-	art := artifact.RawBytesArtifact{Data: data}
-	err = shared.config.ArtifactStorage.StoreArtifact(art, identifier)
+	hash := utils.CalcSha256Hex(data)
+	log.Debugf("storing file at %s", hash)
+	err = shared.config.ArtifactStorage.StoreArtifact(artifact.RawBytesArtifact{Data: data}, hash)
 	if err != nil {
 		log.Errorf("error storing artifact %artifactStorage", err)
+		c.JSON(http.StatusInternalServerError, "internal error")
+		return
+	}
+	err = shared.config.ArtifactStorage.AddArtifactAlias(hash, alias)
+	if err != nil {
+		log.Errorf("error adding artifact alias %s", err)
 		c.JSON(http.StatusInternalServerError, "internal error")
 		return
 	}

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/artifact"
@@ -14,6 +15,7 @@ import (
 type ArtifactStorage interface {
 	LoadArtifact(identifier string) (artifact.Artifact, error)
 	StoreArtifact(artifact artifact.Artifact, identifier string) error
+	AddArtifactAlias(identifier string, alias string) error
 	StoreDelta(d delta.ArtifactDelta, identifier string) error
 	LoadDelta(identifier string) (delta.ArtifactDelta, error)
 }
@@ -22,6 +24,24 @@ type ArtifactStorage interface {
 // It loads and stores artifacts from the file system relative to the specified basePath.
 type FilesystemStorage struct {
 	BasePath string
+}
+
+func (s *FilesystemStorage) AddArtifactAlias(identifier string, alias string) error {
+	fPath := filepath.Join(s.BasePath, identifier)
+	log.Debugf("loading file `%s`", fPath)
+	aliasPath := filepath.Join(s.BasePath, alias)
+	if _, err := os.Stat(aliasPath); err == nil {
+		return errors.New("symlink already exists")
+	} else if errors.Is(err, os.ErrNotExist) {
+		log.Debugf("creating symlink from %s to %s", alias, identifier)
+		if err := os.Symlink(alias, fPath); err != nil {
+			return err
+		}
+		return nil
+	} else {
+		log.Fatalf("unexpected error while checking if %s exists", fPath)
+		panic(err)
+	}
 }
 
 func (s *FilesystemStorage) LoadArtifact(identifier string) (artifact.Artifact, error) {
