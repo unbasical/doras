@@ -3,14 +3,19 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"github.com/unbasical/doras-server/internal/pkg/storage"
 	"net/http"
 )
 
-func BuildApp() *gin.Engine {
+type Config struct {
+	ArtifactStorage storage.ArtifactStorage
+}
+
+func BuildApp(config *Config) *gin.Engine {
 	log.Debug("Building app")
 	r := gin.Default()
 	r = BuildEdgeAPI(r)
-	r = BuildCloudAPI(r)
+	r = BuildCloudAPI(r, config)
 	authV1 := r.Group("/api/v1")
 	authV1.POST("edge/artifacts/delta/create", CreateDelta)
 	authV1.GET("edge/artifacts/delta", ReadDelta)
@@ -35,7 +40,7 @@ func CreateDelta(c *gin.Context) {
 	// rough idea: look for file at identifier and check against hash. create delta if hash is valid
 	var requestBody CreateDeltaRequestBody
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
-		log.Errorf("failed to parse request body: %s", err)
+		log.Errorf("failed to parse request body: %artifactStorage", err)
 		c.JSON(http.StatusBadRequest, "missing request body")
 		return
 	}
@@ -56,7 +61,7 @@ type ReadDeltaResponseBody struct {
 func ReadDelta(c *gin.Context) {
 	var requestBody ReadDeltaRequestBody
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
-		log.Errorf("failed to parse request body: %s", err)
+		log.Errorf("failed to parse request body: %artifactStorage", err)
 		c.JSON(http.StatusBadRequest, "missing request body")
 		return
 	}

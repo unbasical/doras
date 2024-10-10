@@ -12,13 +12,23 @@ type Doras struct {
 	engine  *gin.Engine
 }
 
-func (d *Doras) Start() {
+func (d *Doras) Init(storagePath string) *Doras {
+	d.storage = &storage.FilesystemStorage{BasePath: storagePath}
+	config := api.Config{
+		ArtifactStorage: d.storage,
+	}
+	d.engine = api.BuildApp(&config)
+	return d
+}
+
+func (d *Doras) Start() *Doras {
 	log.Info("Starting doras")
-	d.engine = api.BuildApp()
+
 	err := d.engine.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
+	return d
 }
 
 func (d *Doras) Stop() {

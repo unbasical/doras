@@ -24,7 +24,7 @@ type FilesystemStorage struct {
 	BasePath string
 }
 
-func (s *FilesystemStorage) LoadArtifact(identifier string) (artifact.RawBytesArtifact, error) {
+func (s *FilesystemStorage) LoadArtifact(identifier string) (artifact.Artifact, error) {
 	data, err := s.loadFile(identifier)
 	if err != nil {
 		return artifact.RawBytesArtifact{}, fmt.Errorf("could not read artifact file from `%s`: %w", identifier, err)
