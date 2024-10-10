@@ -7,7 +7,10 @@ import (
 )
 
 func BuildApp() *gin.Engine {
+	log.Debug("Building app")
 	r := gin.Default()
+	r = BuildEdgeAPI(r)
+	r = BuildCloudAPI(r)
 	authV1 := r.Group("/api/v1")
 	authV1.POST("edge/artifacts/delta/create", CreateDelta)
 	authV1.GET("edge/artifacts/delta", ReadDelta)
