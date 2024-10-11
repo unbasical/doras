@@ -25,28 +25,33 @@ func BuildCloudAPI(r *gin.Engine, config *Config) *gin.Engine {
 	artifactsAPI.PUT("/named/:identifier", func(context *gin.Context) {
 		createNamedArtifact(&cloudAPI, context)
 	})
-	artifactsAPI.POST("", func(context *gin.Context) {
+	artifactsAPI.POST("/", func(context *gin.Context) {
 		createArtifact(&cloudAPI, context)
 	})
-	artifactsAPI.GET("", func(c *gin.Context) {
+	artifactsAPI.GET("/", func(c *gin.Context) {
 		readAllArtifacts(&cloudAPI, c)
 	})
-	artifactsAPI.GET(":identifier", func(c *gin.Context) {
+	artifactsAPI.GET("/:identifier", func(c *gin.Context) {
 		readArtifact(&cloudAPI, c)
 	})
 	artifactsAPI.GET("/named/:identifier", func(c *gin.Context) {
 		readNamedArtifact(&cloudAPI, c)
 	})
-	artifactsAPI.PUT("", func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, "not implemented")
+	artifactsAPI.DELETE("/named/:identifier", func(c *gin.Context) {
+		deleteArtifact(&cloudAPI, c)
 	})
-	artifactsAPI.PATCH("", func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, "not implemented")
-	})
-	artifactsAPI.DELETE("", func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, "not implemented")
+	artifactsAPI.DELETE("/:identifier", func(c *gin.Context) {
+		deleteNamedArtifact(&cloudAPI, c)
 	})
 	return r
+}
+
+func deleteNamedArtifact(shared *CloudAPI, c *gin.Context) {
+	c.JSON(http.StatusNotImplemented, "not implemented")
+}
+
+func deleteArtifact(shared *CloudAPI, c *gin.Context) {
+	c.JSON(http.StatusNotImplemented, "not implemented")
 }
 
 func readAllArtifacts(shared *CloudAPI, c *gin.Context) {
