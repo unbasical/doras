@@ -185,7 +185,7 @@ func createNamedArtifact(shared *CloudAPI, c *gin.Context) {
 }
 
 func extractFile(c *gin.Context, name string) ([]byte, error) {
-	formFile, err := c.FormFile("artifact")
+	formFile, err := c.FormFile(name)
 	if err != nil {
 		return nil, err
 	}

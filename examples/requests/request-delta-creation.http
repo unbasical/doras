@@ -1,7 +1,8 @@
-POST http://localhost:8080/api/v1/edge/artifacts/delta/create
+POST http://localhost:8080/edge/artifacts
 content-type: application/json
 
 {
-  "identifier": "hello-world.txt",
-  "hash": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26"
+  "identifier_from": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+  "identifier_to": "7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
+  "algorithm": "bsdiff"
 }

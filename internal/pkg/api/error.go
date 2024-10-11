@@ -10,9 +10,12 @@ type cloudAPIErrorInner struct {
 }
 
 const (
-	DorasAliasNotFoundError       = "AliasNotFound"
-	DorasArtifactNotFoundError    = "ArtifactNotFound"
-	DorasAliasExistsError         = "AliasExists"
-	DorasArtifactNotProvidedError = "ArtifactNotProvided"
-	DorasInternalError            = "Internal"
+	DorasAliasNotFoundError               = "AliasNotFound"
+	DorasDeltaNotFoundError               = "DeltaNotFound"
+	DorasArtifactNotFoundError            = "ArtifactNotFound"
+	DorasAliasExistsError                 = "AliasExists"
+	DorasArtifactNotProvidedError         = "ArtifactNotProvided"
+	DorasInternalError                    = "Internal"
+	DorasMissingRequestBodyError          = "MissingRequestBody"
+	DorasUnsupportedDiffingAlgorithmError = "UnsupportedDiffingAlgorithm"
 )
