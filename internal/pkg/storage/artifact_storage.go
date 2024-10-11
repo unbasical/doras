@@ -5,6 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/artifact"
 	"github.com/unbasical/doras-server/internal/pkg/delta"
+	"github.com/unbasical/doras-server/internal/pkg/utils"
 	"io"
 	"os"
 	"path/filepath"
@@ -12,9 +13,17 @@ import (
 
 // ArtifactStorage is an interface that abstracts loading and storing artifacts.
 type ArtifactStorage interface {
+	// LoadArtifact
+	//The implementation has to handle the sanitization of the identifier.
 	LoadArtifact(identifier string) (artifact.Artifact, error)
+	// StoreArtifact
+	//The implementation has to handle the sanitization of the identifier.
 	StoreArtifact(artifact artifact.Artifact, identifier string) error
+	// StoreDelta stores the delta with the provided identifier.
+	//The implementation has to handle the sanitization of the identifier.
 	StoreDelta(d delta.ArtifactDelta, identifier string) error
+	// LoadDelta
+	//The implementation has to handle the sanitization of the identifier.
 	LoadDelta(identifier string) (delta.ArtifactDelta, error)
 }
 
@@ -58,9 +67,14 @@ func (s *FilesystemStorage) LoadDelta(identifier string) (delta.ArtifactDelta, e
 }
 
 func (s *FilesystemStorage) loadFile(fPath string) ([]byte, error) {
-	fPath = filepath.Join(s.BasePath, fPath)
-	log.Debugf("loading file `%s`", fPath)
-	data, err := os.ReadFile(fPath)
+	fPathJoined := filepath.Join(s.BasePath, fPath)
+	fPathClean, err := utils.VerifyPath(fPathJoined, s.BasePath, true)
+	if err != nil {
+		log.Errorf("sanitization failure: %s", err)
+		return nil, fmt.Errorf("could not verify provided path `%s` reason: %w", fPath, err)
+	}
+	log.Debugf("loading file `%s`", fPathClean)
+	data, err := os.ReadFile(fPathClean)
 	if err != nil {
 		log.Errorf("could not read file `%s`: %s", fPath, err)
 		return data, err
@@ -69,11 +83,18 @@ func (s *FilesystemStorage) loadFile(fPath string) ([]byte, error) {
 }
 
 func (s *FilesystemStorage) storeFile(r io.Reader, fPath string) error {
-	fPath = filepath.Join(s.BasePath, fPath)
-	log.Debugf("attempting to store file at `%s`", fPath)
-	f, err := os.Create(fPath)
+	fPathJoined := filepath.Join(s.BasePath, fPath)
+	log.Debugf("joined path is `%s`", fPathJoined)
+	fPathClean, err := utils.VerifyPath(fPathJoined, s.BasePath, false)
 	if err != nil {
-		return fmt.Errorf("could not create file at `%s`: %w", fPath, err)
+		log.Errorf("sanitization failure: %s", err)
+		return fmt.Errorf("could not verify provided path `%s` reason: %w", fPath, err)
+	}
+	log.Debugf("attempting to store file at `%s`", fPathClean)
+	f, err := os.Create(fPathClean)
+	if err != nil {
+		log.Errorf("could not create file `%s`: %s", fPath, err)
+		return fmt.Errorf("could not create file at `%s`: %w", fPathClean, err)
 	}
 	defer f.Close()
 	buf := make([]byte, 8096)
@@ -81,6 +102,7 @@ func (s *FilesystemStorage) storeFile(r io.Reader, fPath string) error {
 		nRead, errRead := r.Read(buf)
 		nWrite, errWrite := f.Write(buf[:nRead])
 		if errRead == io.EOF {
+			log.Debug("reached EOF")
 			break
 		}
 		if errWrite != nil {

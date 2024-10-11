@@ -9,9 +9,9 @@ import (
 func main() {
 	log.SetLevel(log.DebugLevel)
 	doras := core.Doras{}
-	err := os.MkdirAll("./doras-working-dir", 0777)
+	err := os.MkdirAll("doras-working-dir", 0777)
 	if err != nil {
 		panic(err)
 	}
-	doras.Init("./doras-working-dir").Start()
+	doras.Init("doras-working-dir").Start()
 }

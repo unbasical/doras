@@ -10,12 +10,10 @@ import (
 	"net/http"
 )
 
+// CloudAPI
+// TODO: handle/prevent resource conflicts
 type CloudAPI struct {
 	config *Config
-}
-
-func (receiver CloudAPI) CreateOrUpdateArtifact(c *gin.Context) {
-
 }
 
 func BuildCloudAPI(r *gin.Engine, config *Config) *gin.Engine {
@@ -25,24 +23,23 @@ func BuildCloudAPI(r *gin.Engine, config *Config) *gin.Engine {
 	cloudAPI := CloudAPI{config: config}
 
 	artifactsAPI.PUT("/named/:identifier", func(context *gin.Context) {
-		CreateArtifactWithName(&cloudAPI, context)
+		createNamedArtifact(&cloudAPI, context)
 	})
 
 	artifactsAPI.POST("", func(context *gin.Context) {
-		CreateArtifact(&cloudAPI, context)
+		createArtifact(&cloudAPI, context)
 	})
 
-	artifactsAPI.POST("/:identifier", func(c *gin.Context) {})
 	// List all artifacts
 	artifactsAPI.GET("", func(c *gin.Context) {
 		c.JSON(http.StatusNotImplemented, "not implemented")
 	})
 	// Path to specific artifact
 	artifactsAPI.GET(":identifier", func(c *gin.Context) {
-		ReadArtifact(&cloudAPI, c)
+		readArtifact(&cloudAPI, c)
 	})
 	artifactsAPI.GET("/named/:identifier", func(c *gin.Context) {
-		readerNamedArtifact(&cloudAPI, c)
+		readNamedArtifact(&cloudAPI, c)
 	})
 	artifactsAPI.PUT("", func(c *gin.Context) {
 		c.JSON(http.StatusNotImplemented, "not implemented")
@@ -55,13 +52,19 @@ func BuildCloudAPI(r *gin.Engine, config *Config) *gin.Engine {
 	})
 	return r
 }
-func readerNamedArtifact(shared *CloudAPI, c *gin.Context) {
+
+func readNamedArtifact(shared *CloudAPI, c *gin.Context) {
+	// assumption: storage.ArtifactStorage and storage.Aliaser handle path sanitization
 	identifier := c.Param("identifier")
-	// TODO: handle input sanitization
 	identifier, err := shared.config.Aliaser.ResolveAlias(identifier)
 	if err != nil {
 		log.Errorf("Failed to resolve alias %s: %s", identifier, err)
-		c.JSON(http.StatusNotFound, "artifact named does not exist")
+		c.JSON(http.StatusNotFound, apiError{
+			Error: apiErrorInner{
+				Code:    "",
+				Message: fmt.Sprintf("unknown alias %s", identifier),
+			},
+		})
 		return
 	}
 	artfct, err := shared.config.ArtifactStorage.LoadArtifact(identifier)
@@ -81,9 +84,9 @@ func readerNamedArtifact(shared *CloudAPI, c *gin.Context) {
 	c.DataFromReader(http.StatusOK, int64(contentLength), contentType, reader, extraHeaders)
 }
 
-func ReadArtifact(shared *CloudAPI, c *gin.Context) {
+func readArtifact(shared *CloudAPI, c *gin.Context) {
+	// assumption: storage.ArtifactStorage and storage.Aliaser handle path sanitization
 	identifier := c.Param("identifier")
-	// TODO: handle input sanitization
 	artfct, err := shared.config.ArtifactStorage.LoadArtifact(identifier)
 	if err != nil {
 		log.Errorf("Error loading artifact: %v", err)
@@ -101,7 +104,12 @@ func ReadArtifact(shared *CloudAPI, c *gin.Context) {
 	c.DataFromReader(http.StatusOK, int64(contentLength), contentType, reader, extraHeaders)
 }
 
-func CreateArtifact(shared *CloudAPI, c *gin.Context) {
+// createArtifact
+// Stores the artifact provided as a file in the request body.
+// TODO:
+//   - add option to provide artifact via URL
+//   - add option to provide artifact via OCI reference
+func createArtifact(shared *CloudAPI, c *gin.Context) {
 	data, err := extractFile(c, "artifact")
 	if err != nil {
 		log.Errorf("Failed to extract artifact %s", err)
@@ -119,12 +127,18 @@ func CreateArtifact(shared *CloudAPI, c *gin.Context) {
 	})
 }
 
-// CreateArtifactWithName creates an artifact at this location and set it as the alias.
-func CreateArtifactWithName(shared *CloudAPI, c *gin.Context) {
+// createNamedArtifact creates an artifact at this location and set it as the alias.
+func createNamedArtifact(shared *CloudAPI, c *gin.Context) {
+	// assumption: storage.ArtifactStorage and storage.Aliaser handle path sanitization
 	identifier := c.Param("identifier")
 	// rename to avoid confusion
 	alias := identifier
 	data, err := extractFile(c, "artifact")
+	if err != nil {
+		log.Errorf("Failed to extract artifact %s", err)
+		c.JSON(http.StatusInternalServerError, "internal error")
+		return
+	}
 	hash := utils.CalcSha256Hex(data)
 	log.Debugf("storing file at %s", hash)
 	err = shared.config.ArtifactStorage.StoreArtifact(artifact.RawBytesArtifact{Data: data}, hash)
