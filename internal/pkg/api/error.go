@@ -1,12 +1,18 @@
 package api
 
-type apiError struct {
-	Error apiErrorInner `json:"error"`
+type cloudAPIError struct {
+	Error cloudAPIErrorInner `json:"error"`
 }
 
-type apiErrorInner struct {
+type cloudAPIErrorInner struct {
 	Code    string `json:"code"`
 	Message string `json:"message,omitempty"`
 }
 
-const ArtifactExists = "ArtifactExists"
+const (
+	DorasAliasNotFoundError       = "AliasNotFound"
+	DorasArtifactNotFoundError    = "ArtifactNotFound"
+	DorasAliasExistsError         = "AliasExists"
+	DorasArtifactNotProvidedError = "ArtifactNotProvided"
+	DorasInternalError            = "Internal"
+)
