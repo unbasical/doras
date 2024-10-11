@@ -27,19 +27,18 @@ type FilesystemStorage struct {
 }
 
 func (s *FilesystemStorage) AddArtifactAlias(identifier string, alias string) error {
-	fPath := filepath.Join(s.BasePath, identifier)
-	log.Debugf("loading file `%s`", fPath)
 	aliasPath := filepath.Join(s.BasePath, alias)
 	if _, err := os.Stat(aliasPath); err == nil {
 		return errors.New("symlink already exists")
 	} else if errors.Is(err, os.ErrNotExist) {
 		log.Debugf("creating symlink from %s to %s", alias, identifier)
-		if err := os.Symlink(alias, fPath); err != nil {
+		// do not use the base path for oldname because the bath is relative to the symlink
+		if err := os.Symlink(identifier, aliasPath); err != nil {
 			return err
 		}
 		return nil
 	} else {
-		log.Fatalf("unexpected error while checking if %s exists", fPath)
+		log.Fatalf("unexpected error while checking if %s exists", identifier)
 		panic(err)
 	}
 }
