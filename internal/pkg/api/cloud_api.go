@@ -24,7 +24,7 @@ func BuildCloudAPI(r *gin.Engine, config *Config) *gin.Engine {
 	artifactsAPI := r.Group("/api/artifacts")
 	cloudAPI := CloudAPI{config: config}
 
-	artifactsAPI.PUT(":identifier", func(context *gin.Context) {
+	artifactsAPI.PUT("/named/:identifier", func(context *gin.Context) {
 		CreateArtifactWithName(&cloudAPI, context)
 	})
 
@@ -41,6 +41,9 @@ func BuildCloudAPI(r *gin.Engine, config *Config) *gin.Engine {
 	artifactsAPI.GET(":identifier", func(c *gin.Context) {
 		ReadArtifact(&cloudAPI, c)
 	})
+	artifactsAPI.GET("/named/:identifier", func(c *gin.Context) {
+		readerNamedArtifact(&cloudAPI, c)
+	})
 	artifactsAPI.PUT("", func(c *gin.Context) {
 		c.JSON(http.StatusNotImplemented, "not implemented")
 	})
@@ -51,6 +54,31 @@ func BuildCloudAPI(r *gin.Engine, config *Config) *gin.Engine {
 		c.JSON(http.StatusNotImplemented, "not implemented")
 	})
 	return r
+}
+func readerNamedArtifact(shared *CloudAPI, c *gin.Context) {
+	identifier := c.Param("identifier")
+	// TODO: handle input sanitization
+	identifier, err := shared.config.Aliaser.ResolveAlias(identifier)
+	if err != nil {
+		log.Errorf("Failed to resolve alias %s: %s", identifier, err)
+		c.JSON(http.StatusNotFound, "artifact named does not exist")
+		return
+	}
+	artfct, err := shared.config.ArtifactStorage.LoadArtifact(identifier)
+	if err != nil {
+		log.Errorf("Error loading artifact: %v", err)
+		c.JSON(http.StatusInternalServerError, "internal server error")
+		return
+	}
+	reader := artfct.GetReader()
+	contentLength := len(artfct.GetBytes())
+	contentType := "application/octet-stream"
+
+	// TODO: this should be sanitized or it might allow injecting stuff into the header
+	extraHeaders := map[string]string{
+		"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, identifier),
+	}
+	c.DataFromReader(http.StatusOK, int64(contentLength), contentType, reader, extraHeaders)
 }
 
 func ReadArtifact(shared *CloudAPI, c *gin.Context) {
@@ -105,7 +133,7 @@ func CreateArtifactWithName(shared *CloudAPI, c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, "internal error")
 		return
 	}
-	err = shared.config.ArtifactStorage.AddArtifactAlias(hash, alias)
+	err = shared.config.Aliaser.AddAlias(alias, hash)
 	if err != nil {
 		log.Errorf("error adding artifact alias %s", err)
 		c.JSON(http.StatusInternalServerError, "internal error")

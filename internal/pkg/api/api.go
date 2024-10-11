@@ -9,6 +9,7 @@ import (
 
 type Config struct {
 	ArtifactStorage storage.ArtifactStorage
+	Aliaser         storage.Aliasing
 }
 
 func BuildApp(config *Config) *gin.Engine {
@@ -40,7 +41,7 @@ func CreateDelta(c *gin.Context) {
 	// rough idea: look for file at identifier and check against hash. create delta if hash is valid
 	var requestBody CreateDeltaRequestBody
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
-		log.Errorf("failed to parse request body: %artifactStorage", err)
+		log.Errorf("failed to parse request body: %s", err)
 		c.JSON(http.StatusBadRequest, "missing request body")
 		return
 	}
@@ -61,7 +62,7 @@ type ReadDeltaResponseBody struct {
 func ReadDelta(c *gin.Context) {
 	var requestBody ReadDeltaRequestBody
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
-		log.Errorf("failed to parse request body: %artifactStorage", err)
+		log.Errorf("failed to parse request body: %s", err)
 		c.JSON(http.StatusBadRequest, "missing request body")
 		return
 	}

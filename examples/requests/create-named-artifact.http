@@ -1,9 +1,9 @@
-PUT localhost:8080/api/artifacts/hello-world.txt
+PUT localhost:8080/api/artifacts/named/hello-world.txt
 content-type: multipart/form-data;boundary=---------------------------735323031399963166993862150
 
 -----------------------------735323031399963166993862150
 content-disposition: form-data; name="artifact"; filename="artifact"
 content-type: text/plain;charset=UTF-8
 
-Hello World
+Hello World!
 -----------------------------735323031399963166993862150--

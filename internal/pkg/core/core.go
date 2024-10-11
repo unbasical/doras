@@ -9,13 +9,16 @@ import (
 
 type Doras struct {
 	storage storage.ArtifactStorage
+	aliaser storage.Aliasing
 	engine  *gin.Engine
 }
 
 func (d *Doras) Init(storagePath string) *Doras {
 	d.storage = &storage.FilesystemStorage{BasePath: storagePath}
+	d.aliaser = &storage.SymlinkAliasing{BasePath: storagePath}
 	config := api.Config{
 		ArtifactStorage: d.storage,
+		Aliaser:         d.aliaser,
 	}
 	d.engine = api.BuildApp(&config)
 	return d
