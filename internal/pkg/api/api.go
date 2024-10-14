@@ -10,12 +10,14 @@ import (
 
 type Config struct {
 	ArtifactStorage storage.ArtifactStorage
-	Aliaser         aliasing.Aliasing
+	AliasStorage    aliasing.Aliasing
+	AuthMiddleware  gin.HandlerFunc
 }
 
 func BuildApp(config *Config) *gin.Engine {
 	log.Debug("Building app")
 	r := gin.Default()
+	r.Use(config.AuthMiddleware)
 	r = BuildEdgeAPI(r, config)
 	r = BuildCloudAPI(r, config)
 	r.GET("/ping", func(c *gin.Context) {
