@@ -223,6 +223,7 @@ func (cloudAPI *CloudAPI) readNamedArtifact(alias string) (artifact.Artifact, er
 }
 
 func (cloudAPI *CloudAPI) createNamedArtifact(artfct artifact.Artifact, identifier string) (string, error) {
+	// improvement idea: use goroutine to parallelize alias creation and artifact storage
 	alias := identifier
 	// store the artifact at a deterministic location first
 	identifier, err := cloudAPI.createArtifact(artfct)
