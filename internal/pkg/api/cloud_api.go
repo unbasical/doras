@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -9,12 +10,6 @@ import (
 	"io"
 	"net/http"
 )
-
-// CloudAPI
-// TODO: handle/prevent resource conflicts
-type CloudAPI struct {
-	config *Config
-}
 
 func BuildCloudAPI(r *gin.Engine, config *Config) *gin.Engine {
 	log.Debug("Building cloud API")
@@ -61,53 +56,56 @@ func readAllArtifacts(shared *CloudAPI, c *gin.Context) {
 func readNamedArtifact(shared *CloudAPI, c *gin.Context) {
 	// assumption: storage.ArtifactStorage and storage.Aliaser handle path sanitization
 	identifier := c.Param("identifier")
-	identifier, err := shared.config.Aliaser.ResolveAlias(identifier)
+	artfct, err := shared.readNamedArtifact(identifier)
 	if err != nil {
-		log.Errorf("Failed to resolve alias %s: %s", identifier, err)
-		c.JSON(http.StatusNotFound, cloudAPIError{
-			Error: cloudAPIErrorInner{
-				Code:    DorasAliasNotFoundError,
-				Message: fmt.Sprintf("unknown alias %s", identifier),
-			},
-		})
+		log.Error(err)
+		var inner error
+		if errors.Is(err, DorasArtifactNotFoundError) || errors.Is(err, DorasAliasNotFoundError) {
+			inner = err
+		} else {
+			inner = DorasInternalError
+		}
+		c.JSON(http.StatusNotFound, cloudAPIError{Error: cloudAPIErrorInner{
+			Code:    inner,
+			Message: fmt.Sprintf("failed to find named artifact for alis %s", identifier)}},
+		)
 		return
 	}
-	artfct, err := shared.config.ArtifactStorage.LoadArtifact(identifier)
-	if err != nil {
-		log.Errorf("Error loading artifact: %v", err)
-		c.JSON(http.StatusInternalServerError, "internal server error")
-		return
-	}
-	reader := artfct.GetReader()
-	contentLength := len(artfct.GetBytes())
-	contentType := "application/octet-stream"
-
-	// TODO: this should be sanitized or it might allow injecting stuff into the header
-	extraHeaders := map[string]string{
-		"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, identifier),
-	}
-	c.DataFromReader(http.StatusOK, int64(contentLength), contentType, reader, extraHeaders)
+	c.DataFromReader(
+		http.StatusOK,
+		int64(artfct.GetContentLength()),
+		"application/octet-stream",
+		artfct.GetReader(),
+		// TODO: this should be sanitized or it might allow injecting stuff into the header
+		map[string]string{
+			"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, identifier),
+		},
+	)
 }
 
 func readArtifact(shared *CloudAPI, c *gin.Context) {
 	// assumption: storage.ArtifactStorage and storage.Aliaser handle path sanitization
 	identifier := c.Param("identifier")
-	artfct, err := shared.config.ArtifactStorage.LoadArtifact(identifier)
+	artfct, err := shared.readArtifact(identifier)
 	if err != nil {
 		log.Errorf("Error loading artifact: %v", err)
-		c.JSON(http.StatusInternalServerError,
-			cloudAPIError{Error: cloudAPIErrorInner{Code: DorasArtifactNotFoundError}})
+		if errors.Is(err, DorasArtifactNotFoundError) {
+			c.JSON(http.StatusNotFound, cloudAPIError{Error: cloudAPIErrorInner{Code: DorasArtifactNotFoundError}})
+		} else {
+			c.JSON(http.StatusInternalServerError, cloudAPIError{Error: cloudAPIErrorInner{Code: DorasInternalError}})
+		}
 		return
 	}
-	reader := artfct.GetReader()
-	contentLength := len(artfct.GetBytes())
-	contentType := "application/octet-stream"
-
-	// TODO: this should be sanitized or it might allow injecting stuff into the header
-	extraHeaders := map[string]string{
-		"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, identifier),
-	}
-	c.DataFromReader(http.StatusOK, int64(contentLength), contentType, reader, extraHeaders)
+	c.DataFromReader(
+		http.StatusOK,
+		int64(artfct.GetContentLength()),
+		"application/octet-stream",
+		artfct.GetReader(),
+		// TODO: this should be sanitized or it might allow injecting stuff into the header
+		map[string]string{
+			"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, identifier),
+		},
+	)
 }
 
 type CreateArtifactResponse struct {
@@ -126,19 +124,17 @@ func createArtifact(shared *CloudAPI, c *gin.Context) {
 		c.JSON(http.StatusBadRequest, cloudAPIError{
 			Error: cloudAPIErrorInner{
 				Code:    DorasArtifactNotProvidedError,
-				Message: "no artifact provided in request body",
+				Message: "artifact not provided in request body",
 			},
 		})
 		return
 	}
-	hash := utils.CalcSha256Hex(data)
-	err = shared.config.ArtifactStorage.StoreArtifact(artifact.RawBytesArtifact{Data: data}, hash)
+	identifier, err := shared.createArtifact(&artifact.RawBytesArtifact{Data: data})
 	if err != nil {
-		log.Errorf("Failed to store artifact %s", err)
+		log.Errorf("Failed to create artifact %s", err)
 		c.JSON(http.StatusInternalServerError, cloudAPIError{Error: cloudAPIErrorInner{Code: DorasInternalError}})
-		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"success": CreateArtifactResponse{Identifier: hash}})
+	c.JSON(http.StatusCreated, gin.H{"success": CreateArtifactResponse{Identifier: identifier}})
 }
 
 type CreateNamedArtifactResponse struct {
@@ -163,25 +159,95 @@ func createNamedArtifact(shared *CloudAPI, c *gin.Context) {
 		})
 		return
 	}
-	hash := utils.CalcSha256Hex(data)
-	log.Debugf("storing file at %s", hash)
-	err = shared.config.ArtifactStorage.StoreArtifact(artifact.RawBytesArtifact{Data: data}, hash)
+	identifier, err = shared.createNamedArtifact(&artifact.RawBytesArtifact{Data: data}, alias)
 	if err != nil {
-		log.Errorf("error storing artifact %s", err)
 		c.JSON(http.StatusInternalServerError, cloudAPIError{Error: cloudAPIErrorInner{Code: DorasInternalError}})
 		return
 	}
-	err = shared.config.Aliaser.AddAlias(alias, hash)
-	if err != nil {
-		log.Errorf("error adding artifact alias %s", err)
-		// TODO: handle cases where the error source is not a name conflict
-		c.JSON(http.StatusInternalServerError, cloudAPIError{Error: cloudAPIErrorInner{Code: DorasAliasExistsError}})
-		return
-	}
+
 	c.JSON(http.StatusOK, gin.H{"success": CreateNamedArtifactResponse{
-		NamedIdentifier: identifier,
-		Identifier:      hash,
+		NamedIdentifier: alias,
+		Identifier:      identifier,
 	}})
+}
+
+// CloudAPI
+// TODO:
+//   - handle/prevent resource conflicts
+//   - replace config with interfaces that provide functionality
+//   - move to separate file
+type CloudAPI struct {
+	config *Config
+}
+
+func (cloudAPI *CloudAPI) deleteNamedArtifact(identifier string) error {
+	panic("not implemented")
+}
+
+func (cloudAPI *CloudAPI) deleteArtifact(identifier string) error {
+	panic("not implemented")
+}
+
+func (cloudAPI *CloudAPI) readAllArtifacts() ([]artifact.Artifact, error) {
+	panic("not implemented")
+}
+
+func (cloudAPI *CloudAPI) readArtifact(identifier string) (artifact.Artifact, error) {
+	artfct, err := cloudAPI.config.ArtifactStorage.LoadArtifact(identifier)
+	if err != nil {
+		log.Errorf("Error loading artifact: %v", err)
+		return nil, DorasArtifactNotFoundError
+	}
+	return artfct, nil
+}
+
+func (cloudAPI *CloudAPI) readNamedArtifact(alias string) (artifact.Artifact, error) {
+	// resolve the alias to the real identifier
+	identifier, err := cloudAPI.config.Aliaser.ResolveAlias(alias)
+	if err != nil {
+		log.Errorf("Error resolving alias: %v", err)
+		return nil, DorasAliasNotFoundError
+	}
+	// now find the artifact using the resolved alias
+	artfct, err := cloudAPI.config.ArtifactStorage.LoadArtifact(identifier)
+	if err != nil {
+		log.Errorf("Error loading artifact: %v", err)
+		return nil, DorasArtifactNotFoundError
+	}
+	return artfct, nil
+}
+
+func (cloudAPI *CloudAPI) createNamedArtifact(artfct artifact.Artifact, identifier string) (string, error) {
+	alias := identifier
+	// store the artifact at a deterministic location first
+	identifier, err := cloudAPI.createArtifact(artfct)
+	if err != nil {
+		return "", err
+	}
+	// add an alias to the previously returned identifier
+	log.Debugf("adding alias from `%s` -> `%s`", alias, identifier)
+	err = cloudAPI.config.Aliaser.AddAlias(alias, identifier)
+	if err != nil {
+		// TODO: add better error handling here to cover different error causes
+		log.Errorf("error storing artifact %s", err)
+		return "", DorasInternalError
+	}
+	return identifier, nil
+}
+
+func (cloudAPI *CloudAPI) createArtifact(artfct artifact.Artifact) (string, error) {
+	// store the artifact at a deterministic location
+	data := artfct.GetBytes()
+	hash := utils.CalcSha256Hex(data)
+	log.Debugf("storing file at %s", hash)
+	err := cloudAPI.config.ArtifactStorage.StoreArtifact(&artifact.RawBytesArtifact{Data: data}, hash)
+	if err != nil {
+		// TODO: add better error handling here to cover different error causes
+		log.Errorf("error storing artifact %s", err)
+		return "", DorasInternalError
+	}
+	// add an alias to the previously stored artifact
+	return hash, nil
 }
 
 func extractFile(c *gin.Context, name string) ([]byte, error) {

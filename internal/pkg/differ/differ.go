@@ -32,7 +32,7 @@ func (b Bsdiff) ApplyDiff(from artifact.Artifact, diff []byte) artifact.Artifact
 	if err != nil {
 		panic(err)
 	}
-	return artifact.RawBytesArtifact{
+	return &artifact.RawBytesArtifact{
 		Data: to,
 	}
 }

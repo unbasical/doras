@@ -36,9 +36,9 @@ type FilesystemStorage struct {
 func (s *FilesystemStorage) LoadArtifact(identifier string) (artifact.Artifact, error) {
 	data, err := s.loadFile(identifier)
 	if err != nil {
-		return artifact.RawBytesArtifact{}, fmt.Errorf("could not read artifact file from `%s`: %w", identifier, err)
+		return &artifact.RawBytesArtifact{}, fmt.Errorf("could not read artifact file from `%s`: %w", identifier, err)
 	}
-	return artifact.RawBytesArtifact{Data: data}, nil
+	return &artifact.RawBytesArtifact{Data: data}, nil
 }
 
 func (s *FilesystemStorage) StoreArtifact(artifact artifact.Artifact, identifier string) error {
