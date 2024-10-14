@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"github.com/unbasical/doras-server/internal/pkg/aliasing"
 	"github.com/unbasical/doras-server/internal/pkg/delta"
 	"github.com/unbasical/doras-server/internal/pkg/differ"
 	"github.com/unbasical/doras-server/internal/pkg/storage"
@@ -14,7 +15,7 @@ import (
 
 type EdgeAPI struct {
 	artifactStorageProvider storage.ArtifactStorage
-	aliasProvider           storage.Aliasing
+	aliasProvider           aliasing.Aliasing
 }
 
 func BuildEdgeAPI(r *gin.Engine, config *Config) *gin.Engine {

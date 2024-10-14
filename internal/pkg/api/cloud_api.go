@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"github.com/unbasical/doras-server/internal/pkg/aliasing"
 	"github.com/unbasical/doras-server/internal/pkg/artifact"
 	"github.com/unbasical/doras-server/internal/pkg/storage"
 	"github.com/unbasical/doras-server/internal/pkg/utils"
@@ -182,7 +183,7 @@ func createNamedArtifact(shared *CloudAPI, c *gin.Context) {
 //   - move to separate file
 type CloudAPI struct {
 	artifactStorageProvider storage.ArtifactStorage
-	aliasProvider           storage.Aliasing
+	aliasProvider           aliasing.Aliasing
 }
 
 func (cloudAPI *CloudAPI) deleteNamedArtifact(identifier string) error {

@@ -3,13 +3,14 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"github.com/unbasical/doras-server/internal/pkg/aliasing"
 	"github.com/unbasical/doras-server/internal/pkg/storage"
 	"net/http"
 )
 
 type Config struct {
 	ArtifactStorage storage.ArtifactStorage
-	Aliaser         storage.Aliasing
+	Aliaser         aliasing.Aliasing
 }
 
 func BuildApp(config *Config) *gin.Engine {
