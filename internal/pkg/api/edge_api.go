@@ -50,6 +50,60 @@ type createDeltaResponseBody struct {
 	Identifier string `json:"identifier"`
 }
 
+func createDelta(shared *EdgeAPI, c *gin.Context) {
+	log.Debug("handling delta creation request")
+	var body createDeltaRequestBody
+	err := c.BindJSON(&body)
+	log.Debug(body)
+	if err != nil {
+		log.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{
+			"code":        DorasMissingRequestBodyError,
+			"description": "missing request body",
+		}})
+		return
+	}
+	deltaIdentifier, err := shared.createDelta(body.IdentifierFrom, body.IdentifierTo, body.Algorithm)
+	if err != nil {
+		// TODO: introduce better error handling, e.g. artifacts do not exist, etc.
+		log.Error(err.Error())
+		c.JSON(http.StatusInternalServerError, cloudAPIError{Error: cloudAPIErrorInner{Code: DorasInternalError}})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": createDeltaResponseBody{Identifier: deltaIdentifier},
+	})
+}
+
+func readDelta(shared *EdgeAPI, c *gin.Context) {
+	// TODO: handle case where delta is not yet created
+	identifier := c.Param("identifier")
+	algorithm := c.Query("algorithm")
+	reader, contentLength, err := shared.readDelta(identifier, algorithm)
+	if err != nil {
+		return
+	}
+
+	// TODO: this should be sanitized or it might allow injecting stuff into the header
+	extraHeaders := map[string]string{
+		"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, identifier),
+	}
+	c.DataFromReader(http.StatusOK, int64(contentLength), "application/octet-stream", reader, extraHeaders)
+}
+
+func readFull(shared *EdgeAPI, c *gin.Context) {
+	identifier := c.Param("identifier")
+	reader, contentLength, err := shared.readFull(identifier)
+	if err != nil {
+		return
+	}
+	// TODO: this should be sanitized or it might allow injecting stuff into the header
+	extraHeaders := map[string]string{
+		"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, identifier),
+	}
+	c.DataFromReader(http.StatusOK, int64(contentLength), "application/octet-stream", reader, extraHeaders)
+}
+
 func (edgeAPI *EdgeAPI) createDelta(fromIdentifier string, toIdentifier string, algorithm string) (string, error) {
 	log.Debug("handling delta creation request")
 
@@ -87,31 +141,6 @@ func (edgeAPI *EdgeAPI) createDelta(fromIdentifier string, toIdentifier string, 
 	return deltaHash, nil
 }
 
-func createDelta(shared *EdgeAPI, c *gin.Context) {
-	log.Debug("handling delta creation request")
-	var body createDeltaRequestBody
-	err := c.BindJSON(&body)
-	log.Debug(body)
-	if err != nil {
-		log.Error(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{
-			"code":        DorasMissingRequestBodyError,
-			"description": "missing request body",
-		}})
-		return
-	}
-	deltaIdentifier, err := shared.createDelta(body.IdentifierFrom, body.IdentifierTo, body.Algorithm)
-	if err != nil {
-		// TODO: introduce better error handling, e.g. artifacts do not exist, etc.
-		log.Error(err.Error())
-		c.JSON(http.StatusInternalServerError, cloudAPIError{Error: cloudAPIErrorInner{Code: DorasInternalError}})
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": createDeltaResponseBody{Identifier: deltaIdentifier},
-	})
-}
-
 func (edgeAPI *EdgeAPI) readDelta(identifier string, algorithm string) (io.Reader, int, error) {
 	var fileExt string
 	switch algorithm {
@@ -129,24 +158,7 @@ func (edgeAPI *EdgeAPI) readDelta(identifier string, algorithm string) (io.Reade
 	return reader, contentLength, nil
 }
 
-func readDelta(shared *EdgeAPI, c *gin.Context) {
-	// TODO: handle case where delta is not yet created
-	identifier := c.Param("identifier")
-	algorithm := c.Query("algorithm")
-	reader, contentLength, err := shared.readDelta(identifier, algorithm)
-	if err != nil {
-		return
-	}
-
-	// TODO: this should be sanitized or it might allow injecting stuff into the header
-	extraHeaders := map[string]string{
-		"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, identifier),
-	}
-	c.DataFromReader(http.StatusOK, int64(contentLength), "application/octet-stream", reader, extraHeaders)
-}
-
 func (edgeAPI *EdgeAPI) readFull(identifier string) (io.Reader, int, error) {
-
 	deltaData, err := edgeAPI.artifactStorageProvider.LoadArtifact(identifier)
 	if err != nil {
 		log.Error(err.Error())
@@ -155,17 +167,4 @@ func (edgeAPI *EdgeAPI) readFull(identifier string) (io.Reader, int, error) {
 	reader := deltaData.GetReader()
 	contentLength := deltaData.GetContentLength()
 	return reader, contentLength, nil
-}
-
-func readFull(shared *EdgeAPI, c *gin.Context) {
-	identifier := c.Param("identifier")
-	reader, contentLength, err := shared.readFull(identifier)
-	if err != nil {
-		return
-	}
-	// TODO: this should be sanitized or it might allow injecting stuff into the header
-	extraHeaders := map[string]string{
-		"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, identifier),
-	}
-	c.DataFromReader(http.StatusOK, int64(contentLength), "application/octet-stream", reader, extraHeaders)
 }
