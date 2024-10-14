@@ -88,7 +88,7 @@ func readDelta(shared *EdgeAPI, c *gin.Context) {
 
 	// TODO: this should be sanitized or it might allow injecting stuff into the header
 	extraHeaders := map[string]string{
-		"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, identifier),
+		"Content-Disposition": fmt.Sprintf(`attachment; filename=%q`, identifier),
 	}
 	c.DataFromReader(http.StatusOK, int64(contentLength), "application/octet-stream", reader, extraHeaders)
 }
@@ -101,12 +101,12 @@ func readFull(shared *EdgeAPI, c *gin.Context) {
 	}
 	// TODO: this should be sanitized or it might allow injecting stuff into the header
 	extraHeaders := map[string]string{
-		"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, identifier),
+		"Content-Disposition": fmt.Sprintf(`attachment; filename=%q`, identifier),
 	}
 	c.DataFromReader(http.StatusOK, int64(contentLength), "application/octet-stream", reader, extraHeaders)
 }
 
-func (edgeAPI *EdgeAPI) createDelta(fromIdentifier string, toIdentifier string, algorithm string) (string, error) {
+func (edgeAPI *EdgeAPI) createDelta(fromIdentifier, toIdentifier, algorithm string) (string, error) {
 	log.Debug("handling delta creation request")
 
 	var (
@@ -115,8 +115,8 @@ func (edgeAPI *EdgeAPI) createDelta(fromIdentifier string, toIdentifier string, 
 	)
 
 	switch algorithm {
-	case "bsdiff":
-		diffAlg, fileExt = differ.Bsdiff{}, ".bsdiff"
+	case delta.BSDIFF:
+		diffAlg, fileExt = differ.Bsdiff{}, "."+delta.BSDIFF
 	default:
 		return "", fmt.Errorf("unsupported diffing algorithm %s", algorithm)
 	}
@@ -151,12 +151,12 @@ func (edgeAPI *EdgeAPI) createDelta(fromIdentifier string, toIdentifier string, 
 	return deltaHash, nil
 }
 
-func (edgeAPI *EdgeAPI) readDelta(identifier string, algorithm string) (io.Reader, int, error) {
+func (edgeAPI *EdgeAPI) readDelta(identifier, algorithm string) (io.Reader, int, error) {
 	var fileExt string
 	switch algorithm {
-	case "bsdiff":
+	case delta.BSDIFF:
 	default:
-		fileExt = ".bsdiff"
+		fileExt = "." + delta.BSDIFF
 	}
 	deltaData, err := edgeAPI.artifactStorageProvider.LoadDelta(identifier + fileExt)
 	if err != nil {

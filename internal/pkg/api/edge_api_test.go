@@ -24,8 +24,8 @@ func (store *MapArtifactStorage) LoadArtifact(identifier string) (artifact.Artif
 	return artfct, nil
 }
 
-func (store *MapArtifactStorage) StoreArtifact(artifact artifact.Artifact, identifier string) error {
-	store.Artifacts[identifier] = artifact
+func (store *MapArtifactStorage) StoreArtifact(a artifact.Artifact, identifier string) error {
+	store.Artifacts[identifier] = a
 	return nil
 }
 func (store *MapArtifactStorage) StoreDelta(d delta.ArtifactDelta, identifier string) error {

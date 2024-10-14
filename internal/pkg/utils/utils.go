@@ -14,7 +14,7 @@ func CalcSha256Hex(b []byte) string {
 }
 
 // VerifyPath adapted from: https://www.stackhawk.com/blog/golang-path-traversal-guide-examples-and-prevention/
-func VerifyPath(path string, trustedRoot string, mustExist bool) (string, error) {
+func VerifyPath(path, trustedRoot string, mustExist bool) (string, error) {
 	log.Debugf("verifying path `%s` using `%s` as trustedRoot", path, trustedRoot)
 	c := filepath.Clean(path)
 	log.Debug("cleaned path: " + c)
@@ -37,7 +37,7 @@ func VerifyPath(path string, trustedRoot string, mustExist bool) (string, error)
 		return r, nil
 	}
 }
-func inTrustedRoot(path string, trustedRoot string) error {
+func inTrustedRoot(path, trustedRoot string) error {
 	// this can lead to an infinite loop if path never becomes equal to "/" or trustedRoot
 	for path != "/" {
 		log.Debug(path)

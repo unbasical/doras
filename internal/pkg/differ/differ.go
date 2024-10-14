@@ -15,7 +15,7 @@ type Differ interface {
 type Bsdiff struct {
 }
 
-func (b Bsdiff) CreateDiff(from artifact.Artifact, to artifact.Artifact) []byte {
+func (b Bsdiff) CreateDiff(from, to artifact.Artifact) []byte {
 	log.Debug("creating bsdiff")
 	patch, err := bsdiff.Bytes(from.GetBytes(), to.GetBytes())
 	if err != nil {

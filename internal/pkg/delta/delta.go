@@ -5,6 +5,10 @@ import (
 	"io"
 )
 
+const (
+	BSDIFF = "bsdiff"
+)
+
 type ArtifactDelta interface {
 	GetReader() io.Reader
 	GetBytes() ([]byte, error)

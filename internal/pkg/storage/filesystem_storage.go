@@ -25,10 +25,10 @@ func (s *FilesystemStorage) LoadArtifact(identifier string) (artifact.Artifact, 
 	return &artifact.RawBytesArtifact{Data: data}, nil
 }
 
-func (s *FilesystemStorage) StoreArtifact(artifact artifact.Artifact, identifier string) error {
-	err := s.storeFile(artifact.GetReader(), identifier)
+func (s *FilesystemStorage) StoreArtifact(a artifact.Artifact, identifier string) error {
+	err := s.storeFile(a.GetReader(), identifier)
 	if err != nil {
-		return fmt.Errorf("could not store artifact file at `%s`: %w", identifier, err)
+		return fmt.Errorf("could not store a file at `%s`: %w", identifier, err)
 	}
 	return nil
 }
@@ -47,7 +47,6 @@ func (s *FilesystemStorage) LoadDelta(identifier string) (delta.ArtifactDelta, e
 		return delta.RawDiff{}, fmt.Errorf("could not read delta file from `%s`: %w", identifier, err)
 	}
 	return delta.RawDiff{Data: data}, nil
-
 }
 
 func (s *FilesystemStorage) loadFile(fPath string) ([]byte, error) {

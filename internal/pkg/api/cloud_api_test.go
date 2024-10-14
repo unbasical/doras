@@ -14,22 +14,22 @@ type ArtifactStorageStub struct {
 	StoredArtifact artifact.Artifact
 }
 
-func (a *ArtifactStorageStub) LoadArtifact(identifier string) (artifact.Artifact, error) {
-	if a.StoredArtifact != nil {
-		return a.StoredArtifact, nil
+func (stor *ArtifactStorageStub) LoadArtifact(identifier string) (artifact.Artifact, error) {
+	if stor.StoredArtifact != nil {
+		return stor.StoredArtifact, nil
 	}
 	return nil, dorasErrors.DorasArtifactNotFoundError
 }
 
-func (a *ArtifactStorageStub) StoreArtifact(artifact artifact.Artifact, identifier string) error {
-	a.StoredArtifact = artifact
+func (stor *ArtifactStorageStub) StoreArtifact(a artifact.Artifact, identifier string) error {
+	stor.StoredArtifact = a
 	return nil
 }
-func (a *ArtifactStorageStub) StoreDelta(d delta.ArtifactDelta, identifier string) error {
+func (stor *ArtifactStorageStub) StoreDelta(d delta.ArtifactDelta, identifier string) error {
 	panic("not implemented")
 }
 
-func (a *ArtifactStorageStub) LoadDelta(identifier string) (delta.ArtifactDelta, error) {
+func (stor *ArtifactStorageStub) LoadDelta(identifier string) (delta.ArtifactDelta, error) {
 	panic("not implemented")
 }
 
@@ -38,7 +38,7 @@ type AliasStub struct {
 	Value string
 }
 
-func (a *AliasStub) AddAlias(alias string, identifier string) error {
+func (a *AliasStub) AddAlias(alias, identifier string) error {
 	if a.Key != alias {
 		return dorasErrors.DorasAliasExistsError
 	}
@@ -150,8 +150,8 @@ func Test_readArtifactArtifactNotFound(t *testing.T) {
 	if !errors.Is(err, dorasErrors.DorasArtifactNotFoundError) {
 		t.Fatalf("did not get the appropriate error: %s", err)
 	}
-
 }
+
 func Test_readNamedArtifact(t *testing.T) {
 	stor := ArtifactStorageStub{}
 	aliaser := AliasStub{
@@ -190,5 +190,4 @@ func Test_readNamedArtifactAliasNotFound(t *testing.T) {
 	if !errors.Is(err, dorasErrors.DorasAliasNotFoundError) {
 		t.Fatalf("did not get the appropriate error: %s", err)
 	}
-
 }

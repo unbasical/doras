@@ -84,7 +84,7 @@ func readNamedArtifact(shared *CloudAPI, c *gin.Context) {
 		artfct.GetReader(),
 		// TODO: this should be sanitized or it might allow injecting stuff into the header
 		map[string]string{
-			"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, identifier),
+			"Content-Disposition": fmt.Sprintf(`attachment; filename=%q`, identifier),
 		},
 	)
 }
@@ -109,7 +109,7 @@ func readArtifact(shared *CloudAPI, c *gin.Context) {
 		artfct.GetReader(),
 		// TODO: this should be sanitized or it might allow injecting stuff into the header
 		map[string]string{
-			"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, identifier),
+			"Content-Disposition": fmt.Sprintf(`attachment; filename=%q`, identifier),
 		},
 	)
 }

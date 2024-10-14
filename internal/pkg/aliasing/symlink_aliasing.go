@@ -7,17 +7,13 @@ import (
 	"github.com/unbasical/doras-server/internal/pkg/utils"
 	"os"
 	"path/filepath"
-	"sync"
 )
 
 type SymlinkAliasing struct {
 	BasePath string
-	lock     sync.RWMutex
 }
 
 func (aliaser *SymlinkAliasing) ResolveAlias(alias string) (string, error) {
-	aliaser.lock.RLock()
-	defer aliaser.lock.RUnlock()
 	aliasPath := filepath.Join(aliaser.BasePath, alias)
 	aliasPathClean, err := utils.VerifyPath(aliasPath, aliaser.BasePath, true)
 	if err != nil {
@@ -30,9 +26,7 @@ func (aliaser *SymlinkAliasing) ResolveAlias(alias string) (string, error) {
 	return identifier, nil
 }
 
-func (aliaser *SymlinkAliasing) AddAlias(alias string, target string) error {
-	aliaser.lock.Lock()
-	defer aliaser.lock.Unlock()
+func (aliaser *SymlinkAliasing) AddAlias(alias, target string) error {
 	aliasPath := filepath.Join(aliaser.BasePath, alias)
 	// verify the alias path, assume target is trustworthy
 	aliasPathClean, err := utils.VerifyPath(aliasPath, aliaser.BasePath, false)

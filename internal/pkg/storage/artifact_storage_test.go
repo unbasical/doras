@@ -15,7 +15,7 @@ func TestFilesystemStorage_LoadArtifact(t *testing.T) {
 	storage := FilesystemStorage{tempDir}
 	filePath := path.Join(tempDir, "hello.in")
 	expected := []byte("hello world")
-	err := os.WriteFile(filePath, expected, 0644)
+	err := os.WriteFile(filePath, expected, 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
