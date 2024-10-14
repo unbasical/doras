@@ -9,19 +9,15 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sync"
 )
 
 // FilesystemStorage implements the ArtifactStorage interface.
 // It loads and stores artifacts from the file system relative to the specified basePath.
 type FilesystemStorage struct {
 	BasePath string
-	lock     sync.RWMutex
 }
 
 func (s *FilesystemStorage) LoadArtifact(identifier string) (artifact.Artifact, error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
 	data, err := s.loadFile(identifier)
 	if err != nil {
 		return &artifact.RawBytesArtifact{}, fmt.Errorf("could not read artifact file from `%s`: %w", identifier, err)
@@ -30,8 +26,6 @@ func (s *FilesystemStorage) LoadArtifact(identifier string) (artifact.Artifact, 
 }
 
 func (s *FilesystemStorage) StoreArtifact(artifact artifact.Artifact, identifier string) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
 	err := s.storeFile(artifact.GetReader(), identifier)
 	if err != nil {
 		return fmt.Errorf("could not store artifact file at `%s`: %w", identifier, err)
@@ -40,8 +34,6 @@ func (s *FilesystemStorage) StoreArtifact(artifact artifact.Artifact, identifier
 }
 
 func (s *FilesystemStorage) StoreDelta(d delta.ArtifactDelta, identifier string) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
 	err := s.storeFile(d.GetReader(), identifier)
 	if err != nil {
 		return fmt.Errorf("could not store delta file at `%s`: %w", identifier, err)
@@ -50,8 +42,6 @@ func (s *FilesystemStorage) StoreDelta(d delta.ArtifactDelta, identifier string)
 }
 
 func (s *FilesystemStorage) LoadDelta(identifier string) (delta.ArtifactDelta, error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
 	data, err := s.loadFile(identifier)
 	if err != nil {
 		return delta.RawDiff{}, fmt.Errorf("could not read delta file from `%s`: %w", identifier, err)

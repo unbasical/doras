@@ -21,8 +21,8 @@ func TestFilesystemStorage_LoadArtifact(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(artfct.Data, []byte("hello world")) {
-		t.Fatalf("expected '%s' but got '%s'", string(expected), string(artfct.Data))
+	if !bytes.Equal(artfct.GetBytes(), []byte("hello world")) {
+		t.Fatalf("expected '%s' but got '%s'", string(expected), string(artfct.GetBytes()))
 	}
 }
 
@@ -34,7 +34,7 @@ func TestFilesystemStorage_StoreArtifact(t *testing.T) {
 	bytesArtifact := artifact.RawBytesArtifact{
 		Data: expected,
 	}
-	err := storage.StoreArtifact(bytesArtifact, "hello.out")
+	err := storage.StoreArtifact(&bytesArtifact, "hello.out")
 	if err != nil {
 		t.Fatal(err)
 	}
