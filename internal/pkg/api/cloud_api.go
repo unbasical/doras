@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/artifact"
+	"github.com/unbasical/doras-server/internal/pkg/storage"
 	"github.com/unbasical/doras-server/internal/pkg/utils"
 	"io"
 	"net/http"
@@ -15,7 +16,10 @@ func BuildCloudAPI(r *gin.Engine, config *Config) *gin.Engine {
 	log.Debug("Building cloud API")
 
 	artifactsAPI := r.Group("/api/artifacts")
-	cloudAPI := CloudAPI{config: config}
+	cloudAPI := CloudAPI{
+		artifactStorageProvider: config.ArtifactStorage,
+		aliasProvider:           config.Aliaser,
+	}
 
 	artifactsAPI.PUT("/named/:identifier", func(context *gin.Context) {
 		createNamedArtifact(&cloudAPI, context)
@@ -177,7 +181,8 @@ func createNamedArtifact(shared *CloudAPI, c *gin.Context) {
 //   - replace config with interfaces that provide functionality
 //   - move to separate file
 type CloudAPI struct {
-	config *Config
+	artifactStorageProvider storage.ArtifactStorage
+	aliasProvider           storage.Aliasing
 }
 
 func (cloudAPI *CloudAPI) deleteNamedArtifact(identifier string) error {
@@ -193,7 +198,7 @@ func (cloudAPI *CloudAPI) readAllArtifacts() ([]artifact.Artifact, error) {
 }
 
 func (cloudAPI *CloudAPI) readArtifact(identifier string) (artifact.Artifact, error) {
-	artfct, err := cloudAPI.config.ArtifactStorage.LoadArtifact(identifier)
+	artfct, err := cloudAPI.artifactStorageProvider.LoadArtifact(identifier)
 	if err != nil {
 		log.Errorf("Error loading artifact: %v", err)
 		return nil, DorasArtifactNotFoundError
@@ -203,13 +208,13 @@ func (cloudAPI *CloudAPI) readArtifact(identifier string) (artifact.Artifact, er
 
 func (cloudAPI *CloudAPI) readNamedArtifact(alias string) (artifact.Artifact, error) {
 	// resolve the alias to the real identifier
-	identifier, err := cloudAPI.config.Aliaser.ResolveAlias(alias)
+	identifier, err := cloudAPI.aliasProvider.ResolveAlias(alias)
 	if err != nil {
 		log.Errorf("Error resolving alias: %v", err)
 		return nil, DorasAliasNotFoundError
 	}
 	// now find the artifact using the resolved alias
-	artfct, err := cloudAPI.config.ArtifactStorage.LoadArtifact(identifier)
+	artfct, err := cloudAPI.artifactStorageProvider.LoadArtifact(identifier)
 	if err != nil {
 		log.Errorf("Error loading artifact: %v", err)
 		return nil, DorasArtifactNotFoundError
@@ -226,7 +231,7 @@ func (cloudAPI *CloudAPI) createNamedArtifact(artfct artifact.Artifact, identifi
 	}
 	// add an alias to the previously returned identifier
 	log.Debugf("adding alias from `%s` -> `%s`", alias, identifier)
-	err = cloudAPI.config.Aliaser.AddAlias(alias, identifier)
+	err = cloudAPI.aliasProvider.AddAlias(alias, identifier)
 	if err != nil {
 		// TODO: add better error handling here to cover different error causes
 		log.Errorf("error storing artifact %s", err)
@@ -240,7 +245,7 @@ func (cloudAPI *CloudAPI) createArtifact(artfct artifact.Artifact) (string, erro
 	data := artfct.GetBytes()
 	hash := utils.CalcSha256Hex(data)
 	log.Debugf("storing file at %s", hash)
-	err := cloudAPI.config.ArtifactStorage.StoreArtifact(&artifact.RawBytesArtifact{Data: data}, hash)
+	err := cloudAPI.artifactStorageProvider.StoreArtifact(&artifact.RawBytesArtifact{Data: data}, hash)
 	if err != nil {
 		// TODO: add better error handling here to cover different error causes
 		log.Errorf("error storing artifact %s", err)
