@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -120,13 +121,21 @@ func (edgeAPI *EdgeAPI) createDelta(fromIdentifier string, toIdentifier string, 
 	}
 	from, err := edgeAPI.artifactStorageProvider.LoadArtifact(fromIdentifier)
 	if err != nil {
+		if !errors.Is(err, DorasArtifactNotFoundError) {
+			// TODO: handle this error
+			panic("unhandled error")
+		}
 		log.Error(err.Error())
-		return "", DorasInternalError
+		return "", DorasArtifactNotFoundError
 	}
 	to, err := edgeAPI.artifactStorageProvider.LoadArtifact(toIdentifier)
 	if err != nil {
+		if !errors.Is(err, DorasArtifactNotFoundError) {
+			// TODO: handle this error
+			panic("unhandled error")
+		}
 		log.Error(err.Error())
-		return "", DorasInternalError
+		return "", DorasArtifactNotFoundError
 	}
 	deltaData := diffAlg.CreateDiff(from, to)
 	deltaHash := utils.CalcSha256Hex(deltaData)
@@ -162,7 +171,7 @@ func (edgeAPI *EdgeAPI) readFull(identifier string) (io.Reader, int, error) {
 	deltaData, err := edgeAPI.artifactStorageProvider.LoadArtifact(identifier)
 	if err != nil {
 		log.Error(err.Error())
-		return nil, 0, DorasDeltaNotFoundError
+		return nil, 0, DorasArtifactNotFoundError
 	}
 	reader := deltaData.GetReader()
 	contentLength := deltaData.GetContentLength()
