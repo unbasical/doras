@@ -1,4 +1,4 @@
-POST http://localhost:8080/edge/artifacts
+POST http://localhost:8080/edge/artifacts/delta
 content-type: application/json
 
 {
