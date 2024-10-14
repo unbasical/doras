@@ -5,6 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/aliasing"
 	"github.com/unbasical/doras-server/internal/pkg/api"
+	"github.com/unbasical/doras-server/internal/pkg/auth"
 	"github.com/unbasical/doras-server/internal/pkg/storage"
 )
 
@@ -19,7 +20,8 @@ func (d *Doras) Init(storagePath string) *Doras {
 	d.aliaser = &aliasing.SymlinkAliasing{BasePath: storagePath}
 	config := api.Config{
 		ArtifactStorage: d.storage,
-		Aliaser:         d.aliaser,
+		AliasStorage:    d.aliaser,
+		AuthMiddleware:  auth.AlwaysAuth(),
 	}
 	d.engine = api.BuildApp(&config)
 	return d

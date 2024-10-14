@@ -19,7 +19,7 @@ func BuildCloudAPI(r *gin.Engine, config *Config) *gin.Engine {
 	artifactsAPI := r.Group("/api/artifacts")
 	cloudAPI := CloudAPI{
 		artifactStorageProvider: config.ArtifactStorage,
-		aliasProvider:           config.Aliaser,
+		aliasProvider:           config.AliasStorage,
 	}
 
 	artifactsAPI.PUT("/named/:identifier", func(context *gin.Context) {
@@ -59,7 +59,7 @@ func readAllArtifacts(shared *CloudAPI, c *gin.Context) {
 }
 
 func readNamedArtifact(shared *CloudAPI, c *gin.Context) {
-	// assumption: storage.ArtifactStorage and storage.Aliaser handle path sanitization
+	// assumption: storage.ArtifactStorage and storage.AliasStorage handle path sanitization
 	identifier := c.Param("identifier")
 	artfct, err := shared.readNamedArtifact(identifier)
 	if err != nil {
@@ -89,7 +89,7 @@ func readNamedArtifact(shared *CloudAPI, c *gin.Context) {
 }
 
 func readArtifact(shared *CloudAPI, c *gin.Context) {
-	// assumption: storage.ArtifactStorage and storage.Aliaser handle path sanitization
+	// assumption: storage.ArtifactStorage and storage.AliasStorage handle path sanitization
 	identifier := c.Param("identifier")
 	artfct, err := shared.readArtifact(identifier)
 	if err != nil {
@@ -149,7 +149,7 @@ type CreateNamedArtifactResponse struct {
 
 // createNamedArtifact creates an artifact at this location and set it as the alias.
 func createNamedArtifact(shared *CloudAPI, c *gin.Context) {
-	// assumption: storage.ArtifactStorage and storage.Aliaser handle path sanitization
+	// assumption: storage.ArtifactStorage and storage.AliasStorage handle path sanitization
 	identifier := c.Param("identifier")
 	// rename to avoid confusion
 	alias := identifier

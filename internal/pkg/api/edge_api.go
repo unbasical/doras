@@ -22,7 +22,7 @@ func BuildEdgeAPI(r *gin.Engine, config *Config) *gin.Engine {
 	log.Debug("Building edge API")
 	shared := &EdgeAPI{
 		artifactStorageProvider: config.ArtifactStorage,
-		aliasProvider:           config.Aliaser,
+		aliasProvider:           config.AliasStorage,
 	}
 	edgeAPI := r.Group("/edge/artifacts")
 
