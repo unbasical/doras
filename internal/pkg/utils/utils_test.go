@@ -2,7 +2,7 @@ package utils
 
 import "testing"
 
-func TestCalcSha256Hex(t *testing.T) {
+func Test_CalcSha256Hex(t *testing.T) {
 
 	tests := []struct {
 		name  string

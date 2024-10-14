@@ -1,12 +1,12 @@
-package api
+package error
 
 import "errors"
 
-type cloudAPIError struct {
-	Error cloudAPIErrorInner `json:"error"`
+type CloudAPIError struct {
+	Error CloudAPIErrorInner `json:"error"`
 }
 
-type cloudAPIErrorInner struct {
+type CloudAPIErrorInner struct {
 	Code    error  `json:"code"`
 	Message string `json:"message,omitempty"`
 }

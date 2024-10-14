@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bytes"
+	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/artifact"
 	"os"
 	"path"
@@ -10,6 +11,7 @@ import (
 
 func TestFilesystemStorage_LoadArtifact(t *testing.T) {
 	tempDir := t.TempDir()
+	log.Debug(tempDir)
 	storage := FilesystemStorage{tempDir}
 	filePath := path.Join(tempDir, "hello.in")
 	expected := []byte("hello world")

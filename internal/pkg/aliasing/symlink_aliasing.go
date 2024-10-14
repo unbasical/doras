@@ -3,6 +3,7 @@ package aliasing
 import (
 	"errors"
 	log "github.com/sirupsen/logrus"
+	error2 "github.com/unbasical/doras-server/internal/pkg/error"
 	"github.com/unbasical/doras-server/internal/pkg/utils"
 	"os"
 	"path/filepath"
@@ -39,7 +40,7 @@ func (aliaser *SymlinkAliasing) AddAlias(alias string, target string) error {
 		return err
 	}
 	if _, err := os.Stat(aliasPathClean); err == nil {
-		return errors.New("symlink already exists")
+		return error2.DorasAliasExistsError
 	} else if errors.Is(err, os.ErrNotExist) {
 		log.Debugf("creating symlink from %s to %s", alias, target)
 		// do not use the base path for oldname because the bath is relative to the symlink

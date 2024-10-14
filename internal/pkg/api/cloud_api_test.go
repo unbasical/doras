@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/unbasical/doras-server/internal/pkg/artifact"
 	"github.com/unbasical/doras-server/internal/pkg/delta"
+	dorasErrors "github.com/unbasical/doras-server/internal/pkg/error"
 	"github.com/unbasical/doras-server/internal/pkg/utils"
 	"testing"
 )
@@ -17,7 +18,7 @@ func (a *ArtifactStorageStub) LoadArtifact(identifier string) (artifact.Artifact
 	if a.StoredArtifact != nil {
 		return a.StoredArtifact, nil
 	}
-	return nil, DorasArtifactNotFoundError
+	return nil, dorasErrors.DorasArtifactNotFoundError
 }
 
 func (a *ArtifactStorageStub) StoreArtifact(artifact artifact.Artifact, identifier string) error {
@@ -39,7 +40,7 @@ type AliasStub struct {
 
 func (a *AliasStub) AddAlias(alias string, identifier string) error {
 	if a.Key != alias {
-		return DorasAliasExistsError
+		return dorasErrors.DorasAliasExistsError
 	}
 	a.Value = identifier
 	a.Key = alias
@@ -50,7 +51,7 @@ func (a *AliasStub) ResolveAlias(alias string) (string, error) {
 	if alias == a.Key {
 		return a.Value, nil
 	}
-	return "", DorasAliasNotFoundError
+	return "", dorasErrors.DorasAliasNotFoundError
 }
 
 func Test_createArtifact(t *testing.T) {
@@ -111,7 +112,7 @@ func Test_createNamedArtifactNameCollision(t *testing.T) {
 	if err == nil {
 		t.Fatalf("did not get an error when it was expected")
 	}
-	if !errors.Is(err, DorasAliasExistsError) {
+	if !errors.Is(err, dorasErrors.DorasAliasExistsError) {
 		t.Fatalf("did not get the appropriate error: %s", err)
 	}
 	if len(stor.StoredArtifact.GetBytes()) != 0 {
@@ -146,7 +147,7 @@ func Test_readArtifactArtifactNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error, got %s", artfct)
 	}
-	if !errors.Is(err, DorasArtifactNotFoundError) {
+	if !errors.Is(err, dorasErrors.DorasArtifactNotFoundError) {
 		t.Fatalf("did not get the appropriate error: %s", err)
 	}
 
@@ -186,7 +187,7 @@ func Test_readNamedArtifactAliasNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error, got %s", artfct)
 	}
-	if !errors.Is(err, DorasAliasNotFoundError) {
+	if !errors.Is(err, dorasErrors.DorasAliasNotFoundError) {
 		t.Fatalf("did not get the appropriate error: %s", err)
 	}
 
