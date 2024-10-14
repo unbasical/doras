@@ -7,6 +7,7 @@ import (
 	"github.com/unbasical/doras-server/internal/pkg/delta"
 	"github.com/unbasical/doras-server/internal/pkg/differ"
 	"github.com/unbasical/doras-server/internal/pkg/utils"
+	"io"
 	"net/http"
 )
 
@@ -43,6 +44,43 @@ type createDeltaResponseBody struct {
 	Identifier string `json:"identifier"`
 }
 
+func (edgeAPI *EdgeAPI) createDelta(fromIdentifier string, toIdentifier string, algorithm string) (string, error) {
+	log.Debug("handling delta creation request")
+
+	var (
+		diffAlg differ.Differ
+		fileExt string
+	)
+
+	switch algorithm {
+	case "bsdiff":
+		diffAlg, fileExt = differ.Bsdiff{}, ".bsdiff"
+	default:
+		return "", fmt.Errorf("unsupported diffing algorithm %s", algorithm)
+	}
+	from, err := edgeAPI.config.ArtifactStorage.LoadArtifact(fromIdentifier)
+	if err != nil {
+		log.Error(err.Error())
+		return "", DorasInternalError
+	}
+	to, err := edgeAPI.config.ArtifactStorage.LoadArtifact(toIdentifier)
+	if err != nil {
+		log.Error(err.Error())
+		return "", DorasInternalError
+	}
+	deltaData := diffAlg.CreateDiff(from, to)
+	deltaHash := utils.CalcSha256Hex(deltaData)
+	err = edgeAPI.config.ArtifactStorage.StoreDelta(
+		&delta.RawDiff{Data: deltaData},
+		deltaHash+fileExt,
+	)
+	if err != nil {
+		log.Error(err.Error())
+		return "", DorasInternalError
+	}
+	return deltaHash, nil
+}
+
 func createDelta(shared *EdgeAPI, c *gin.Context) {
 	log.Debug("handling delta creation request")
 	var body createDeltaRequestBody
@@ -56,76 +94,72 @@ func createDelta(shared *EdgeAPI, c *gin.Context) {
 		}})
 		return
 	}
-	var (
-		diffAlg differ.Differ
-		fileExt string
-	)
+	deltaIdentifier, err := shared.createDelta(body.IdentifierFrom, body.IdentifierTo, body.Algorithm)
+	if err != nil {
+		// TODO: introduce better error handling, e.g. artifacts do not exist, etc.
+		log.Error(err.Error())
+		c.JSON(http.StatusInternalServerError, cloudAPIError{Error: cloudAPIErrorInner{Code: DorasInternalError}})
+	}
 
-	switch body.Algorithm {
-	case "bsdiff":
-		diffAlg, fileExt = differ.Bsdiff{}, ".bsdiff"
-	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{
-			"code":        DorasUnsupportedDiffingAlgorithmError,
-			"description": fmt.Sprintf("unsupported diffing algorithm %s", body.Algorithm),
-		}})
-		return
-	}
-	from, err := shared.config.ArtifactStorage.LoadArtifact(body.IdentifierFrom)
-	if err != nil {
-		log.Debug(err.Error())
-		c.JSON(http.StatusInternalServerError, cloudAPIError{Error: cloudAPIErrorInner{Code: DorasInternalError}})
-		return
-	}
-	to, err := shared.config.ArtifactStorage.LoadArtifact(body.IdentifierTo)
-	if err != nil {
-		log.Debug(err.Error())
-		c.JSON(http.StatusInternalServerError, cloudAPIError{Error: cloudAPIErrorInner{Code: DorasInternalError}})
-		return
-	}
-	deltaData := diffAlg.CreateDiff(from, to)
-	deltaHash := utils.CalcSha256Hex(deltaData)
-	err = shared.config.ArtifactStorage.StoreDelta(
-		&delta.RawDiff{Data: deltaData},
-		deltaHash+fileExt,
-	)
-	if err != nil {
-		log.Debug(err.Error())
-		c.JSON(http.StatusInternalServerError, cloudAPIError{Error: cloudAPIErrorInner{Code: DorasInternalError}})
-		return
-	}
 	c.JSON(http.StatusOK, gin.H{
-		"success": createDeltaResponseBody{Identifier: deltaHash},
+		"success": createDeltaResponseBody{Identifier: deltaIdentifier},
 	})
 }
 
-func readDelta(shared *EdgeAPI, c *gin.Context) {
-	// TODO: handle case where delta is not yet created
-	identifier := c.Param("identifier")
-	algorithm := c.Query("algorithm")
-
+func (edgeAPI *EdgeAPI) readDelta(identifier string, algorithm string) (io.Reader, int, error) {
 	var fileExt string
 	switch algorithm {
 	case "bsdiff":
 	default:
 		fileExt = ".bsdiff"
 	}
-	deltaData, err := shared.config.ArtifactStorage.LoadDelta(identifier + fileExt)
+	deltaData, err := edgeAPI.config.ArtifactStorage.LoadDelta(identifier + fileExt)
 	if err != nil {
-		log.Debug(err.Error())
-		c.JSON(http.StatusNotFound, cloudAPIError{Error: cloudAPIErrorInner{Code: DorasDeltaNotFoundError}})
-		return
+		log.Error(err.Error())
+		return nil, 0, DorasDeltaNotFoundError
 	}
 	reader := deltaData.GetReader()
 	contentLength := deltaData.GetContentLen()
-	contentType := "application/octet-stream"
+	return reader, contentLength, nil
+}
+
+func readDelta(shared *EdgeAPI, c *gin.Context) {
+	// TODO: handle case where delta is not yet created
+	identifier := c.Param("identifier")
+	algorithm := c.Query("algorithm")
+	reader, contentLength, err := shared.readDelta(identifier, algorithm)
+	if err != nil {
+		return
+	}
 
 	// TODO: this should be sanitized or it might allow injecting stuff into the header
 	extraHeaders := map[string]string{
 		"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, identifier),
 	}
-	c.DataFromReader(http.StatusOK, int64(contentLength), contentType, reader, extraHeaders)
+	c.DataFromReader(http.StatusOK, int64(contentLength), "application/octet-stream", reader, extraHeaders)
 }
+
+func (edgeAPI *EdgeAPI) readFull(identifier string) (io.Reader, int, error) {
+
+	deltaData, err := edgeAPI.config.ArtifactStorage.LoadArtifact(identifier)
+	if err != nil {
+		log.Error(err.Error())
+		return nil, 0, DorasDeltaNotFoundError
+	}
+	reader := deltaData.GetReader()
+	contentLength := deltaData.GetContentLength()
+	return reader, contentLength, nil
+}
+
 func readFull(shared *EdgeAPI, c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, "not implemented")
+	identifier := c.Param("identifier")
+	reader, contentLength, err := shared.readFull(identifier)
+	if err != nil {
+		return
+	}
+	// TODO: this should be sanitized or it might allow injecting stuff into the header
+	extraHeaders := map[string]string{
+		"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, identifier),
+	}
+	c.DataFromReader(http.StatusOK, int64(contentLength), "application/octet-stream", reader, extraHeaders)
 }
