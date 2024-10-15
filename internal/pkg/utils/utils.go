@@ -17,24 +17,14 @@ func CalcSha256Hex(b []byte) string {
 func VerifyPath(path, trustedRoot string, mustExist bool) (string, error) {
 	log.Debugf("verifying path `%s` using `%s` as trustedRoot", path, trustedRoot)
 	c := filepath.Clean(path)
-	log.Debug("cleaned path: " + c)
-	r, err := filepath.EvalSymlinks(c)
-	if err != nil && !mustExist {
-		// we cannot evaluate the symlink if the file does not exist
-		r = c
-	} else if err != nil {
-		log.Debug("Error " + err.Error())
-		return c, errors.New("unsafe or invalid path specified")
-	}
-	log.Debugf("EvalSymlinks() == %s", r)
-	err = inTrustedRoot(r, trustedRoot)
+	err := inTrustedRoot(c, trustedRoot)
 	log.Debug(err)
 	if err != nil {
-		log.Debugf("path `%s` not in trusted root: %s", r, err)
-		return r, errors.New("unsafe or invalid path specified")
+		log.Debugf("path `%s` not in trusted root: %s", c, err)
+		return c, errors.New("unsafe or invalid path specified: " + err.Error())
 	} else {
-		log.Debugf("provided path `%s` passed checks", r)
-		return r, nil
+		log.Debugf("provided path `%s` passed checks", c)
+		return c, nil
 	}
 }
 func inTrustedRoot(path, trustedRoot string) error {

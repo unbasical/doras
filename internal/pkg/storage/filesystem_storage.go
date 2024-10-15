@@ -67,7 +67,6 @@ func (s *FilesystemStorage) loadFile(fPath string) ([]byte, error) {
 
 func (s *FilesystemStorage) storeFile(r io.Reader, fPath string) error {
 	fPathJoined := filepath.Join(s.BasePath, fPath)
-	log.Debugf("joined path is `%s`", fPathJoined)
 	fPathClean, err := utils.VerifyPath(fPathJoined, s.BasePath, false)
 	if err != nil {
 		log.Errorf("sanitization failure: %s", err)

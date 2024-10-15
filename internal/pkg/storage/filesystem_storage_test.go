@@ -48,3 +48,22 @@ func TestFilesystemStorage_StoreArtifact(t *testing.T) {
 		t.Fatalf("expected '%s' but got %s", string(expected), string(data))
 	}
 }
+
+func TestFilesystemStorage_LoadDelta(t *testing.T) {
+	tempDir := t.TempDir()
+	storage := FilesystemStorage{tempDir}
+	filePath := path.Join(tempDir, "hello.in")
+	expected := []byte("hello world")
+	err := os.WriteFile(filePath, expected, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := storage.LoadDelta("hello.in")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _ := d.GetBytes()
+	if !bytes.Equal(got, expected) {
+		t.Fatalf("expected '%s' but got '%s'", string(expected), string(got))
+	}
+}
