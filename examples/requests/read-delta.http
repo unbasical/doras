@@ -1,0 +1,6 @@
+GET http://localhost:8080/edge/artifacts/delta/13a6b76414432794e67afc3c6dd2df3d32f344d846a01fe7eee0cb2becbb3b5b
+content-type: application/json
+
+{
+  "algorithm": "bsdiff"
+}
