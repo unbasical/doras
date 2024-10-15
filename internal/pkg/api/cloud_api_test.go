@@ -3,33 +3,38 @@ package api
 import (
 	"bytes"
 	"errors"
+	"testing"
+
 	"github.com/unbasical/doras-server/internal/pkg/artifact"
 	"github.com/unbasical/doras-server/internal/pkg/delta"
 	dorasErrors "github.com/unbasical/doras-server/internal/pkg/error"
 	"github.com/unbasical/doras-server/internal/pkg/utils"
-	"testing"
 )
 
 type ArtifactStorageStub struct {
 	StoredArtifact artifact.Artifact
 }
 
+//goland:noinspection GoUnusedParameter
 func (stor *ArtifactStorageStub) LoadArtifact(identifier string) (artifact.Artifact, error) {
 	if stor.StoredArtifact != nil {
 		return stor.StoredArtifact, nil
 	}
-	return nil, dorasErrors.DorasArtifactNotFoundError
+	return nil, dorasErrors.ErrArtifactNotFound
 }
 
+//goland:noinspection GoUnusedParameter
 func (stor *ArtifactStorageStub) StoreArtifact(a artifact.Artifact, identifier string) error {
 	stor.StoredArtifact = a
 	return nil
 }
+
+//goland:noinspection GoUnusedParameter,GoUnusedParameter
 func (stor *ArtifactStorageStub) StoreDelta(d delta.ArtifactDelta, identifier string) error {
 	panic("not implemented")
 }
 
-func (stor *ArtifactStorageStub) LoadDelta(identifier string) (delta.ArtifactDelta, error) {
+func (stor *ArtifactStorageStub) LoadDelta(string) (delta.ArtifactDelta, error) {
 	panic("not implemented")
 }
 
@@ -40,7 +45,7 @@ type AliasStub struct {
 
 func (a *AliasStub) AddAlias(alias, identifier string) error {
 	if a.Key != alias {
-		return dorasErrors.DorasAliasExistsError
+		return dorasErrors.ErrAliasExists
 	}
 	a.Value = identifier
 	a.Key = alias
@@ -51,7 +56,7 @@ func (a *AliasStub) ResolveAlias(alias string) (string, error) {
 	if alias == a.Key {
 		return a.Value, nil
 	}
-	return "", dorasErrors.DorasAliasNotFoundError
+	return "", dorasErrors.ErrAliasNotFound
 }
 
 func Test_createArtifact(t *testing.T) {
@@ -79,7 +84,7 @@ func Test_createNamedArtifact(t *testing.T) {
 		artifactStorageProvider: &stor,
 		aliasProvider:           &aliaser,
 	}
-	alias := "bar"
+	alias := "foo.bar"
 	artfct := artifact.RawBytesArtifact{Data: []byte("foo")}
 	identifier, err := cloudAPI.createNamedArtifact(&artfct, alias)
 	if err != nil {
@@ -112,7 +117,7 @@ func Test_createNamedArtifactNameCollision(t *testing.T) {
 	if err == nil {
 		t.Fatalf("did not get an error when it was expected")
 	}
-	if !errors.Is(err, dorasErrors.DorasAliasExistsError) {
+	if !errors.Is(err, dorasErrors.ErrAliasExists) {
 		t.Fatalf("did not get the appropriate error: %s", err)
 	}
 	if len(stor.StoredArtifact.GetBytes()) != 0 {
@@ -147,7 +152,7 @@ func Test_readArtifactArtifactNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error, got %s", artfct)
 	}
-	if !errors.Is(err, dorasErrors.DorasArtifactNotFoundError) {
+	if !errors.Is(err, dorasErrors.ErrArtifactNotFound) {
 		t.Fatalf("did not get the appropriate error: %s", err)
 	}
 }
@@ -187,7 +192,7 @@ func Test_readNamedArtifactAliasNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error, got %s", artfct)
 	}
-	if !errors.Is(err, dorasErrors.DorasAliasNotFoundError) {
+	if !errors.Is(err, dorasErrors.ErrAliasNotFound) {
 		t.Fatalf("did not get the appropriate error: %s", err)
 	}
 }

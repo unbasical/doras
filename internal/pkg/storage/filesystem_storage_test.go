@@ -2,11 +2,12 @@ package storage
 
 import (
 	"bytes"
-	log "github.com/sirupsen/logrus"
-	"github.com/unbasical/doras-server/internal/pkg/artifact"
 	"os"
 	"path"
 	"testing"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/unbasical/doras-server/internal/pkg/artifact"
 )
 
 func TestFilesystemStorage_LoadArtifact(t *testing.T) {

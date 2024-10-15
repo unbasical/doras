@@ -2,13 +2,14 @@ package storage
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/artifact"
 	"github.com/unbasical/doras-server/internal/pkg/delta"
 	"github.com/unbasical/doras-server/internal/pkg/utils"
-	"io"
-	"os"
-	"path/filepath"
 )
 
 // FilesystemStorage implements the ArtifactStorage interface.
@@ -51,7 +52,7 @@ func (s *FilesystemStorage) LoadDelta(identifier string) (delta.ArtifactDelta, e
 
 func (s *FilesystemStorage) loadFile(fPath string) ([]byte, error) {
 	fPathJoined := filepath.Join(s.BasePath, fPath)
-	fPathClean, err := utils.VerifyPath(fPathJoined, s.BasePath, true)
+	fPathClean, err := utils.VerifyPath(fPathJoined, s.BasePath)
 	if err != nil {
 		log.Errorf("sanitization failure: %s", err)
 		return nil, fmt.Errorf("could not verify provided path `%s` reason: %w", fPath, err)
@@ -67,7 +68,7 @@ func (s *FilesystemStorage) loadFile(fPath string) ([]byte, error) {
 
 func (s *FilesystemStorage) storeFile(r io.Reader, fPath string) error {
 	fPathJoined := filepath.Join(s.BasePath, fPath)
-	fPathClean, err := utils.VerifyPath(fPathJoined, s.BasePath, false)
+	fPathClean, err := utils.VerifyPath(fPathJoined, s.BasePath)
 	if err != nil {
 		log.Errorf("sanitization failure: %s", err)
 		return fmt.Errorf("could not verify provided path `%s` reason: %w", fPath, err)

@@ -3,6 +3,9 @@ package api
 import (
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/aliasing"
@@ -10,8 +13,6 @@ import (
 	dorasErrors "github.com/unbasical/doras-server/internal/pkg/error"
 	"github.com/unbasical/doras-server/internal/pkg/storage"
 	"github.com/unbasical/doras-server/internal/pkg/utils"
-	"io"
-	"net/http"
 )
 
 func BuildCloudAPI(r *gin.Engine, config *Config) *gin.Engine {
@@ -47,14 +48,17 @@ func BuildCloudAPI(r *gin.Engine, config *Config) *gin.Engine {
 	return r
 }
 
+//nolint:unparam // not yet implemented
 func deleteNamedArtifact(shared *CloudAPI, c *gin.Context) {
 	c.JSON(http.StatusNotImplemented, "not implemented")
 }
 
+//nolint:unparam // not yet implemented
 func deleteArtifact(shared *CloudAPI, c *gin.Context) {
 	c.JSON(http.StatusNotImplemented, "not implemented")
 }
 
+//nolint:unparam // not yet implemented
 func readAllArtifacts(shared *CloudAPI, c *gin.Context) {
 	c.JSON(http.StatusNotImplemented, "not implemented")
 }
@@ -66,10 +70,10 @@ func readNamedArtifact(shared *CloudAPI, c *gin.Context) {
 	if err != nil {
 		log.Error(err)
 		var inner error
-		if errors.Is(err, dorasErrors.DorasArtifactNotFoundError) || errors.Is(err, dorasErrors.DorasAliasNotFoundError) {
+		if errors.Is(err, dorasErrors.ErrArtifactNotFound) || errors.Is(err, dorasErrors.ErrAliasNotFound) {
 			inner = err
 		} else {
-			inner = dorasErrors.DorasInternalError
+			inner = dorasErrors.ErrInternal
 		}
 		c.JSON(http.StatusNotFound, dorasErrors.CloudAPIError{Error: dorasErrors.CloudAPIErrorInner{
 			Code:    inner,
@@ -95,10 +99,10 @@ func readArtifact(shared *CloudAPI, c *gin.Context) {
 	artfct, err := shared.readArtifact(identifier)
 	if err != nil {
 		log.Errorf("Error loading artifact: %v", err)
-		if errors.Is(err, dorasErrors.DorasArtifactNotFoundError) {
-			c.JSON(http.StatusNotFound, dorasErrors.CloudAPIError{Error: dorasErrors.CloudAPIErrorInner{Code: dorasErrors.DorasArtifactNotFoundError}})
+		if errors.Is(err, dorasErrors.ErrArtifactNotFound) {
+			c.JSON(http.StatusNotFound, dorasErrors.CloudAPIError{Error: dorasErrors.CloudAPIErrorInner{Code: dorasErrors.ErrArtifactNotFound}})
 		} else {
-			c.JSON(http.StatusInternalServerError, dorasErrors.CloudAPIError{Error: dorasErrors.CloudAPIErrorInner{Code: dorasErrors.DorasInternalError}})
+			c.JSON(http.StatusInternalServerError, dorasErrors.CloudAPIError{Error: dorasErrors.CloudAPIErrorInner{Code: dorasErrors.ErrInternal}})
 		}
 		return
 	}
@@ -129,7 +133,7 @@ func createArtifact(shared *CloudAPI, c *gin.Context) {
 		log.Errorf("Failed to extract artifact %s", err)
 		c.JSON(http.StatusBadRequest, dorasErrors.CloudAPIError{
 			Error: dorasErrors.CloudAPIErrorInner{
-				Code:    dorasErrors.DorasArtifactNotProvidedError,
+				Code:    dorasErrors.ErrArtifactNotProvided,
 				Message: "artifact not provided in request body",
 			},
 		})
@@ -138,7 +142,7 @@ func createArtifact(shared *CloudAPI, c *gin.Context) {
 	identifier, err := shared.createArtifact(&artifact.RawBytesArtifact{Data: data})
 	if err != nil {
 		log.Errorf("Failed to create artifact %s", err)
-		c.JSON(http.StatusInternalServerError, dorasErrors.CloudAPIError{Error: dorasErrors.CloudAPIErrorInner{Code: dorasErrors.DorasInternalError}})
+		c.JSON(http.StatusInternalServerError, dorasErrors.CloudAPIError{Error: dorasErrors.CloudAPIErrorInner{Code: dorasErrors.ErrInternal}})
 	}
 	c.JSON(http.StatusCreated, gin.H{"success": CreateArtifactResponse{Identifier: identifier}})
 }
@@ -159,7 +163,7 @@ func createNamedArtifact(shared *CloudAPI, c *gin.Context) {
 		log.Errorf("Failed to extract artifact %s", err)
 		c.JSON(http.StatusBadRequest, dorasErrors.CloudAPIError{
 			Error: dorasErrors.CloudAPIErrorInner{
-				Code:    dorasErrors.DorasArtifactNotProvidedError,
+				Code:    dorasErrors.ErrArtifactNotProvided,
 				Message: "no artifact provided in request body",
 			},
 		})
@@ -167,7 +171,7 @@ func createNamedArtifact(shared *CloudAPI, c *gin.Context) {
 	}
 	identifier, err = shared.createNamedArtifact(&artifact.RawBytesArtifact{Data: data}, alias)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dorasErrors.CloudAPIError{Error: dorasErrors.CloudAPIErrorInner{Code: dorasErrors.DorasInternalError}})
+		c.JSON(http.StatusInternalServerError, dorasErrors.CloudAPIError{Error: dorasErrors.CloudAPIErrorInner{Code: dorasErrors.ErrInternal}})
 		return
 	}
 
@@ -187,23 +191,11 @@ type CloudAPI struct {
 	aliasProvider           aliasing.Aliasing
 }
 
-func (cloudAPI *CloudAPI) deleteNamedArtifact(identifier string) error {
-	panic("not implemented")
-}
-
-func (cloudAPI *CloudAPI) deleteArtifact(identifier string) error {
-	panic("not implemented")
-}
-
-func (cloudAPI *CloudAPI) readAllArtifacts() ([]artifact.Artifact, error) {
-	panic("not implemented")
-}
-
 func (cloudAPI *CloudAPI) readArtifact(identifier string) (artifact.Artifact, error) {
 	artfct, err := cloudAPI.artifactStorageProvider.LoadArtifact(identifier)
 	if err != nil {
 		log.Errorf("Error loading artifact: %v", err)
-		return nil, dorasErrors.DorasArtifactNotFoundError
+		return nil, dorasErrors.ErrArtifactNotFound
 	}
 	return artfct, nil
 }
@@ -213,13 +205,13 @@ func (cloudAPI *CloudAPI) readNamedArtifact(alias string) (artifact.Artifact, er
 	identifier, err := cloudAPI.aliasProvider.ResolveAlias(alias)
 	if err != nil {
 		log.Errorf("Error resolving alias: %v", err)
-		return nil, dorasErrors.DorasAliasNotFoundError
+		return nil, dorasErrors.ErrAliasNotFound
 	}
 	// now find the artifact using the resolved alias
 	artfct, err := cloudAPI.artifactStorageProvider.LoadArtifact(identifier)
 	if err != nil {
 		log.Errorf("Error loading artifact: %v", err)
-		return nil, dorasErrors.DorasArtifactNotFoundError
+		return nil, dorasErrors.ErrArtifactNotFound
 	}
 	return artfct, nil
 }
@@ -237,11 +229,11 @@ func (cloudAPI *CloudAPI) createNamedArtifact(artfct artifact.Artifact, identifi
 	err = cloudAPI.aliasProvider.AddAlias(alias, identifier)
 	if err != nil {
 		// TODO: add better error handling here to cover different error causes
-		if err != dorasErrors.DorasAliasExistsError {
+		if !errors.Is(err, dorasErrors.ErrAliasExists) {
 			log.Errorf("unknown error storing artifact %s", err)
-			return "", dorasErrors.DorasInternalError
+			return "", dorasErrors.ErrInternal
 		}
-		return "", dorasErrors.DorasAliasExistsError
+		return "", dorasErrors.ErrAliasExists
 	}
 	return identifier, nil
 }
@@ -255,7 +247,7 @@ func (cloudAPI *CloudAPI) createArtifact(artfct artifact.Artifact) (string, erro
 	if err != nil {
 		// TODO: add better error handling here to cover different error causes
 		log.Errorf("error storing artifact %s", err)
-		return "", dorasErrors.DorasInternalError
+		return "", dorasErrors.ErrInternal
 	}
 	// add an alias to the previously stored artifact
 	return hash, nil

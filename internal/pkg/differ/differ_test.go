@@ -1,8 +1,9 @@
 package differ
 
 import (
-	"github.com/unbasical/doras-server/internal/pkg/artifact"
 	"testing"
+
+	"github.com/unbasical/doras-server/internal/pkg/artifact"
 )
 
 func TestNaiveDiffer(t *testing.T) {

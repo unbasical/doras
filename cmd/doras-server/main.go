@@ -1,9 +1,10 @@
 package main
 
 import (
+	"os"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/core"
-	"os"
 )
 
 func main() {

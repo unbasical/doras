@@ -1,13 +1,14 @@
 package main
 
 import (
+	"os"
+	"strings"
+
 	"github.com/alecthomas/kingpin/v2"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/delta"
 	"github.com/unbasical/doras-server/internal/pkg/differ"
 	"github.com/unbasical/doras-server/internal/pkg/storage"
-	"os"
-	"strings"
 )
 
 func main() {

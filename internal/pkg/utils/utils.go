@@ -4,8 +4,9 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"path/filepath"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func CalcSha256Hex(b []byte) string {
@@ -14,7 +15,7 @@ func CalcSha256Hex(b []byte) string {
 }
 
 // VerifyPath adapted from: https://www.stackhawk.com/blog/golang-path-traversal-guide-examples-and-prevention/
-func VerifyPath(path, trustedRoot string, mustExist bool) (string, error) {
+func VerifyPath(path, trustedRoot string) (string, error) {
 	log.Debugf("verifying path `%s` using `%s` as trustedRoot", path, trustedRoot)
 	c := filepath.Clean(path)
 	err := inTrustedRoot(c, trustedRoot)

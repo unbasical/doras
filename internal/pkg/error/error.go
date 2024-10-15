@@ -11,13 +11,14 @@ type CloudAPIErrorInner struct {
 	Message string `json:"message,omitempty"`
 }
 
+//nolint:golint,gochecknoglobals // errors.New() is not const
 var (
-	DorasAliasNotFoundError               = errors.New("AliasNotFound")
-	DorasDeltaNotFoundError               = errors.New("DeltaNotFound")
-	DorasArtifactNotFoundError            = errors.New("ArtifactNotFound")
-	DorasAliasExistsError                 = errors.New("AliasExists")
-	DorasArtifactNotProvidedError         = errors.New("ArtifactNotProvided")
-	DorasInternalError                    = errors.New("Internal")
-	DorasMissingRequestBodyError          = errors.New("MissingRequestBody")
-	DorasUnsupportedDiffingAlgorithmError = errors.New("UnsupportedDiffingAlgorithm")
+	ErrAliasNotFound               = errors.New("AliasNotFound")
+	ErrDeltaNotFound               = errors.New("DeltaNotFound")
+	ErrArtifactNotFound            = errors.New("ArtifactNotFound")
+	ErrAliasExists                 = errors.New("AliasExists")
+	ErrArtifactNotProvided         = errors.New("ArtifactNotProvided")
+	ErrInternal                    = errors.New("Internal")
+	ErrMissingRequestBody          = errors.New("MissingRequestBody")
+	ErrUnsupportedDiffingAlgorithm = errors.New("UnsupportedDiffingAlgorithm")
 )

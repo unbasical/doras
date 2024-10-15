@@ -3,6 +3,9 @@ package api
 import (
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/aliasing"
@@ -11,8 +14,6 @@ import (
 	error2 "github.com/unbasical/doras-server/internal/pkg/error"
 	"github.com/unbasical/doras-server/internal/pkg/storage"
 	"github.com/unbasical/doras-server/internal/pkg/utils"
-	"io"
-	"net/http"
 )
 
 type EdgeAPI struct {
@@ -60,7 +61,7 @@ func createDelta(shared *EdgeAPI, c *gin.Context) {
 	if err != nil {
 		log.Error(err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{
-			"code":        error2.DorasMissingRequestBodyError,
+			"code":        error2.ErrMissingRequestBody,
 			"description": "missing request body",
 		}})
 		return
@@ -69,7 +70,7 @@ func createDelta(shared *EdgeAPI, c *gin.Context) {
 	if err != nil {
 		// TODO: introduce better error handling, e.g. artifacts do not exist, etc.
 		log.Error(err.Error())
-		c.JSON(http.StatusInternalServerError, error2.CloudAPIError{Error: error2.CloudAPIErrorInner{Code: error2.DorasInternalError}})
+		c.JSON(http.StatusInternalServerError, error2.CloudAPIError{Error: error2.CloudAPIErrorInner{Code: error2.ErrInternal}})
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -122,21 +123,21 @@ func (edgeAPI *EdgeAPI) createDelta(fromIdentifier, toIdentifier, algorithm stri
 	}
 	from, err := edgeAPI.artifactStorageProvider.LoadArtifact(fromIdentifier)
 	if err != nil {
-		if !errors.Is(err, error2.DorasArtifactNotFoundError) {
+		if !errors.Is(err, error2.ErrArtifactNotFound) {
 			// TODO: handle this error
 			panic("unhandled error")
 		}
 		log.Error(err.Error())
-		return "", error2.DorasArtifactNotFoundError
+		return "", error2.ErrArtifactNotFound
 	}
 	to, err := edgeAPI.artifactStorageProvider.LoadArtifact(toIdentifier)
 	if err != nil {
-		if !errors.Is(err, error2.DorasArtifactNotFoundError) {
+		if !errors.Is(err, error2.ErrArtifactNotFound) {
 			// TODO: handle this error
 			panic("unhandled error")
 		}
 		log.Error(err.Error())
-		return "", error2.DorasArtifactNotFoundError
+		return "", error2.ErrArtifactNotFound
 	}
 	deltaData := diffAlg.CreateDiff(from, to)
 	deltaHash := utils.CalcSha256Hex(deltaData)
@@ -146,7 +147,7 @@ func (edgeAPI *EdgeAPI) createDelta(fromIdentifier, toIdentifier, algorithm stri
 	)
 	if err != nil {
 		log.Error(err.Error())
-		return "", error2.DorasInternalError
+		return "", error2.ErrInternal
 	}
 	return deltaHash, nil
 }
@@ -161,7 +162,7 @@ func (edgeAPI *EdgeAPI) readDelta(identifier, algorithm string) (io.Reader, int,
 	deltaData, err := edgeAPI.artifactStorageProvider.LoadDelta(identifier + fileExt)
 	if err != nil {
 		log.Error(err.Error())
-		return nil, 0, error2.DorasDeltaNotFoundError
+		return nil, 0, error2.ErrDeltaNotFound
 	}
 	reader := deltaData.GetReader()
 	contentLength := deltaData.GetContentLen()
@@ -172,7 +173,7 @@ func (edgeAPI *EdgeAPI) readFull(identifier string) (io.Reader, int, error) {
 	deltaData, err := edgeAPI.artifactStorageProvider.LoadArtifact(identifier)
 	if err != nil {
 		log.Error(err.Error())
-		return nil, 0, error2.DorasArtifactNotFoundError
+		return nil, 0, error2.ErrArtifactNotFound
 	}
 	reader := deltaData.GetReader()
 	contentLength := deltaData.GetContentLength()

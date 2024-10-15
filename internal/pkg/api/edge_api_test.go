@@ -3,12 +3,13 @@ package api
 import (
 	"bytes"
 	"errors"
+	"testing"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/artifact"
 	"github.com/unbasical/doras-server/internal/pkg/delta"
 	"github.com/unbasical/doras-server/internal/pkg/differ"
 	error2 "github.com/unbasical/doras-server/internal/pkg/error"
-	"testing"
 )
 
 type MapArtifactStorage struct {
@@ -19,7 +20,7 @@ type MapArtifactStorage struct {
 func (store *MapArtifactStorage) LoadArtifact(identifier string) (artifact.Artifact, error) {
 	artfct, ok := store.Artifacts[identifier]
 	if !ok {
-		return nil, error2.DorasArtifactNotFoundError
+		return nil, error2.ErrArtifactNotFound
 	}
 	return artfct, nil
 }
@@ -38,7 +39,7 @@ func (store *MapArtifactStorage) StoreDelta(d delta.ArtifactDelta, identifier st
 func (store *MapArtifactStorage) LoadDelta(identifier string) (delta.ArtifactDelta, error) {
 	dt, ok := store.Deltas[identifier]
 	if !ok {
-		return nil, error2.DorasDeltaNotFoundError
+		return nil, error2.ErrDeltaNotFound
 	}
 	return dt, nil
 }
@@ -92,7 +93,7 @@ func TestEdgeAPI_createDeltaErrors(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error, got %s", deltaIdentifier)
 	}
-	if !errors.Is(err, error2.DorasArtifactNotFoundError) {
+	if !errors.Is(err, error2.ErrArtifactNotFound) {
 		t.Fatalf("did not return the appropriate error, got: %s", err)
 	}
 }
@@ -136,7 +137,7 @@ func TestEdgeAPI_readDeltaError(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error, got %s", reader)
 	}
-	if !errors.Is(err, error2.DorasDeltaNotFoundError) {
+	if !errors.Is(err, error2.ErrDeltaNotFound) {
 		t.Fatalf("did not return the appropriate error, got: %s", err)
 	}
 }
@@ -179,7 +180,7 @@ func TestEdgeAPI_readFullError(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error, got %s", reader)
 	}
-	if errors.Is(err, error2.DorasDeltaNotFoundError) {
+	if errors.Is(err, error2.ErrDeltaNotFound) {
 		t.Fatalf("did not return the appropriate error, got: %s", err)
 	}
 }
