@@ -241,7 +241,7 @@ components:
       type: string
       enum:
         - filesystem
-        - oci
+        - cachedtarget
     Artifact:
       type: object
       properties:
