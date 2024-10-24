@@ -39,28 +39,12 @@ type Descriptor struct {
 	Size int64 `json:"size"`
 }
 
-// Empty is an empty descriptor
-var Empty Descriptor
-
 // FromOCI shrinks the OCI descriptor to the minimum.
 func FromOCI(desc ocispec.Descriptor) Descriptor {
 	return Descriptor{
 		MediaType: desc.MediaType,
 		Digest:    desc.Digest,
 		Size:      desc.Size,
-	}
-}
-
-// IsForeignLayer checks if a descriptor describes a foreign layer.
-func IsForeignLayer(desc ocispec.Descriptor) bool {
-	switch desc.MediaType {
-	case ocispec.MediaTypeImageLayerNonDistributable,
-		ocispec.MediaTypeImageLayerNonDistributableGzip,
-		ocispec.MediaTypeImageLayerNonDistributableZstd,
-		docker.MediaTypeForeignLayer:
-		return true
-	default:
-		return false
 	}
 }
 
