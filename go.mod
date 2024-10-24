@@ -6,7 +6,11 @@ require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/gabstv/go-bsdiff v1.0.5
 	github.com/gin-gonic/gin v1.10.0
+	github.com/opencontainers/go-digest v1.0.0
+	github.com/opencontainers/image-spec v1.1.0
 	github.com/sirupsen/logrus v1.9.3
+	golang.org/x/sync v0.8.0
+	oras.land/oras-go/v2 v2.5.0
 )
 
 require (
