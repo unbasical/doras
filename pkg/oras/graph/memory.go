@@ -18,10 +18,10 @@ package graph
 import (
 	"context"
 	"errors"
-	"github.com/unbasical/doras-server/internal/pkg/oras/container/set"
-	"github.com/unbasical/doras-server/internal/pkg/oras/descriptor"
-	"github.com/unbasical/doras-server/internal/pkg/oras/status"
-	"github.com/unbasical/doras-server/internal/pkg/oras/syncutil"
+	"github.com/unbasical/doras-server/pkg/oras/container/set"
+	"github.com/unbasical/doras-server/pkg/oras/descriptor"
+	"github.com/unbasical/doras-server/pkg/oras/status"
+	"github.com/unbasical/doras-server/pkg/oras/syncutil"
 	"sync"
 
 	"github.com/opencontainers/go-digest"

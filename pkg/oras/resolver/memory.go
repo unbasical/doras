@@ -17,7 +17,7 @@ package resolver
 
 import (
 	"context"
-	"github.com/unbasical/doras-server/internal/pkg/oras/container/set"
+	"github.com/unbasical/doras-server/pkg/oras/container/set"
 	"maps"
 	"sync"
 

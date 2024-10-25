@@ -18,8 +18,8 @@ package manifestutil
 import (
 	"context"
 	"encoding/json"
-	"github.com/unbasical/doras-server/internal/pkg/oras/docker"
-	"github.com/unbasical/doras-server/internal/pkg/oras/spec"
+	"github.com/unbasical/doras-server/pkg/oras/docker"
+	"github.com/unbasical/doras-server/pkg/oras/spec"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"

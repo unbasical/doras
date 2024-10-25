@@ -16,7 +16,7 @@ limitations under the License.
 package status
 
 import (
-	"github.com/unbasical/doras-server/internal/pkg/oras/descriptor"
+	"github.com/unbasical/doras-server/pkg/oras/descriptor"
 	"sync"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"

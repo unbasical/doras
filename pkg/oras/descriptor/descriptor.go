@@ -18,8 +18,8 @@ package descriptor
 import (
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/unbasical/doras-server/internal/pkg/oras/docker"
-	"github.com/unbasical/doras-server/internal/pkg/oras/spec"
+	"github.com/unbasical/doras-server/pkg/oras/docker"
+	"github.com/unbasical/doras-server/pkg/oras/spec"
 )
 
 // DefaultMediaType is the media type used when no media type is specified.

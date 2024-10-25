@@ -17,7 +17,7 @@ package cas
 
 import (
 	"context"
-	"github.com/unbasical/doras-server/internal/pkg/oras/ioutil"
+	"github.com/unbasical/doras-server/pkg/oras/ioutil"
 	"io"
 	"sync"
 

@@ -19,7 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/unbasical/doras-server/internal/pkg/oras/fs/tarfs"
+	"github.com/unbasical/doras-server/pkg/oras/fs/tarfs"
 	"io"
 	"io/fs"
 	"path"

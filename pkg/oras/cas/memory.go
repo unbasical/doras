@@ -19,10 +19,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/unbasical/doras-server/pkg/oras/descriptor"
 	"io"
 	"sync"
-
-	"github.com/unbasical/doras-server/internal/pkg/oras/descriptor"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	contentpkg "oras.land/oras-go/v2/content"

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/unbasical/doras-server/pkg/oras/ioutil"
 	"io"
 	"io/fs"
 	"os"
@@ -11,7 +12,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/unbasical/doras-server/internal/pkg/oras/ioutil"
 	"oras.land/oras-go/v2/content/file"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
