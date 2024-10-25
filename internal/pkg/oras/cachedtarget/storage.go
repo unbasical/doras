@@ -4,15 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/unbasical/doras-server/internal/pkg/oras/ioutil"
 	"io"
 	"io/fs"
-	"oras.land/oras-go/v2/content/file"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"sync"
+
+	"github.com/unbasical/doras-server/internal/pkg/oras/ioutil"
+	"oras.land/oras-go/v2/content/file"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/errdef"
@@ -110,7 +110,7 @@ func (s *Storage) Push(_ context.Context, expected ocispec.Descriptor, content i
 	if name := expected.Annotations[ocispec.AnnotationTitle]; name != "" {
 		outputPath, err := s.resolveWritePath(name)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("failed to resolve output path for complete file %w", err)
 		}
 
 		if !s.SymlinkFromCache {
@@ -118,18 +118,18 @@ func (s *Storage) Push(_ context.Context, expected ocispec.Descriptor, content i
 			// update permissions
 			// create symlink to cache
 			if err := os.Rename(target, outputPath); err != nil {
-				panic(err)
+				return fmt.Errorf("could not move fully downloaded file from %q to %q: %w", target, outputPath, err)
 			}
 			if err := os.Chmod(outputPath, os.FileMode(0600)); err != nil {
-				panic(err)
+				return fmt.Errorf("failed to chmod output file %q: %w", outputPath, err)
 			}
 			if err := os.Symlink(outputPath, target); err != nil {
-				panic(err)
+				return fmt.Errorf("failed to create symlink %q -> %q: %w", target, outputPath, err)
 			}
 		} else {
 			err = os.Symlink(target, outputPath)
 			if err != nil {
-				panic(err)
+				return fmt.Errorf("failed to create symlink %q -> %q: %w", outputPath, target, err)
 			}
 		}
 	}
@@ -181,55 +181,58 @@ func (s *Storage) ingest(expected ocispec.Descriptor, content io.Reader) (path s
 	var writer *ioutil.SkipWriter
 	// use reflection magic to pick up partially downloaded ingest files
 	// todo refactor this to use nicer pattern
-	if reflect.TypeOf(content).Implements(reflect.TypeOf((*io.ReadSeeker)(nil)).Elem()) {
+	contentSeeker, ok := content.(io.ReadSeeker)
+	if ok {
 		entries, err := os.ReadDir(s.ingestRoot)
 		if err != nil {
-			panic(err)
+			return "", fmt.Errorf("failed to read directory for partial ingest files: %w", err)
 		}
 		for _, entry := range entries {
-			if strings.HasPrefix(entry.Name(), expected.Digest.Encoded()) {
-				// open the previously downloaded file for reading
-				fpR, err := os.Open(filepath.Join(s.ingestRoot, entry.Name()))
-				if err != nil {
-					return "", fmt.Errorf("failed to open file %s for download continuation: %w", entry.Name(), err)
-				}
-				// get file size
-				fstat, err := fpR.Stat()
-				if err != nil {
-					panic(err)
-				}
-				size := fstat.Size()
-
-				path = fpR.Name()
-
-				// also open the previous file for writing
-				fpW, err := os.OpenFile(filepath.Join(s.ingestRoot, entry.Name()), os.O_WRONLY, 0600)
-				if err != nil {
-					panic(err)
-				}
-				defer fpW.Close()
-
-				_, err = fpW.Seek(size, io.SeekStart)
-				if err != nil {
-					panic(err)
-				}
-				// adjust content reader so it continues from where we left off
-				_, err = content.(io.Seeker).Seek(size, io.SeekStart)
-				if err != nil {
-					panic(err)
-				}
-				// create combine writer that reads the previously downloaded bytes and then fetches the rest
-				// the LimitReader is necessary so we do not keep reading the file as we write to it
-				content = io.MultiReader(io.LimitReader(fpR, size), content)
-				// the copying functionality needs to process the entire file to accept it
-				// to avoid writing content multiple times to the same file we need to skip some of the stream
-				// provided by the reader
-				w := ioutil.NewSkipWriter(fpW, int(size))
-				writer = &w
-				// break is necessary in case there are multiple ingest files for the same blob
-				fmt.Printf("continuing from %d/%d bytes\n", size, expected.Size)
-				break
+			if !strings.HasPrefix(entry.Name(), expected.Digest.Encoded()) {
+				continue
 			}
+			// open the previously downloaded file for reading
+			fpR, err := os.Open(filepath.Join(s.ingestRoot, entry.Name()))
+			if err != nil {
+				return "", fmt.Errorf("failed to open file %s for download continuation: %w", entry.Name(), err)
+			}
+			// get file size
+			fstat, err := fpR.Stat()
+			if err != nil {
+				return "", fmt.Errorf("failed to get file stats for the detected partial ingest file at %q: %w", entry.Name(), err)
+			}
+			size := fstat.Size()
+
+			path = fpR.Name()
+
+			// also open the previous file for writing
+			fpW, err := os.OpenFile(filepath.Join(s.ingestRoot, entry.Name()), os.O_WRONLY, 0600)
+			if err != nil {
+				return "", fmt.Errorf("failed to open partial ingest file %q for download: %w", entry.Name(), err)
+			}
+			defer fpW.Close()
+
+			_, err = fpW.Seek(size, io.SeekStart)
+			if err != nil {
+				return "", fmt.Errorf("failed to seek ingest file %q for writing: %w", entry.Name(), err)
+			}
+			// adjust content reader so it continues from where we left off
+			_, err = contentSeeker.Seek(size, io.SeekStart)
+			if err != nil {
+				return "", fmt.Errorf("failed to seek content reader: %w", err)
+			}
+			// create combine writer that reads the previously downloaded bytes and then fetches the rest
+			// the LimitReader is necessary so we do not keep reading the file as we write to it
+			content = io.MultiReader(io.LimitReader(fpR, size), content)
+			// the copying functionality needs to process the entire file to accept it
+			// to avoid writing content multiple times to the same file we need to skip some of the stream
+			// provided by the reader
+			w := ioutil.NewSkipWriter(fpW, int(size))
+			writer = &w
+			// break is necessary in case there are multiple ingest files for the same blob
+			fmt.Printf("continuing from %d/%d bytes\n", size, expected.Size)
+			break
+
 		}
 
 	}
