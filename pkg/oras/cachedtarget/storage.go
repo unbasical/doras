@@ -256,6 +256,11 @@ func (s *Storage) ingest(expected ocispec.Descriptor, content io.Reader) (path s
 		writer = &w
 	}
 
+	name, ok := expected.Annotations[ocispec.AnnotationTitle]
+	if !ok {
+		name = "UNNAMED-ARTIFACT"
+	}
+
 	// create a temp file with the file name format "blobDigest_randomString"
 	// in the ingest directory.
 	// Go ensures that multiple programs or goroutines calling CreateTemp
@@ -264,10 +269,10 @@ func (s *Storage) ingest(expected ocispec.Descriptor, content io.Reader) (path s
 	buf := bufPool.Get().(*[]byte)
 	defer bufPool.Put(buf)
 	if err := ioutil.CopyBuffer(writer, content, *buf, expected); err != nil {
-		fmt.Printf("Fetch-Report: outcome=failure artifact=%s new-bytes=%d cached-bytes=%d  artifact-size=%d\n", expected.Digest, writer.BytesWritten(), writer.GetSkipBytes(), expected.Size)
+		fmt.Printf("Fetch-Report: outcome=failure artifact=%q digest=%s new-bytes=%d cached-bytes=%d  artifact-size=%d\n", name, expected.Digest, writer.BytesWritten(), writer.GetSkipBytes(), expected.Size)
 		return "", fmt.Errorf("failed to ingest: %w", err)
 	}
-	fmt.Printf("Fetch-Report: outcome=success artifact=%s new-bytes=%d cached-bytes=%d  artifact-size=%d\n", expected.Digest, writer.BytesWritten(), writer.GetSkipBytes(), expected.Size)
+	fmt.Printf("Fetch-Report: outcome=success artifact=%q digest=%s new-bytes=%d cached-bytes=%d  artifact-size=%d\n", name, expected.Digest, writer.BytesWritten(), writer.GetSkipBytes(), expected.Size)
 
 	// change to readonly
 	if err := os.Chmod(path, 0444); err != nil {
