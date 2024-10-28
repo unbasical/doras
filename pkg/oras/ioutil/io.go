@@ -96,3 +96,6 @@ func NewSkipWriter(w io.Writer, skipBytes int) SkipWriter {
 func (s *SkipWriter) BytesWritten() int {
 	return max(0, s.bytesProcessed-s.skipBytes)
 }
+func (s *SkipWriter) GetSkipBytes() int {
+	return s.skipBytes
+}

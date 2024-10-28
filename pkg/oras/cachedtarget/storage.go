@@ -230,12 +230,11 @@ func (s *Storage) ingest(expected ocispec.Descriptor, content io.Reader) (path s
 			w := ioutil.NewSkipWriter(fpW, int(size))
 			writer = &w
 			// break is necessary in case there are multiple ingest files for the same blob
-			fmt.Printf("continuing from %d/%d bytes\n", size, expected.Size)
 			break
 
 		}
-
 	}
+
 	if writer == nil {
 		fp, err := os.CreateTemp(s.ingestRoot, expected.Digest.Encoded()+"_*")
 		if err != nil {
@@ -265,10 +264,10 @@ func (s *Storage) ingest(expected ocispec.Descriptor, content io.Reader) (path s
 	buf := bufPool.Get().(*[]byte)
 	defer bufPool.Put(buf)
 	if err := ioutil.CopyBuffer(writer, content, *buf, expected); err != nil {
-		fmt.Printf("fetching failed after reading %d new bytes out of %d in total\n", writer.BytesWritten(), expected.Size)
+		fmt.Printf("fetching failed: artifact=%s cached=%d new-bytes=%d  artifact-size=%d in total\n", expected.Digest, writer.BytesWritten(), writer.GetSkipBytes(), expected.Size)
 		return "", fmt.Errorf("failed to ingest: %w", err)
 	}
-	fmt.Printf("successfully fetched %d new bytes out of %d\n", writer.BytesWritten(), expected.Size)
+	fmt.Printf("fetching succeeded: artifact=%s cached=%d new-bytes=%d  artifact-size=%d in total\n", expected.Digest, writer.BytesWritten(), writer.GetSkipBytes(), expected.Size)
 
 	// change to readonly
 	if err := os.Chmod(path, 0444); err != nil {
