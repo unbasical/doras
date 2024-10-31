@@ -170,7 +170,7 @@ func (s *ReadOnlyStore) loadIndexFile(ctx context.Context) error {
 // LoadIndex loads index into memory.
 func LoadIndex(ctx context.Context, index *ocispec.Index, fetcher content.Fetcher, tagger content.Tagger, graph *graph.Memory) error {
 	for _, desc := range index.Manifests {
-		if err := tagger.Tag(ctx, DeleteAnnotationRefName(desc), desc.Digest.String()); err != nil {
+		if err := tagger.Tag(ctx, deleteAnnotationRefName(desc), desc.Digest.String()); err != nil {
 			return err
 		}
 		if ref := desc.Annotations[ocispec.AnnotationRefName]; ref != "" {
@@ -234,9 +234,9 @@ func ListTags(tagResolver *resolver.Memory, last string, fn func(tags []string) 
 	return fn(tags)
 }
 
-// DeleteAnnotationRefName deletes the AnnotationRefName from the annotation map
+// deleteAnnotationRefName deletes the AnnotationRefName from the annotation map
 // of desc.
-func DeleteAnnotationRefName(desc ocispec.Descriptor) ocispec.Descriptor {
+func deleteAnnotationRefName(desc ocispec.Descriptor) ocispec.Descriptor {
 	if _, ok := desc.Annotations[ocispec.AnnotationRefName]; !ok {
 		// no ops
 		return desc

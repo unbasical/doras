@@ -413,7 +413,7 @@ func (s *CachedStore) saveIndex() error {
 	for ref, desc := range refMap {
 		if ref == desc.Digest.String() && !tagged.Contains(desc.Digest) {
 			// skip tagged ones since they have been added in step 1
-			manifests = append(manifests, DeleteAnnotationRefName(desc))
+			manifests = append(manifests, deleteAnnotationRefName(desc))
 		}
 	}
 
@@ -501,7 +501,7 @@ func (s *CachedStore) gcIndex(ctx context.Context) error {
 		if ref == desc.Digest.String() {
 			continue
 		}
-		if err := tagResolver.Tag(ctx, DeleteAnnotationRefName(desc), desc.Digest.String()); err != nil {
+		if err := tagResolver.Tag(ctx, deleteAnnotationRefName(desc), desc.Digest.String()); err != nil {
 			return err
 		}
 		if err := tagResolver.Tag(ctx, desc, ref); err != nil {
@@ -530,7 +530,7 @@ func (s *CachedStore) gcIndex(ctx context.Context) error {
 				break
 			}
 			if graph.Exists(*subject) {
-				if err := tagResolver.Tag(ctx, DeleteAnnotationRefName(desc), desc.Digest.String()); err != nil {
+				if err := tagResolver.Tag(ctx, deleteAnnotationRefName(desc), desc.Digest.String()); err != nil {
 					return err
 				}
 				plain := descriptor.Plain(desc)

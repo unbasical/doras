@@ -150,6 +150,16 @@ func (s *Storage) Delete(ctx context.Context, target ocispec.Descriptor) error {
 		}
 		return err
 	}
+	if name := target.Annotations[ocispec.AnnotationTitle]; name != "" {
+		targetPath = filepath.Join(s.fsRoot, name)
+		err = os.Remove(targetPath)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return fmt.Errorf("%s (%s): %s: %w", name, target.Digest, target.MediaType, errdef.ErrNotFound)
+			}
+			return err
+		}
+	}
 	return nil
 }
 
