@@ -19,13 +19,14 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/unbasical/doras-server/pkg/oras/docker"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"testing/fstest"
+
+	"github.com/unbasical/doras-server/pkg/oras/docker"
 
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"

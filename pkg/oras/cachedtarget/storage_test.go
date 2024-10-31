@@ -237,7 +237,6 @@ func TestStorage_BadPush(t *testing.T) {
 			t.Errorf("Storage.Push() error = %v, wantErr %v", err, true)
 		}
 	}
-
 }
 
 func TestStorage_Push_Concurrent(t *testing.T) {
