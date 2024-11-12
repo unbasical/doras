@@ -13,12 +13,12 @@ type CloudAPIErrorInner struct {
 
 //nolint:golint,gochecknoglobals // errors.New() is not const
 var (
-	ErrAliasNotFound               = errors.New("AliasNotFound")
-	ErrDeltaNotFound               = errors.New("DeltaNotFound")
-	ErrArtifactNotFound            = errors.New("ArtifactNotFound")
-	ErrAliasExists                 = errors.New("AliasExists")
-	ErrArtifactNotProvided         = errors.New("ArtifactNotProvided")
-	ErrInternal                    = errors.New("Internal")
-	ErrMissingRequestBody          = errors.New("MissingRequestBody")
-	ErrUnsupportedDiffingAlgorithm = errors.New("UnsupportedDiffingAlgorithm")
+	ErrAliasNotFound               = errors.New("alias not found")
+	ErrDeltaNotFound               = errors.New("delta not found")
+	ErrArtifactNotFound            = errors.New("artifact not found")
+	ErrAliasExists                 = errors.New("alias exists")
+	ErrArtifactNotProvided         = errors.New("artifact not provided")
+	ErrInternal                    = errors.New("internal")
+	ErrMissingRequestBody          = errors.New("missing request body")
+	ErrUnsupportedDiffingAlgorithm = errors.New("unsupported diffing algorithm")
 )

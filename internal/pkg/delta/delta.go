@@ -11,23 +11,23 @@ const (
 
 type ArtifactDelta interface {
 	GetReader() io.Reader
-	GetBytes() ([]byte, error)
-	GetContentLen() int
+	GetBytes() []byte
+	GetContentLength() int
 }
 
 type RawDiff struct {
 	Data []byte
 }
 
-func (r RawDiff) GetBytes() ([]byte, error) {
-	return r.Data, nil
+func (r RawDiff) GetBytes() []byte {
+	return r.Data
 }
 
 func (r RawDiff) GetReader() io.Reader {
 	return bytes.NewReader(r.Data)
 }
 
-func (r RawDiff) GetContentLen() int {
+func (r RawDiff) GetContentLength() int {
 	return len(r.Data)
 }
 

@@ -1,0 +1,7 @@
+sources:
+  localhost:5001:
+    enable-http: true
+storage:
+  kind: oci
+  url: localhost:5000/hello
+  enable-http: true

@@ -3,41 +3,59 @@ package core
 import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
-	"github.com/unbasical/doras-server/internal/pkg/aliasing"
+	"github.com/unbasical/doras-server/configs"
 	"github.com/unbasical/doras-server/internal/pkg/api"
-	"github.com/unbasical/doras-server/internal/pkg/auth"
-	"github.com/unbasical/doras-server/internal/pkg/storage"
+	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
+	"oras.land/oras-go/v2/registry/remote"
+	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 type Doras struct {
-	storage storage.ArtifactStorage
-	aliaser aliasing.Aliasing
-	engine  *gin.Engine
+	engine *gin.Engine
+	stop   chan bool
 }
 
-func (d *Doras) Init(storagePath string) *Doras {
-	d.storage = &storage.FilesystemStorage{BasePath: storagePath}
-	d.aliaser = &aliasing.SymlinkAliasing{BasePath: storagePath}
-	config := api.Config{
-		ArtifactStorage: d.storage,
-		AliasStorage:    d.aliaser,
-		AuthMiddleware:  auth.AlwaysAuth(),
+func New(config configs.DorasServerConfig) *Doras {
+	doras := Doras{}
+	return doras.Init(config)
+}
+
+func (d *Doras) Init(config configs.DorasServerConfig) *Doras {
+	// TODO: replace repository with a mechanism that resolves a string to a target, e.g. a remote repository
+	reg, err := remote.NewRegistry(config.Storage.URL)
+	if err != nil {
+		log.Fatalf("failed to create reg for URL: %s, %s", config.Storage.URL, err)
 	}
-	d.engine = api.BuildApp(&config)
+
+	clientConfigs := make(map[string]remote.Client, len(config.Sources))
+	for k := range config.Sources {
+		clientConfigs[k] = &auth.Client{}
+	}
+	reg.PlainHTTP = config.Storage.EnableHTTP
+	appConfig := &apicommon.Config{
+		ArtifactStorage: apicommon.NewRegistryStorage(reg),
+		RepoClients:     clientConfigs,
+	}
+	d.engine = api.BuildApp(appConfig)
 	return d
 }
 
-func (d *Doras) Start() *Doras {
+func (d *Doras) Start() {
+	// TODO: use goroutine and channel to handle shutdown
 	log.Info("Starting doras")
 
-	err := d.engine.Run()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return d
+	d.stop = make(chan bool, 1)
+	go func() {
+		err := d.engine.Run("localhost:8080")
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
 }
 
 func (d *Doras) Stop() {
+	// TODO: use goroutine and channel to handle shutdown
 	log.Info("Stopping doras")
+	d.stop <- true
 	log.Warn("Stop() is not implemented yet")
 }

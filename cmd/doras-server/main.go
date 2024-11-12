@@ -1,6 +1,9 @@
 package main
 
 import (
+	"github.com/alecthomas/kingpin/v2"
+	"github.com/unbasical/doras-server/configs"
+	"github.com/unbasical/doras-server/internal/pkg/utils"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -9,10 +12,18 @@ import (
 
 func main() {
 	log.SetLevel(log.DebugLevel)
-	doras := core.Doras{}
-	err := os.MkdirAll("doras-working-dir", 0777)
-	if err != nil {
-		panic(err)
+	// TODO: refactor this to allow more configuration via envars
+	var (
+		configFile = kingpin.Flag("config", "path to config file").ExistingFile()
+	)
+
+	kingpin.Parse()
+	var config configs.DorasServerConfig
+	exists, err := utils.SafeReadYAML(*configFile, &config, os.FileMode(0644))
+	if !exists || err != nil {
+		log.Fatalf("Error reading config file %s: %s", *configFile, err)
 	}
-	doras.Init("doras-working-dir").Start()
+	log.Debugf("Config: %+v", config)
+	doras := core.New(config)
+	doras.Start()
 }
