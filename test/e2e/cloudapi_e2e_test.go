@@ -3,6 +3,14 @@ package e2e
 import (
 	"context"
 	"fmt"
+
+	"io"
+	"net/http"
+	"os"
+	"path"
+	"strings"
+	"testing"
+
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/testcontainers/testcontainers-go"
@@ -10,15 +18,9 @@ import (
 	"github.com/unbasical/doras-server/configs"
 	"github.com/unbasical/doras-server/internal/pkg/core"
 	"github.com/unbasical/doras-server/pkg/client"
-	"io"
-	"net/http"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry/remote"
-	"os"
-	"path"
-	"strings"
-	"testing"
 )
 
 func Test_everything(t *testing.T) {
@@ -45,7 +47,7 @@ func Test_everything(t *testing.T) {
 		t.Fatal(err)
 	}
 	helloPath := path.Join(tempDir, "hello")
-	err = os.WriteFile(helloPath, []byte("Hello World!"), 0644)
+	err = os.WriteFile(helloPath, []byte("Hello World!"), 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,12 +125,12 @@ func Test_everything(t *testing.T) {
 	}
 	tempDir = t.TempDir()
 
-	client, err := client.NewEdgeClient("http://localhost:8080", uriDst, true)
+	edgeClient, err := client.NewEdgeClient("http://localhost:8080", uriDst, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = client.LoadArtifact(uriDst+"/"+repoPath+":"+tag, tempDir)
+	err = edgeClient.LoadArtifact(uriDst+"/"+repoPath+":"+tag, tempDir)
 	if err != nil {
 		panic(err)
 	}

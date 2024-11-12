@@ -11,17 +11,6 @@ func main() {
 	var (
 		app = kingpin.New("doras-cli", "A command-line tool to work with doras delta patches")
 
-		// commands
-		//create     = app.Command("create", "Create a delta patch")
-		//apply      = app.Command("apply", "Apply a delta patch")
-		//fromCreate = create.Flag("from", "path to first file").ExistingFile()
-		//toCreate   = create.Flag("to", "path to second file").ExistingFile()
-		//outCreate  = create.Flag("out", "first artifact").String()
-		//
-		//fromApply = apply.Flag("from", "file to apply patch to").ExistingFile()
-		//inApply   = apply.Flag("in", "path to patch").ExistingFile()
-		//outApply  = apply.Flag("out", "output path").String()
-		//algorithm = app.Flag("algorithm", "The algorithm that is used to create the delta patch").Default("bsdiff").Envar("DORAS_ALGORITHM").Enum("bsdiff")
 		// Logging
 		logLevel  = app.Flag("log-level", "Log-Level, must be one of [DEBUG, INFO, WARN, ERROR]").Default("INFO").Envar("LOG_LEVEL").Enum("DEBUG", "INFO", "WARN", "ERROR", "debug", "info", "warn", "error")
 		logFormat = app.Flag("log-format", "Log-Format, must be one of [TEXT, JSON]").Default("TEXT").Envar("LOG_FORMAT").Enum("TEXT", "JSON")

@@ -25,12 +25,12 @@ func BuildEdgeAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
 	edgeAPI.GET("/delta/:identifier", func(c *gin.Context) {
 		panic("todo")
 
-		//readDelta(shared, c)
+		// readDelta(shared, c)
 	})
 
 	edgeAPI.GET("/full/:identifier", func(c *gin.Context) {
 		panic("todo")
-		//readFull(shared, c)
+		// readFull(shared, c)
 	})
 	return r
 }

@@ -4,6 +4,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -11,12 +16,8 @@ import (
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
 	"github.com/unbasical/doras-server/internal/pkg/artifact"
 	dorasErrors "github.com/unbasical/doras-server/internal/pkg/error"
-	"io"
-	"net/http"
-	"net/url"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
-	"strings"
 )
 
 func BuildCloudAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
@@ -104,7 +105,6 @@ func createArtifact(shared *CloudAPI, c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, dorasErrors.CloudAPIError{Error: dorasErrors.CloudAPIErrorInner{Code: dorasErrors.ErrInternal}})
 		}
 		panic("todo")
-		c.JSON(http.StatusCreated, gin.H{"success": CreateArtifactResponse{}})
 	case "oci":
 		var requestBody CreateOCIArtifactRequest
 		if err := c.BindJSON(&requestBody); err != nil {

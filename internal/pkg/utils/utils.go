@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io"
 	"os"
 	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 
 	log "github.com/sirupsen/logrus"
 )

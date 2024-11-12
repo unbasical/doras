@@ -1,4 +1,4 @@
-package doras_client
+package main
 
 func main() {
 	println("Hello world")

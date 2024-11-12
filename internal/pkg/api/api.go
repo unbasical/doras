@@ -1,12 +1,13 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
 	"github.com/unbasical/doras-server/internal/pkg/api/cloudapi"
 	"github.com/unbasical/doras-server/internal/pkg/api/edgeapi"
-	"net/http"
 )
 
 func BuildApp(config *apicommon.Config) *gin.Engine {
