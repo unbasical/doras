@@ -1,0 +1,12 @@
+services:
+  registry:
+    image: registry:2.8
+    environment:
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: "/registry-storage"
+    volumes:
+      - registry-storage:/registry-storage
+    ports:
+      - "5000:5000"
+volumes:
+  registry-storage:
+
