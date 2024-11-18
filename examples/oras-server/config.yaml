@@ -3,5 +3,5 @@ sources:
     enable-http: true
 storage:
   kind: oci
-  url: localhost:5000/hello
+  url: localhost:5000
   enable-http: true

@@ -3,6 +3,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"io"
 	"net/http"
@@ -100,11 +101,13 @@ func Test_everything(t *testing.T) {
 	go dorasApp.Init(config).Start()
 	log.Info(repoSrc, regDst)
 	for {
-		res, err := http.DefaultClient.Get("http://localhost:8080/ping")
+		res, err := http.DefaultClient.Get("http://localhost:8080/api/v1/ping")
 		if err != nil {
 			t.Error(err)
+			time.Sleep(200 * time.Millisecond)
 			continue
 		}
+
 		resBody, err := io.ReadAll(res.Body)
 		if err != nil {
 			t.Error(err)

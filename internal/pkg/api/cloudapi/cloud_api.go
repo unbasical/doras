@@ -79,6 +79,16 @@ type CreateArtifactResponse struct {
 	Tag  string `json:"tag"`
 }
 
+// @BasePath /api/v1/create
+// PingExample godoc
+// @Summary ping example
+// @Schemes
+// @Description do ping
+// @Tags CloudAPI
+// @Accept json
+// @Produce json
+// @Success 200 {string} {"message":"pong"}
+// @Router /api/v1/artifacts/create [get]
 // createArtifact
 // Stores the artifact provided as a file in the request body.
 // TODO:

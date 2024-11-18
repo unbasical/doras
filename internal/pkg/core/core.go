@@ -45,12 +45,10 @@ func (d *Doras) Start() {
 	log.Info("Starting doras")
 
 	d.stop = make(chan bool, 1)
-	go func() {
-		err := d.engine.Run("localhost:8080")
-		if err != nil {
-			log.Fatal(err)
-		}
-	}()
+	err := d.engine.Run("localhost:8080")
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func (d *Doras) Stop() {

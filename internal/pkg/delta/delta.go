@@ -61,6 +61,37 @@ func panicOrLogOnErr(f func() error, panicOnErr bool, msg string) {
 	}
 }
 
+func createDelta(fromImage, toImage v1.Descriptor, fromReader, toReader io.ReadSeeker) (*string, io.ReadCloser, error) {
+	if fromImage.Annotations[ContentUnpack] != toImage.Annotations[ContentUnpack] {
+		return nil, nil, fmt.Errorf("mismatched contents, both need to be packed or not %v, %v", fromImage, toImage)
+	}
+	unpack := fromImage.Annotations[ContentUnpack] == "true"
+	if unpack {
+		// create tar diff
+		optsTarDiff := tar_diff.NewOptions()
+		pr, pw := io.Pipe()
+		go func() {
+			err := tar_diff.Diff(fromReader, toReader, pw, optsTarDiff)
+			panicOrLogOnErr(IdentityFunc(err), true, "failed tardiff creation")
+			panicOrLogOnErr(pw.Close, true, "failed to close pipe writer")
+
+		}()
+		outputName := fmt.Sprintf("%s.patch.tardiff", deltaTag(fromImage, toImage))
+		return &outputName, pr, nil
+	} else {
+		// create bsdiff
+		pr, pw := io.Pipe()
+		go func() {
+			err := bsdiff.Reader(fromReader, toReader, pw)
+			panicOrLogOnErr(IdentityFunc(err), true, "failed bsdiff creation")
+			panicOrLogOnErr(pw.Close, true, "failed to close pipe writer")
+
+		}()
+		outputName := fmt.Sprintf("%s.patch.bsdiff", deltaTag(fromImage, toImage))
+		return &outputName, pr, nil
+	}
+}
+
 func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, fromImage, toImage v1.Descriptor, alg string) (*v1.Descriptor, error) {
 	fromDescriptor, fromBlobReader, err := getBlobReaderForArtifact(ctx, src, fromImage)
 	if err != nil {
@@ -82,58 +113,44 @@ func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, 
 	if err != nil {
 		return nil, err
 	}
+	defer panicOrLogOnErr(fFrom.Close, false, "failed to close temp file")
+
 	fTo, err := writeBlobToTempfile(tempDir, toDescriptor, toBlobReader)
 	if err != nil {
 		return nil, err
 	}
-	var outputPath string
-	var fileNames []string
+	defer panicOrLogOnErr(fTo.Close, false, "failed to close temp file")
 
-	unpack := fromDescriptor.Annotations[ContentUnpack] == "true"
-	if unpack {
-		// create tar diff
-		outputPath = path.Join(tempDir, "tardiff.patch")
-		fOut, err := os.Create(outputPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create output file: %v", err)
-		}
-		defer panicOrLogOnErr(fOut.Close, true, "failed to close output file")
+	fName, content, err := createDelta(fromImage, toImage, fFrom, fTo)
+	if err != nil {
+		return nil, err
+	}
 
-		optsTarDiff := tar_diff.NewOptions()
-		err = tar_diff.Diff(fFrom, fTo, fOut, optsTarDiff)
-		if err != nil {
-			return nil, err
-		}
-		fileNames = []string{"tardiff.patch"}
-	} else {
-		// create bsdiff
-		outputPath = path.Join(tempDir, "bsdiff.patch")
-		f, err := os.Create(outputPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create output file: %v", err)
-		}
-		err = bsdiff.Reader(fromBlobReader, toBlobReader, f)
-		if err != nil {
-			return nil, err
-		}
-		fileNames = []string{"bsdiff.patch"}
+	fileNames := []string{*fName}
+	outputDir := tempDir
+	outputPath := path.Join(outputDir, *fName)
+
+	fOut, err := os.OpenFile(outputPath, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open delta output file (%v): %v", outputPath, err)
+	}
+
+	_, err = io.Copy(fOut, content)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write to delta output file (%v): %v", outputPath, err)
 	}
 
 	// 0. Create a file store
-	fs, err := file.New(os.TempDir())
-	if err != nil {
-		panic(err)
-	}
-	defer panicOrLogOnErr(fs.Close, true, "failed to close oras file storage")
+	fs, err := file.New(outputDir)
+	panicOrLogOnErr(IdentityFunc(err), true, "failed to create storage object")
+	defer panicOrLogOnErr(fs.Close, false, "failed to close oras file storage")
 
 	// 1. Add files to the file store
 	mediaType := "application/octet-stream"
 	fileDescriptors := make([]v1.Descriptor, 0, len(fileNames))
 	for _, name := range fileNames {
 		fileDescriptor, err := fs.Add(ctx, name, mediaType, outputPath)
-		if err != nil {
-			panic(err)
-		}
+		panicOrLogOnErr(IdentityFunc(err), true, "failed to add file to storage object")
 		fileDescriptors = append(fileDescriptors, fileDescriptor)
 	}
 
@@ -143,18 +160,16 @@ func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, 
 		Layers: fileDescriptors,
 	}
 	manifestDescriptor, err := oras.PackManifest(ctx, fs, oras.PackManifestVersion1_1, artifactType, opts)
-	if err != nil {
-		panic(err)
-	}
+	panicOrLogOnErr(IdentityFunc(err), true, "failed to pack manifest")
 	fmt.Println("manifest descriptor:", manifestDescriptor)
 
 	tag := deltaTag(fromImage, toImage)
 	if err = fs.Tag(ctx, manifestDescriptor, tag); err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to tag delta manifest descriptor (%v): %v", manifestDescriptor, err)
 	}
 	descriptor, err := oras.Copy(ctx, fs, tag, dst, tag, oras.DefaultCopyOptions)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to copy delta: %v", err)
 	}
 	return &descriptor, nil
 }
@@ -181,6 +196,12 @@ func writeBlobToTempfile(outdir string, target *v1.Descriptor, content io.Reader
 		return nil, err
 	}
 	return f, nil
+}
+
+func IdentityFunc[T any](t T) func() T {
+	return func() T {
+		return t
+	}
 }
 
 // Artifact describes an artifact manifest.

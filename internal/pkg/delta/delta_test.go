@@ -3,9 +3,15 @@ package delta
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
+	"github.com/unbasical/doras-server/internal/pkg/testutils"
 	"io"
+	"oras.land/oras-go/v2/content/oci"
+	"os"
 	"path"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/opencontainers/go-digest"
@@ -14,6 +20,24 @@ import (
 )
 
 func TestCreateDelta(t *testing.T) {
+	// TODO: finish this test
+	src, err := testutils.StorageFromFiles(
+		context.Background(),
+		t.TempDir(),
+		map[string]testutils.FileDescription{
+			"hello": {
+				Data: strings.NewReader("Hello"),
+			},
+		},
+		"test",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dst, err := oci.New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	type args struct {
 		ctx       context.Context
 		src       oras.ReadOnlyTarget
@@ -25,12 +49,35 @@ func TestCreateDelta(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *v1.Descriptor
+		want    v1.Descriptor
 		wantErr bool
 	}{
-		// TODO: Add test cases.
-		// - tar diff
-		// - bsdiff
+		{name: "create delta", args: struct {
+			ctx       context.Context
+			src       oras.ReadOnlyTarget
+			dst       oras.Target
+			fromImage v1.Descriptor
+			toImage   v1.Descriptor
+			alg       string
+		}{ctx: context.Background(), src: src, dst: dst, fromImage: v1.Descriptor{
+			MediaType:    "",
+			Digest:       "",
+			Size:         0,
+			URLs:         nil,
+			Annotations:  nil,
+			Data:         nil,
+			Platform:     nil,
+			ArtifactType: "",
+		}, toImage: v1.Descriptor{
+			MediaType:    "",
+			Digest:       "",
+			Size:         0,
+			URLs:         nil,
+			Annotations:  nil,
+			Data:         nil,
+			Platform:     nil,
+			ArtifactType: "",
+		}, alg: "bsdiff"}, want: v1.Descriptor{}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -193,6 +240,204 @@ func Test_writeBlobToTempfile(t *testing.T) {
 			// does the file content match the input?
 			if !bytes.Equal(data, wantBytes) {
 				t.Errorf("writeBlobToTempfile() got = %q, want %q", string(data), tt.want)
+			}
+		})
+	}
+}
+
+func Test_createDeltaBinary(t *testing.T) {
+	from := []byte("hello")
+	fromDigest := sha256.Sum256(from)
+	to := []byte("hello world")
+	toDigest := sha256.Sum256(to)
+	patch, err := bsdiff.Bytes(from, to)
+	if err != nil {
+		panic(err)
+	}
+	type args struct {
+		fromImage  v1.Descriptor
+		toImage    v1.Descriptor
+		fromReader io.ReadSeeker
+		toReader   io.ReadSeeker
+	}
+	tests := []struct {
+		name              string
+		args              args
+		expectedExtension string
+		want1             io.Reader
+		wantErr           bool
+	}{
+		{name: "success", args: struct {
+			fromImage  v1.Descriptor
+			toImage    v1.Descriptor
+			fromReader io.ReadSeeker
+			toReader   io.ReadSeeker
+		}{fromImage: v1.Descriptor{
+			MediaType: "application/vnd.oci.image.layer.v1.tar",
+			Digest:    digest.NewDigestFromBytes("sha256", fromDigest[:]),
+			Size:      int64(len(from)),
+			Annotations: map[string]string{
+				"org.opencontainers.image.title": "foo",
+			},
+			Platform:     nil,
+			ArtifactType: "",
+		}, toImage: v1.Descriptor{
+			MediaType: "application/vnd.oci.image.layer.v1.tar",
+			Digest:    digest.NewDigestFromBytes("sha256", toDigest[:]),
+			Size:      int64(len(to)),
+			Annotations: map[string]string{
+				"org.opencontainers.image.title": "foo",
+			},
+			ArtifactType: "",
+		}, fromReader: bytes.NewReader(from), toReader: bytes.NewReader(to)},
+			want1:             bytes.NewReader(patch),
+			expectedExtension: ".patch.bsdiff",
+			wantErr:           false,
+		},
+		{name: "unpack mismatch error", args: struct {
+			fromImage  v1.Descriptor
+			toImage    v1.Descriptor
+			fromReader io.ReadSeeker
+			toReader   io.ReadSeeker
+		}{fromImage: v1.Descriptor{
+			Annotations: map[string]string{
+				ContentUnpack: "true",
+			},
+		}, toImage: v1.Descriptor{}, fromReader: nil, toReader: nil},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			want := deltaTag(tt.args.fromImage, tt.args.toImage) + tt.expectedExtension
+			got, got1, err := createDelta(tt.args.fromImage, tt.args.toImage, tt.args.fromReader, tt.args.toReader)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("createDelta() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if (err != nil) == tt.wantErr {
+				return
+			}
+			defer got1.Close()
+			if *got != want {
+				t.Errorf("createDelta()\ngot = %v\nwant %v", *got, want)
+			}
+			gotBytes, err := io.ReadAll(got1)
+			if err != nil {
+				t.Error(err)
+			}
+			wantBytes, err := io.ReadAll(tt.want1)
+			if err != nil {
+				t.Error(err)
+			}
+			if !bytes.Equal(gotBytes, wantBytes) {
+				t.Errorf("createDelta()\ngot1 = %v\nwant %v", gotBytes, wantBytes)
+			}
+		})
+	}
+}
+
+func Test_createDeltaTardiff(t *testing.T) {
+	from, err := os.ReadFile("./test-files/from.tar.gz")
+	if err != nil {
+		t.Error(err)
+	}
+	to, err := os.ReadFile("./test-files/to.tar.gz")
+	if err != nil {
+		t.Error(err)
+	}
+	fromDigest := sha256.Sum256(from)
+	toDigest := sha256.Sum256(to)
+	patch, err := os.ReadFile("./test-files/delta.patch.tardiff")
+	if err != nil {
+		t.Error(err)
+	}
+
+	type args struct {
+		fromImage  v1.Descriptor
+		toImage    v1.Descriptor
+		fromReader io.ReadSeeker
+		toReader   io.ReadSeeker
+	}
+	tests := []struct {
+		name              string
+		args              args
+		expectedExtension string
+		want1             io.Reader
+		wantErr           bool
+	}{
+		{name: "success", args: struct {
+			fromImage  v1.Descriptor
+			toImage    v1.Descriptor
+			fromReader io.ReadSeeker
+			toReader   io.ReadSeeker
+		}{fromImage: v1.Descriptor{
+			MediaType: "application/vnd.oci.image.layer.v1.tar",
+			Digest:    digest.NewDigestFromBytes("sha256", fromDigest[:]),
+			Size:      int64(len(from)),
+			Annotations: map[string]string{
+				"org.opencontainers.image.title": "foo",
+				ContentUnpack:                    "true",
+			},
+			Platform:     nil,
+			ArtifactType: "",
+		}, toImage: v1.Descriptor{
+			MediaType: "application/vnd.oci.image.layer.v1.tar",
+			Digest:    digest.NewDigestFromBytes("sha256", toDigest[:]),
+			Size:      int64(len(to)),
+			Annotations: map[string]string{
+				"org.opencontainers.image.title": "foo",
+				ContentUnpack:                    "true",
+			},
+			ArtifactType: "",
+		}, fromReader: bytes.NewReader(from), toReader: bytes.NewReader(to)},
+			want1:             bytes.NewReader(patch),
+			expectedExtension: ".patch.tardiff",
+			wantErr:           false,
+		},
+		{name: "unpack mismatch error", args: struct {
+			fromImage  v1.Descriptor
+			toImage    v1.Descriptor
+			fromReader io.ReadSeeker
+			toReader   io.ReadSeeker
+		}{fromImage: v1.Descriptor{
+			Annotations: map[string]string{
+				ContentUnpack: "true",
+			},
+		}, toImage: v1.Descriptor{
+			Annotations: map[string]string{
+				ContentUnpack: "false",
+			},
+		}, fromReader: bytes.NewReader(from), toReader: bytes.NewReader(to)},
+			want1:   nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			want := deltaTag(tt.args.fromImage, tt.args.toImage) + tt.expectedExtension
+			got, got1, err := createDelta(tt.args.fromImage, tt.args.toImage, tt.args.fromReader, tt.args.toReader)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("createDelta() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if (err != nil) == tt.wantErr {
+				return
+			}
+			defer got1.Close()
+			if *got != want {
+				t.Errorf("createDelta()\ngot = %v\nwant %v", *got, want)
+			}
+			gotBytes, err := io.ReadAll(got1)
+			if err != nil {
+				t.Error(err)
+			}
+			wantBytes, err := io.ReadAll(tt.want1)
+			if err != nil {
+				t.Error(err)
+			}
+			if !bytes.Equal(gotBytes, wantBytes) {
+				t.Errorf("createDelta()\ngot1 = %v\nwant %v", gotBytes, wantBytes)
 			}
 		})
 	}
