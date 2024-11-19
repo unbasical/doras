@@ -61,9 +61,9 @@ func panicOrLogOnErr(f func() error, panicOnErr bool, msg string) {
 	}
 }
 
-func createDelta(fromImage, toImage v1.Descriptor, fromReader, toReader io.ReadSeeker) (*string, io.ReadCloser, error) {
+func createDelta(fromImage, toImage v1.Descriptor, fromReader, toReader io.ReadSeeker) (string, io.ReadCloser, error) {
 	if fromImage.Annotations[ContentUnpack] != toImage.Annotations[ContentUnpack] {
-		return nil, nil, fmt.Errorf("mismatched contents, both need to be packed or not %v, %v", fromImage, toImage)
+		return "", nil, fmt.Errorf("mismatched contents, both need to be packed or not %v, %v", fromImage, toImage)
 	}
 	unpack := fromImage.Annotations[ContentUnpack] == "true"
 	if unpack {
@@ -74,10 +74,8 @@ func createDelta(fromImage, toImage v1.Descriptor, fromReader, toReader io.ReadS
 			err := tar_diff.Diff(fromReader, toReader, pw, optsTarDiff)
 			panicOrLogOnErr(IdentityFunc(err), true, "failed tardiff creation")
 			panicOrLogOnErr(pw.Close, true, "failed to close pipe writer")
-
 		}()
-		outputName := fmt.Sprintf("%s.patch.tardiff", deltaTag(fromImage, toImage))
-		return &outputName, pr, nil
+		return "tardiff", pr, nil
 	} else {
 		// create bsdiff
 		pr, pw := io.Pipe()
@@ -87,8 +85,7 @@ func createDelta(fromImage, toImage v1.Descriptor, fromReader, toReader io.ReadS
 			panicOrLogOnErr(pw.Close, true, "failed to close pipe writer")
 
 		}()
-		outputName := fmt.Sprintf("%s.patch.bsdiff", deltaTag(fromImage, toImage))
-		return &outputName, pr, nil
+		return "bsdiff", pr, nil
 	}
 }
 
@@ -121,14 +118,14 @@ func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, 
 	}
 	defer panicOrLogOnErr(fTo.Close, false, "failed to close temp file")
 
-	fName, content, err := createDelta(fromImage, toImage, fFrom, fTo)
+	algo, content, err := createDelta(*fromDescriptor, *toDescriptor, fFrom, fTo)
 	if err != nil {
 		return nil, err
 	}
-
-	fileNames := []string{*fName}
+	fName := fmt.Sprintf("%s.patch.%s", deltaTag(fromImage, toImage), algo)
+	fileNames := []string{fName}
 	outputDir := tempDir
-	outputPath := path.Join(outputDir, *fName)
+	outputPath := path.Join(outputDir, fName)
 
 	fOut, err := os.OpenFile(outputPath, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {

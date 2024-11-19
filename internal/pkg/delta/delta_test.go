@@ -4,15 +4,18 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
-	"github.com/unbasical/doras-server/internal/pkg/testutils"
+	"encoding/json"
+	"fmt"
 	"io"
-	"oras.land/oras-go/v2/content/oci"
 	"os"
 	"path"
 	"reflect"
-	"strings"
 	"testing"
+
+	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
+	"github.com/unbasical/doras-server/internal/pkg/testutils"
+	"github.com/unbasical/doras-server/internal/pkg/utils"
+	"oras.land/oras-go/v2/content/oci"
 
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -20,17 +23,61 @@ import (
 )
 
 func TestCreateDelta(t *testing.T) {
-	// TODO: finish this test
+
+	ctx := context.Background()
+	dataBinV1 := []byte("Hello")
+	dataBinV2 := []byte("Hello World")
+	bsdiffData, err := bsdiff.Bytes(dataBinV1, dataBinV2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tardiffData := utils.ReadOrPanic("test-files/delta.patch.tardiff")
+	dataTarV1 := utils.ReadOrPanic("test-files/from.tar.gz")
+	dataTarV2 := utils.ReadOrPanic("test-files/to.tar.gz")
 	src, err := testutils.StorageFromFiles(
-		context.Background(),
+		ctx,
 		t.TempDir(),
-		map[string]testutils.FileDescription{
-			"hello": {
-				Data: strings.NewReader("Hello"),
+		[]testutils.FileDescription{
+			{
+				Name: "hello",
+				Data: dataBinV1,
+				Tag:  "bin-v1",
+			},
+			{
+				Name: "hello",
+				Data: dataBinV2,
+				Tag:  "bin-v2",
+			},
+			{
+				Name:        "from.tar.gz",
+				Data:        dataTarV1,
+				Tag:         "tar-v1",
+				NeedsUnpack: true,
+			},
+			{
+				Name:        "to.tar.gz",
+				Data:        dataTarV2,
+				Tag:         "tar-v2",
+				NeedsUnpack: true,
 			},
 		},
-		"test",
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	from, err := src.Resolve(ctx, "bin-v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	to, err := src.Resolve(ctx, "bin-v2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fromTar, err := src.Resolve(ctx, "tar-v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	toTar, err := src.Resolve(ctx, "tar-v2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,37 +94,29 @@ func TestCreateDelta(t *testing.T) {
 		alg       string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    v1.Descriptor
-		wantErr bool
+		name        string
+		args        args
+		wantTag     string
+		wantDiff    []byte
+		wantErr     bool
+		wantDiffAlg string
 	}{
-		{name: "create delta", args: struct {
-			ctx       context.Context
-			src       oras.ReadOnlyTarget
-			dst       oras.Target
-			fromImage v1.Descriptor
-			toImage   v1.Descriptor
-			alg       string
-		}{ctx: context.Background(), src: src, dst: dst, fromImage: v1.Descriptor{
-			MediaType:    "",
-			Digest:       "",
-			Size:         0,
-			URLs:         nil,
-			Annotations:  nil,
-			Data:         nil,
-			Platform:     nil,
-			ArtifactType: "",
-		}, toImage: v1.Descriptor{
-			MediaType:    "",
-			Digest:       "",
-			Size:         0,
-			URLs:         nil,
-			Annotations:  nil,
-			Data:         nil,
-			Platform:     nil,
-			ArtifactType: "",
-		}, alg: "bsdiff"}, want: v1.Descriptor{}, wantErr: false},
+		{
+			name:        "create delta binary",
+			args:        args{ctx: ctx, src: src, dst: dst, fromImage: from, toImage: to},
+			wantTag:     deltaTag(from, to),
+			wantDiff:    bsdiffData,
+			wantErr:     false,
+			wantDiffAlg: "bsdiff",
+		},
+		{
+			name:        "create delta tar",
+			args:        args{ctx: ctx, src: src, dst: dst, fromImage: fromTar, toImage: toTar},
+			wantTag:     deltaTag(fromTar, toTar),
+			wantDiff:    tardiffData,
+			wantErr:     false,
+			wantDiffAlg: "tardiff",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -86,8 +125,44 @@ func TestCreateDelta(t *testing.T) {
 				t.Errorf("CreateDelta() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CreateDelta() got = %v, want %v", got, tt.want)
+			want, err := dst.Resolve(tt.args.ctx, tt.wantTag)
+			if err != nil {
+				t.Error(err)
+			}
+			if !reflect.DeepEqual(*got, want) {
+				t.Errorf("CreateDelta() got = %v, want %v", got, tt.wantTag)
+			}
+			r, err := dst.Fetch(tt.args.ctx, want)
+			if err != nil {
+				t.Error(err)
+			}
+			defer panicOrLogOnErr(r.Close, false, "failed to close reader from fetch")
+			data, err := io.ReadAll(r)
+			if err != nil {
+				t.Error(err)
+			}
+			var manifest v1.Manifest
+			err = json.Unmarshal(data, &manifest)
+			if err != nil {
+				t.Error(err)
+			}
+			layerDesc := manifest.Layers[0]
+			expectedFileName := fmt.Sprintf("%s.patch.%s", deltaTag(tt.args.fromImage, tt.args.toImage), tt.wantDiffAlg)
+			gotFileName := layerDesc.Annotations["org.opencontainers.image.title"]
+			if gotFileName != expectedFileName {
+				t.Errorf("unexpected file name \ngot:%q\nwant%q", gotFileName, expectedFileName)
+			}
+			dataDiff, err := dst.Fetch(tt.args.ctx, layerDesc)
+			if err != nil {
+				t.Error(err)
+			}
+			defer panicOrLogOnErr(dataDiff.Close, false, "failed to close reader from fetch")
+			data, err = io.ReadAll(dataDiff)
+			if err != nil {
+				t.Error(err)
+			}
+			if !bytes.Equal(data, tt.wantDiff) {
+				t.Errorf("CreateDelta()\ngot = %v,\nwant %v", data, tt.wantDiff)
 			}
 		})
 	}
@@ -222,7 +297,7 @@ func Test_writeBlobToTempfile(t *testing.T) {
 				t.Errorf("writeBlobToTempfile() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if (err != nil) == tt.wantErr {
+			if (err != nil) && tt.wantErr {
 				return
 			}
 			// is the output path correct?
@@ -291,7 +366,7 @@ func Test_createDeltaBinary(t *testing.T) {
 			ArtifactType: "",
 		}, fromReader: bytes.NewReader(from), toReader: bytes.NewReader(to)},
 			want1:             bytes.NewReader(patch),
-			expectedExtension: ".patch.bsdiff",
+			expectedExtension: "bsdiff",
 			wantErr:           false,
 		},
 		{name: "unpack mismatch error", args: struct {
@@ -309,18 +384,18 @@ func Test_createDeltaBinary(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			want := deltaTag(tt.args.fromImage, tt.args.toImage) + tt.expectedExtension
+			want := tt.expectedExtension
 			got, got1, err := createDelta(tt.args.fromImage, tt.args.toImage, tt.args.fromReader, tt.args.toReader)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("createDelta() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if (err != nil) == tt.wantErr {
+			if (err != nil) && tt.wantErr {
 				return
 			}
 			defer got1.Close()
-			if *got != want {
-				t.Errorf("createDelta()\ngot = %v\nwant %v", *got, want)
+			if got != want {
+				t.Errorf("createDelta()\ngot = %v\nwant %v", got, want)
 			}
 			gotBytes, err := io.ReadAll(got1)
 			if err != nil {
@@ -392,7 +467,7 @@ func Test_createDeltaTardiff(t *testing.T) {
 			ArtifactType: "",
 		}, fromReader: bytes.NewReader(from), toReader: bytes.NewReader(to)},
 			want1:             bytes.NewReader(patch),
-			expectedExtension: ".patch.tardiff",
+			expectedExtension: "tardiff",
 			wantErr:           false,
 		},
 		{name: "unpack mismatch error", args: struct {
@@ -415,18 +490,18 @@ func Test_createDeltaTardiff(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			want := deltaTag(tt.args.fromImage, tt.args.toImage) + tt.expectedExtension
+			want := tt.expectedExtension
 			got, got1, err := createDelta(tt.args.fromImage, tt.args.toImage, tt.args.fromReader, tt.args.toReader)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("createDelta() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if (err != nil) == tt.wantErr {
+			if (err != nil) && tt.wantErr {
 				return
 			}
 			defer got1.Close()
-			if *got != want {
-				t.Errorf("createDelta()\ngot = %v\nwant %v", *got, want)
+			if got != want {
+				t.Errorf("createDelta()\ngot = %v\nwant %v", got, want)
 			}
 			gotBytes, err := io.ReadAll(got1)
 			if err != nil {

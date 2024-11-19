@@ -67,6 +67,7 @@ func SafeReadYAML(filePath string, targetPointer any, perm os.FileMode) (jsonAva
 	}
 	return true, yaml.Unmarshal(fileBytes, targetPointer)
 }
+
 func SafeReadFile(filePath string, perm os.FileMode) ([]byte, error) {
 	file, err := os.OpenFile(filePath, os.O_RDONLY, perm)
 	if err != nil {
@@ -78,4 +79,12 @@ func SafeReadFile(filePath string, perm os.FileMode) ([]byte, error) {
 		log.Errorf("Failed to close file: %s", filePath)
 	}
 	return bytes, readErr
+}
+
+func ReadOrPanic(p string) []byte {
+	data, err := os.ReadFile(p)
+	if err != nil {
+		panic(err)
+	}
+	return data
 }
