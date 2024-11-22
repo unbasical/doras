@@ -4,15 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	tar_diff "github.com/containers/tar-diff/pkg/tar-diff"
-	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
-	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"io"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content/file"
 	"os"
 	"path"
 	"strings"
+
+	tar_diff "github.com/containers/tar-diff/pkg/tar-diff"
+	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content/file"
 )
 
 const (

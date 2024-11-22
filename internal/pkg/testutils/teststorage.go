@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
