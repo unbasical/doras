@@ -3,39 +3,76 @@ package delta
 import (
 	"bytes"
 	"compress/gzip"
-	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/unbasical/doras-server/internal/pkg/utils"
 	"io"
-	"reflect"
 	"testing"
+
+	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
+	"github.com/unbasical/doras-server/internal/pkg/utils"
 )
 
-func TestApplyDelta(t *testing.T) {
-	type args struct {
-		target  v1.Descriptor
-		diff    io.Reader
-		content io.Reader
+func TestApplyDelta_Bspatch(t *testing.T) {
+	from := []byte("Hello")
+	to := []byte("Hello World")
+	bsDiffPatch, err := bsdiff.Bytes(from, to)
+	if err != nil {
+		t.Error(err)
 	}
-	tests := []struct {
-		name    string
-		args    args
-		want    io.ReadCloser
-		wantErr bool
-	}{
-		// TODO: Add test cases.
+	rc, err := ApplyDelta(
+		v1.Descriptor{
+			Annotations: map[string]string{
+				"org.opencontainers.image.title": "delta.patch.bsdiff",
+			},
+		},
+		bytes.NewReader(bsDiffPatch),
+		bytes.NewReader(from),
+	)
+	if err != nil {
+		t.Error(err)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := ApplyDelta(tt.args.target, tt.args.diff, tt.args.content)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ApplyDelta() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ApplyDelta() got = %v, want %v", got, tt.want)
-			}
-		})
+	defer rc.Close()
+	data, err := io.ReadAll(rc)
+	if err != nil {
+		t.Error(err)
+	}
+	if !bytes.Equal(to, data) {
+		t.Errorf("got %q, want %q", data, to)
+	}
+}
+
+func TestApplyDelta_Tarpatch(t *testing.T) {
+	diff := utils.ReadOrPanic("test-files/delta.patch.tardiff")
+	from := utils.ReadOrPanic("test-files/from.tar.gz")
+	to := utils.ReadOrPanic("test-files/to.tar.gz")
+
+	rc, err := ApplyDelta(
+		v1.Descriptor{
+			Annotations: map[string]string{
+				"org.opencontainers.image.title": "delta.patch.tardiff",
+			},
+		},
+		bytes.NewReader(diff),
+		bytes.NewReader(from),
+	)
+	if err != nil {
+		t.Error(err)
+	}
+	defer rc.Close()
+	gz, err := gzip.NewReader(bytes.NewReader(to))
+	if err != nil {
+		t.Error(err)
+	}
+	// the output is not compressed, so we compare it to the decompressed version of `to`
+	want, err := io.ReadAll(gz)
+	if err != nil {
+		t.Error(err)
+	}
+	got, err := io.ReadAll(rc)
+	if err != nil {
+		t.Error(err)
+	}
+	if !bytes.Equal(want, got) {
+		t.Errorf("got %q, want %q", got, want)
 	}
 }
 
@@ -68,7 +105,7 @@ func TestBspatch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := Bspatch(tt.args.old, tt.args.patch)
+			got, _ := Bspatch(tt.args.old, tt.args.patch)
 			data, err := io.ReadAll(got)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Bspatch() error = %v, wantErr %v", err, tt.wantErr)

@@ -18,22 +18,21 @@ func ApplyDelta(target v1.Descriptor, diff io.Reader, content io.Reader) (io.Rea
 		return nil, fmt.Errorf("missing file name in annotations: %v", target.Annotations)
 	}
 	split := strings.Split(name, ".")
-	if len(split) >= 2 {
+	if len(split) < 2 {
 		return nil, fmt.Errorf("invalid file name, missing extension: %q", name)
 	}
 	fileExtension := split[len(split)-1]
 	switch fileExtension {
 	case "tardiff":
+		return Tarpatch(content, diff)
 	case "bsdiff":
-		panic("todo")
+		return Bspatch(content, diff)
 	default:
 		return nil, fmt.Errorf("unsupported delta algorithm: %q", fileExtension)
 	}
-	panic("todo")
-
 }
 
-func Bspatch(old io.Reader, patch io.Reader) io.ReadCloser {
+func Bspatch(old io.Reader, patch io.Reader) (io.ReadCloser, error) {
 	pr, pw := io.Pipe()
 	go func() {
 		err := bspatch.Reader(old, pw, patch)
@@ -43,7 +42,7 @@ func Bspatch(old io.Reader, patch io.Reader) io.ReadCloser {
 		}
 		panicOrLogOnErr(pw.Close, true, "failed to close pipe writer")
 	}()
-	return pr
+	return pr, nil
 }
 func Tarpatch(old io.Reader, patch io.Reader) (io.ReadCloser, error) {
 	pr, pw := io.Pipe()
