@@ -186,7 +186,7 @@ func Test_deltaTag(t *testing.T) {
 			Digest: digest.NewDigestFromHex("sha256", "da39a3ee5e6b4b0d3255bfef95601890afd80709"),
 		}, to: v1.Descriptor{
 			Digest: digest.NewDigestFromHex("sha256", "da39a3ee5e6b4b0d3255bfef95601890afd80709"),
-		}}, want: "sha256-da39a3ee5e6b4b0d3255bfef95601890afd80709_sha256-da39a3ee5e6b4b0d3255bfef95601890afd80709"},
+		}}, want: "sha256-da39a3ee5e6b4b0d3255bfef9_sha256-da39a3ee5e6b4b0d3255bfef9"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

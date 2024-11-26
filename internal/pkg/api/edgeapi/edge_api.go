@@ -3,6 +3,7 @@ package edgeapi
 import (
 	dorasErrors "github.com/unbasical/doras-server/internal/pkg/error"
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -29,23 +30,16 @@ func BuildEdgeAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
 	log.Debug("Building edgeapi API")
 	shared := &EdgeAPI{
 		artifactStorageProvider: config.ArtifactStorage,
+		repoClients:             config.RepoClients,
 	}
 	r.Use(SharedStateMiddleware(shared))
 	log.Infof("%s", shared)
-	edgeAPI := r.Group("/edgeapi/artifacts")
-
-	edgeAPI.GET("/delta", readDelta)
-
-	edgeAPI.GET("/delta/:identifier", func(c *gin.Context) {
-		panic("todo")
-
-		// readDelta(shared, c)
-	})
-
-	edgeAPI.GET("/full/:identifier", func(c *gin.Context) {
-		panic("todo")
-		// readFull(shared, c)
-	})
+	edgeApiPath, err := url.JoinPath("/", apicommon.ApiBasePath, apicommon.DeltaApiPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	edgeAPI := r.Group(edgeApiPath)
+	edgeAPI.GET("/", readDelta)
 	return r
 }
 
@@ -69,10 +63,7 @@ func readDelta(c *gin.Context) {
 		apicommon.RespondWithError(c, http.StatusInternalServerError, dorasErrors.ErrInternal, "")
 		return
 	}
-	var req apicommon.ReadDeltaRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	}
+
 	from := c.Query("from")
 	if from == "" {
 		apicommon.RespondWithError(c, http.StatusBadRequest, dorasErrors.ErrMissingQueryParam, "from")
@@ -91,7 +82,7 @@ func readDelta(c *gin.Context) {
 		t *oras.ReadOnlyTarget
 		i string
 		d *v1.Descriptor
-	}{{&srcFrom, req.From, &descFrom}, {&srcTo, req.To, &descTo}} {
+	}{{&srcFrom, from, &descFrom}, {&srcTo, to, &descTo}} {
 		repo, tag, err := apicommon.ParseOciImageString(t.i)
 		if err != nil {
 			log.Errorf("Failed to parse OCI image: %s", err)

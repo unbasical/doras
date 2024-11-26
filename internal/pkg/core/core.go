@@ -11,8 +11,9 @@ import (
 )
 
 type Doras struct {
-	engine *gin.Engine
-	stop   chan bool
+	engine    *gin.Engine
+	stop      chan bool
+	serverUrl string
 }
 
 func New(config configs.DorasServerConfig) *Doras {
@@ -32,6 +33,12 @@ func (d *Doras) Init(config configs.DorasServerConfig) *Doras {
 		clientConfigs[k] = &auth.Client{}
 	}
 	reg.PlainHTTP = config.Storage.EnableHTTP
+	if config.Host == "" {
+		d.serverUrl = "localhost:8080"
+	} else {
+		d.serverUrl = config.Host
+	}
+
 	appConfig := &apicommon.Config{
 		ArtifactStorage: apicommon.NewRegistryStorage(reg),
 		RepoClients:     clientConfigs,
@@ -45,7 +52,7 @@ func (d *Doras) Start() {
 	log.Info("Starting doras")
 
 	d.stop = make(chan bool, 1)
-	err := d.engine.Run("localhost:8080")
+	err := d.engine.Run(d.serverUrl)
 	if err != nil {
 		log.Fatal(err)
 	}

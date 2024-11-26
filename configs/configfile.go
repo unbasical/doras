@@ -3,6 +3,7 @@ package configs
 type DorasServerConfig struct {
 	Sources map[string]OrasSourceConfiguration `yaml:"sources"`
 	Storage StorageConfiguration               `yaml:"storage"`
+	Host    string                             `yaml:"host"`
 }
 
 type StorageConfiguration struct {

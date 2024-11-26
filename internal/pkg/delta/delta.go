@@ -172,7 +172,7 @@ func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, 
 
 func deltaTag(from v1.Descriptor, to v1.Descriptor) string {
 	digestFormatFunc := func(target v1.Descriptor) string {
-		return strings.ReplaceAll(target.Digest.String(), ":", "-")
+		return strings.ReplaceAll(target.Digest.String()[:32], ":", "-")
 	}
 	return fmt.Sprintf("%s_%s", digestFormatFunc(from), digestFormatFunc(to))
 }

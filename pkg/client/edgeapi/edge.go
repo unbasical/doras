@@ -56,7 +56,7 @@ func (c *Client) LoadArtifact(artifactURL, outdir string) error {
 	return nil
 }
 
-func (c *Client) fetchArtifact(target v1.Descriptor) (io.Reader, error) {
+func (c *Client) fetchArtifact(target v1.Descriptor) (io.ReadCloser, error) {
 	// fetch manifest
 	// fetch artifact via descriptor in manifest
 	// consider using an oras storage to copy and then call fetch on local storage
@@ -82,11 +82,10 @@ func (c *Client) fetchArtifact(target v1.Descriptor) (io.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer funcutils.PanicOrLogOnErr(rc.Close, false, "failed to close fetch reader")
 	return rc, nil
 }
 
-func (c *Client) ReadDelta(from, to string, acceptedAlgorithms []string) (io.Reader, error) {
+func (c *Client) ReadDelta(from, to string, acceptedAlgorithms []string) (io.ReadCloser, error) {
 
 	url := buildurl.New(
 		buildurl.WithBasePath(c.base.DorasURL),
