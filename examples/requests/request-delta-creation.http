@@ -1,8 +1,0 @@
-POST http://localhost:8080/edge/artifacts/delta
-content-type: application/json
-
-{
-  "identifier_from": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
-  "identifier_to": "7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
-  "algorithm": "bsdiff"
-}
