@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 	"io"
 	"os"
 	"path"
@@ -136,7 +137,7 @@ func TestCreateDelta(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			defer panicOrLogOnErr(r.Close, false, "failed to close reader from fetch")
+			defer funcutils.PanicOrLogOnErr(r.Close, false, "failed to close reader from fetch")
 			data, err := io.ReadAll(r)
 			if err != nil {
 				t.Error(err)
@@ -156,7 +157,7 @@ func TestCreateDelta(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			defer panicOrLogOnErr(dataDiff.Close, false, "failed to close reader from fetch")
+			defer funcutils.PanicOrLogOnErr(dataDiff.Close, false, "failed to close reader from fetch")
 			data, err = io.ReadAll(dataDiff)
 			if err != nil {
 				t.Error(err)

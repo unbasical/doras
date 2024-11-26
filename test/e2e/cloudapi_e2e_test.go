@@ -3,6 +3,8 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"github.com/unbasical/doras-server/pkg/client/cloudapi"
+	"github.com/unbasical/doras-server/pkg/client/edgeapi"
 	"time"
 
 	"io"
@@ -18,13 +20,12 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 	"github.com/unbasical/doras-server/configs"
 	"github.com/unbasical/doras-server/internal/pkg/core"
-	"github.com/unbasical/doras-server/pkg/client"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry/remote"
 )
 
-func Test_everything(t *testing.T) {
+func Test_AddAndLoadDelta(t *testing.T) {
 
 	log.SetLevel(log.DebugLevel)
 	log.SetFormatter(UTCFormatter{Formatter: &log.TextFormatter{FullTimestamp: true}})
@@ -121,14 +122,14 @@ func Test_everything(t *testing.T) {
 			t.Error(err)
 		}
 	}
-	orasClient := client.NewCloudClient("http://localhost:8080")
+	orasClient := cloudapi.NewClient("http://localhost:8080")
 	repoPath, tag, err := orasClient.CreateArtifactFromOCIReference(uriSrc + "/hello:v1")
 	if err != nil {
 		panic(err)
 	}
 	tempDir = t.TempDir()
 
-	edgeClient, err := client.NewEdgeClient("http://localhost:8080", uriDst, true)
+	edgeClient, err := edgeapi.NewEdgeClient("http://localhost:8080", uriDst, true)
 	if err != nil {
 		t.Fatal(err)
 	}

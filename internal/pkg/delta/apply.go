@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"github.com/unbasical/doras-server/internal/pkg/delta/tarfsdatasource"
+	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 	"io"
 	"strings"
 
@@ -38,9 +39,9 @@ func Bspatch(old io.Reader, patch io.Reader) (io.ReadCloser, error) {
 		err := bspatch.Reader(old, pw, patch)
 		if err != nil {
 			errInner := pw.CloseWithError(err)
-			panicOrLogOnErr(IdentityFunc(errInner), false, "failed to close pipe writer after error")
+			funcutils.PanicOrLogOnErr(funcutils.IdentityFunc(errInner), false, "failed to close pipe writer after error")
 		}
-		panicOrLogOnErr(pw.Close, true, "failed to close pipe writer")
+		funcutils.PanicOrLogOnErr(pw.Close, true, "failed to close pipe writer")
 	}()
 	return pr, nil
 }
@@ -57,9 +58,9 @@ func Tarpatch(old io.Reader, patch io.Reader) (io.ReadCloser, error) {
 		err := tarpatch.Apply(patch, dataSource, pw)
 		if err != nil {
 			errInner := pw.CloseWithError(err)
-			panicOrLogOnErr(IdentityFunc(errInner), false, "failed to close pipe writer after error")
+			funcutils.PanicOrLogOnErr(funcutils.IdentityFunc(errInner), false, "failed to close pipe writer after error")
 		}
-		panicOrLogOnErr(pw.Close, true, "failed to close pipe writer")
+		funcutils.PanicOrLogOnErr(pw.Close, true, "failed to close pipe writer")
 	}()
 	return pr, nil
 }

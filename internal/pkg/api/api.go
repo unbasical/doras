@@ -1,14 +1,13 @@
 package api
 
 import (
+	"github.com/unbasical/doras-server/internal/pkg/docs"
 	"net/http"
-
-	swaggerfiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
-	"github.com/unbasical/doras-server/interal/pgk/docs"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	swaggerfiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
 	"github.com/unbasical/doras-server/internal/pkg/api/cloudapi"
 	"github.com/unbasical/doras-server/internal/pkg/api/edgeapi"

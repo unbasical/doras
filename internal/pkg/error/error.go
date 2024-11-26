@@ -2,11 +2,11 @@ package error
 
 import "errors"
 
-type CloudAPIError struct {
-	Error CloudAPIErrorInner `json:"error"`
+type APIError struct {
+	Error APIErrorInner `json:"error"`
 }
 
-type CloudAPIErrorInner struct {
+type APIErrorInner struct {
 	Code    error  `json:"code"`
 	Message string `json:"message,omitempty"`
 }

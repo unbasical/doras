@@ -3,7 +3,7 @@ package cloudapi
 import (
 	"context"
 	"crypto/sha256"
-	"fmt"
+	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 	"io"
 	"net/http"
 	"net/url"
@@ -21,9 +21,10 @@ import (
 )
 
 func BuildCloudAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
-	log.Debug("Building cloud API")
-
-	artifactsAPI := r.Group("/api/artifacts")
+	log.Debug("Building cloudapi API")
+	artifactsApiPath, err := url.JoinPath("/", apicommon.ApiBasePath, "artifacts")
+	funcutils.PanicOrLogOnErr(funcutils.IdentityFunc(err), true, "this should never happen")
+	artifactsAPI := r.Group(artifactsApiPath)
 	// TODO: update this initialization
 	cloudAPI := CloudAPI{
 		storageProvider: config.ArtifactStorage,
@@ -93,16 +94,15 @@ type CreateArtifactResponse struct {
 // Stores the artifact provided as a file in the request body.
 // TODO:
 //   - add option to provide artifact via URL
-//   - add option to provide artifact via OCI reference
 func createArtifact(shared *CloudAPI, c *gin.Context) {
-	from := c.Query("from")
+	from := c.Query(apicommon.ArtifactSourceParamKey)
 	switch from {
-	case "upload":
+	case apicommon.ArtifactSourceParamValueUpload:
 		data, err := extractFile(c, "artifact")
 		if err != nil {
 			log.Errorf("Failed to extract artifact %s", err)
-			c.JSON(http.StatusBadRequest, dorasErrors.CloudAPIError{
-				Error: dorasErrors.CloudAPIErrorInner{
+			c.JSON(http.StatusBadRequest, dorasErrors.APIError{
+				Error: dorasErrors.APIErrorInner{
 					Code:    dorasErrors.ErrArtifactNotProvided,
 					Message: "artifact not provided in request body",
 				},
@@ -112,27 +112,27 @@ func createArtifact(shared *CloudAPI, c *gin.Context) {
 		_, err = shared.createArtifact(&artifact.RawBytesArtifact{Data: data})
 		if err != nil {
 			log.Errorf("Failed to create artifact %s", err)
-			c.JSON(http.StatusInternalServerError, dorasErrors.CloudAPIError{Error: dorasErrors.CloudAPIErrorInner{Code: dorasErrors.ErrInternal}})
+			c.JSON(http.StatusInternalServerError, dorasErrors.APIError{Error: dorasErrors.APIErrorInner{Code: dorasErrors.ErrInternal}})
 		}
 		panic("todo")
-	case "oci":
+	case apicommon.ArtifactSourceParamValueOci:
 		var requestBody CreateOCIArtifactRequest
 		if err := c.BindJSON(&requestBody); err != nil {
 			log.Errorf("Failed to bind request body: %s", err)
-			c.JSON(http.StatusInternalServerError, dorasErrors.CloudAPIError{})
+			c.JSON(http.StatusInternalServerError, dorasErrors.APIError{})
 			return
 		}
-		repo, tag, err := parseOciImageString(requestBody.Image)
+		repo, tag, err := apicommon.ParseOciImageString(requestBody.Image)
 		if err != nil {
 			log.Errorf("Failed to parse OCI image: %s", err)
-			c.JSON(http.StatusInternalServerError, dorasErrors.CloudAPIError{})
+			c.JSON(http.StatusInternalServerError, dorasErrors.APIError{})
 			return
 		}
 		src, err := shared.getOrasSource(repo)
 		if err != nil {
 			log.Errorf("Failed to get oras source: %s", err)
 			// unknown source
-			c.JSON(http.StatusInternalServerError, dorasErrors.CloudAPIError{})
+			c.JSON(http.StatusInternalServerError, dorasErrors.APIError{})
 			return
 		}
 		dstPath := strings.ReplaceAll(repo, ".", "/")
@@ -140,7 +140,7 @@ func createArtifact(shared *CloudAPI, c *gin.Context) {
 		d, err := shared.createArtifactFromOCIReference(src, dstPath, tag)
 		if err != nil {
 			log.Errorf("Failed to create artifact from OCI image: %s", err)
-			c.JSON(http.StatusInternalServerError, dorasErrors.CloudAPIError{})
+			c.JSON(http.StatusInternalServerError, dorasErrors.APIError{})
 			return
 		}
 		// TODO: return URI here?
@@ -149,8 +149,10 @@ func createArtifact(shared *CloudAPI, c *gin.Context) {
 			Tag:  tag,
 			Hash: d.Digest.Encoded(),
 		}})
+	case apicommon.ArtifactSourceParamValueUrl:
+		c.JSON(http.StatusNotImplemented, "not implemented")
 	default:
-		c.JSON(http.StatusInternalServerError, dorasErrors.CloudAPIError{})
+		c.JSON(http.StatusBadRequest, "bad artifact source")
 	}
 }
 
@@ -263,22 +265,4 @@ func getDescriptor(data []byte) v1.Descriptor {
 		ArtifactType: "", // TODO: set artifact type
 	}
 	return descriptor
-}
-
-func parseOciImageString(r string) (string, string, error) {
-	if !strings.HasPrefix(r, "oci://") {
-		r = "oci://" + r
-	}
-	log.Debugf("Parsing OCI image: %s", r)
-	u, err := url.Parse(r)
-	if err != nil {
-		return "", "", err
-	}
-	log.Debugf("parsed URL: %s", u)
-	split := strings.SplitN(u.Path, ":", 2)
-
-	if len(split) != 2 {
-		return "", "", fmt.Errorf("invalid oci image: %s", u.Path)
-	}
-	return u.Host + split[0], split[1], nil
 }

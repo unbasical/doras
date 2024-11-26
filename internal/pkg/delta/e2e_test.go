@@ -3,6 +3,7 @@ package delta
 import (
 	"bytes"
 	"compress/gzip"
+	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 	"io"
 	"strings"
 	"testing"
@@ -41,7 +42,7 @@ func Test_BsdiffDeltaE2E(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer panicOrLogOnErr(rc.Close, true, "failed to close reader")
+	defer funcutils.PanicOrLogOnErr(rc.Close, true, "failed to close reader")
 	if ext != "bsdiff" {
 		t.Error("wrong delta type")
 	}
@@ -54,7 +55,7 @@ func Test_BsdiffDeltaE2E(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer panicOrLogOnErr(rc.Close, true, "failed to close reader")
+	defer funcutils.PanicOrLogOnErr(rc.Close, true, "failed to close reader")
 	got, err := io.ReadAll(rc)
 	if err != nil {
 		t.Error(err)
@@ -93,7 +94,7 @@ func Test_TardiffDeltaE2E(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer panicOrLogOnErr(rc.Close, true, "failed to close reader")
+	defer funcutils.PanicOrLogOnErr(rc.Close, true, "failed to close reader")
 	if ext != "bsdiff" {
 		t.Error("wrong delta type")
 	}
@@ -106,7 +107,7 @@ func Test_TardiffDeltaE2E(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer panicOrLogOnErr(rc.Close, true, "failed to close reader")
+	defer funcutils.PanicOrLogOnErr(rc.Close, true, "failed to close reader")
 	got, err := io.ReadAll(rc)
 	if err != nil {
 		t.Error(err)
