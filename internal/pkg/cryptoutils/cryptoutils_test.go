@@ -1,8 +1,8 @@
-package utils
+package cryptoutils
 
 import "testing"
 
-func Test_CalcSha256Hex(t *testing.T) {
+func TestCalcSha256Hex(t *testing.T) {
 	tests := []struct {
 		name  string
 		input []byte

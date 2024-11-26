@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/unbasical/doras-server/configs"
-	"github.com/unbasical/doras-server/internal/pkg/utils"
+	"github.com/unbasical/doras-server/internal/pkg/fileutils"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -19,7 +19,7 @@ func main() {
 
 	kingpin.Parse()
 	var config configs.DorasServerConfig
-	exists, err := utils.SafeReadYAML(*configFile, &config, os.FileMode(0644))
+	exists, err := fileutils.SafeReadYAML(*configFile, &config, os.FileMode(0644))
 	if !exists || err != nil {
 		log.Fatalf("Error reading config file %s: %s", *configFile, err)
 	}

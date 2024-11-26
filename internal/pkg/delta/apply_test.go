@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"compress/gzip"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/unbasical/doras-server/internal/pkg/fileutils"
 	"io"
 	"testing"
 
 	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
-	"github.com/unbasical/doras-server/internal/pkg/utils"
 )
 
 func TestApplyDelta_Bspatch(t *testing.T) {
@@ -41,9 +41,9 @@ func TestApplyDelta_Bspatch(t *testing.T) {
 }
 
 func TestApplyDelta_Tarpatch(t *testing.T) {
-	diff := utils.ReadOrPanic("test-files/delta.patch.tardiff")
-	from := utils.ReadOrPanic("test-files/from.tar.gz")
-	to := utils.ReadOrPanic("test-files/to.tar.gz")
+	diff := fileutils.ReadOrPanic("test-files/delta.patch.tardiff")
+	from := fileutils.ReadOrPanic("test-files/from.tar.gz")
+	to := fileutils.ReadOrPanic("test-files/to.tar.gz")
 
 	rc, err := ApplyDelta(
 		v1.Descriptor{
@@ -122,9 +122,9 @@ func TestBspatch(t *testing.T) {
 }
 
 func TestTarpatch(t *testing.T) {
-	diff := utils.ReadOrPanic("test-files/delta.patch.tardiff")
-	from := utils.ReadOrPanic("test-files/from.tar.gz")
-	to := utils.ReadOrPanic("test-files/to.tar.gz")
+	diff := fileutils.ReadOrPanic("test-files/delta.patch.tardiff")
+	from := fileutils.ReadOrPanic("test-files/from.tar.gz")
+	to := fileutils.ReadOrPanic("test-files/to.tar.gz")
 
 	type args struct {
 		old   io.Reader

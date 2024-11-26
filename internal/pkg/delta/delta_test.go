@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/unbasical/doras-server/internal/pkg/fileutils"
 	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 	"io"
 	"os"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
 	"github.com/unbasical/doras-server/internal/pkg/testutils"
-	"github.com/unbasical/doras-server/internal/pkg/utils"
 	"oras.land/oras-go/v2/content/oci"
 
 	"github.com/opencontainers/go-digest"
@@ -32,9 +32,9 @@ func TestCreateDelta(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tardiffData := utils.ReadOrPanic("test-files/delta.patch.tardiff")
-	dataTarV1 := utils.ReadOrPanic("test-files/from.tar.gz")
-	dataTarV2 := utils.ReadOrPanic("test-files/to.tar.gz")
+	tardiffData := fileutils.ReadOrPanic("test-files/delta.patch.tardiff")
+	dataTarV1 := fileutils.ReadOrPanic("test-files/from.tar.gz")
+	dataTarV2 := fileutils.ReadOrPanic("test-files/to.tar.gz")
 	src, err := testutils.StorageFromFiles(
 		ctx,
 		t.TempDir(),
