@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 	"io"
 	"os"
 	"path"
 	"strings"
 
-	tar_diff "github.com/containers/tar-diff/pkg/tar-diff"
+	"github.com/unbasical/doras-server/internal/pkg/funcutils"
+
+	tarDiff "github.com/containers/tar-diff/pkg/tar-diff"
 	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
@@ -59,10 +60,10 @@ func createDelta(fromImage, toImage v1.Descriptor, fromReader, toReader io.ReadS
 	unpack := fromImage.Annotations[ContentUnpack] == "true"
 	if unpack {
 		// create tar diff
-		optsTarDiff := tar_diff.NewOptions()
+		optsTarDiff := tarDiff.NewOptions()
 		pr, pw := io.Pipe()
 		go func() {
-			err := tar_diff.Diff(fromReader, toReader, pw, optsTarDiff)
+			err := tarDiff.Diff(fromReader, toReader, pw, optsTarDiff)
 			funcutils.PanicOrLogOnErr(funcutils.IdentityFunc(err), true, "failed tardiff creation")
 			funcutils.PanicOrLogOnErr(pw.Close, true, "failed to close pipe writer")
 		}()
@@ -80,13 +81,13 @@ func createDelta(fromImage, toImage v1.Descriptor, fromReader, toReader io.ReadS
 	}
 }
 
-// TODO:
-// - handle case where delta exists already
-// - create dummy placeholder to communicate that the request is ongoing
-// - consider one of these two
-//   - use a local OCI layout for storage instead of writeBlobToTempfile
-//   - stream the data directly into the delta creation
-func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, fromImage, toImage v1.Descriptor, alg string) (*v1.Descriptor, error) {
+func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, fromImage, toImage v1.Descriptor) (*v1.Descriptor, error) {
+	// TODO:
+	// - handle case where delta exists already
+	// - create dummy placeholder to communicate that the request is ongoing
+	// - consider one of these two
+	//   - use a local OCI layout for storage instead of writeBlobToTempfile
+	//   - stream the data directly into the delta creation
 	fromDescriptor, fromBlobReader, err := getBlobReaderForArtifact(ctx, src, fromImage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get from blob for from-image (%v): %v", fromImage, err)

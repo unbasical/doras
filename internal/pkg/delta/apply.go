@@ -3,10 +3,11 @@ package delta
 import (
 	"compress/gzip"
 	"fmt"
-	"github.com/unbasical/doras-server/internal/pkg/delta/tarfsdatasource"
-	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 	"io"
 	"strings"
+
+	"github.com/unbasical/doras-server/internal/pkg/delta/tarfsdatasource"
+	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 
 	tarpatch "github.com/containers/tar-diff/pkg/tar-patch"
 	"github.com/gabstv/go-bsdiff/pkg/bspatch"

@@ -1,9 +1,10 @@
 package edgeapi
 
 import (
-	dorasErrors "github.com/unbasical/doras-server/internal/pkg/error"
 	"net/http"
 	"net/url"
+
+	dorasErrors "github.com/unbasical/doras-server/internal/pkg/error"
 
 	"github.com/gin-gonic/gin"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -112,7 +113,7 @@ func readDelta(c *gin.Context) {
 	log.Warn("currently not using the provided accepted algorithms")
 	finished := make(chan *v1.Descriptor, 1)
 	go func() {
-		descDelta, err := delta.CreateDelta(c, srcTo, dst, descFrom, descTo, "")
+		descDelta, err := delta.CreateDelta(c, srcTo, dst, descFrom, descTo)
 		if err != nil {
 			log.WithError(err).Error("Failed to create delta")
 			finished <- nil

@@ -4,6 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/samber/lo"
@@ -13,13 +19,8 @@ import (
 	"github.com/unbasical/doras-server/internal/pkg/logutils"
 	"github.com/unbasical/doras-server/internal/pkg/testutils"
 	"github.com/unbasical/doras-server/pkg/client/edgeapi"
-	"io"
-	"net/http"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
-	"strings"
-	"testing"
-	"time"
 )
 
 func Test_ReadDelta(t *testing.T) {
@@ -96,6 +97,9 @@ func Test_ReadDelta(t *testing.T) {
 			},
 		},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	tags := []string{tag1Bsdiff, tag2Bsdiff, tag1Tardiff, tag2Tardiff}
 	_ = lo.Reduce(tags, func(agg map[string]v1.Descriptor, tag string, _ int) map[string]v1.Descriptor {
 		descriptor, err := oras.Copy(ctx, store, tag, repoArtifacts, tag, oras.DefaultCopyOptions)

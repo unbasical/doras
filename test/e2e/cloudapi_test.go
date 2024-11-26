@@ -3,11 +3,12 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/unbasical/doras-server/internal/pkg/logutils"
 	"github.com/unbasical/doras-server/internal/pkg/testutils"
 	"github.com/unbasical/doras-server/pkg/client/cloudapi"
 	"github.com/unbasical/doras-server/pkg/client/edgeapi"
-	"time"
 
 	"io"
 	"net/http"

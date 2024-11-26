@@ -16,9 +16,6 @@ type entry struct {
 	pos    int64
 }
 
-// blockSize is the size of each block in a tar archive.
-const blockSize int64 = 512
-
 type TarfsDataSource struct {
 	rsc          io.ReadSeekCloser
 	entries      map[string]*entry

@@ -6,13 +6,14 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"github.com/unbasical/doras-server/internal/pkg/fileutils"
-	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 	"io"
 	"os"
 	"path"
 	"reflect"
 	"testing"
+
+	"github.com/unbasical/doras-server/internal/pkg/fileutils"
+	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 
 	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
 	"github.com/unbasical/doras-server/internal/pkg/testutils"
@@ -92,7 +93,6 @@ func TestCreateDelta(t *testing.T) {
 		dst       oras.Target
 		fromImage v1.Descriptor
 		toImage   v1.Descriptor
-		alg       string
 	}
 	tests := []struct {
 		name        string
@@ -121,7 +121,7 @@ func TestCreateDelta(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CreateDelta(tt.args.ctx, tt.args.src, tt.args.dst, tt.args.fromImage, tt.args.toImage, tt.args.alg)
+			got, err := CreateDelta(tt.args.ctx, tt.args.src, tt.args.dst, tt.args.fromImage, tt.args.toImage)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CreateDelta() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -192,38 +192,6 @@ func Test_deltaTag(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := deltaTag(tt.args.from, tt.args.to); got != tt.want {
 				t.Errorf("deltaTag() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_getBlobReaderForArtifact(t *testing.T) {
-	type args struct {
-		ctx    context.Context
-		src    oras.ReadOnlyTarget
-		target v1.Descriptor
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *v1.Descriptor
-		want1   io.ReadCloser
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, got1, err := getBlobReaderForArtifact(tt.args.ctx, tt.args.src, tt.args.target)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("getBlobReaderForArtifact() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getBlobReaderForArtifact() got = %v, want %v", got, tt.want)
-			}
-			if !reflect.DeepEqual(got1, tt.want1) {
-				t.Errorf("getBlobReaderForArtifact() got1 = %v, want %v", got1, tt.want1)
 			}
 		})
 	}
@@ -394,7 +362,7 @@ func Test_createDeltaBinary(t *testing.T) {
 			if (err != nil) && tt.wantErr {
 				return
 			}
-			defer got1.Close()
+			defer funcutils.PanicOrLogOnErr(got1.Close, false, "")
 			if got != want {
 				t.Errorf("createDelta()\ngot = %v\nwant %v", got, want)
 			}
@@ -500,7 +468,7 @@ func Test_createDeltaTardiff(t *testing.T) {
 			if (err != nil) && tt.wantErr {
 				return
 			}
-			defer got1.Close()
+			defer funcutils.PanicOrLogOnErr(got1.Close, false, "")
 			if got != want {
 				t.Errorf("createDelta()\ngot = %v\nwant %v", got, want)
 			}

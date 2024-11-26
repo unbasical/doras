@@ -3,10 +3,12 @@ package delta
 import (
 	"bytes"
 	"compress/gzip"
-	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/unbasical/doras-server/internal/pkg/fileutils"
 	"io"
 	"testing"
+
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/unbasical/doras-server/internal/pkg/fileutils"
+	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 
 	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
 )
@@ -30,7 +32,7 @@ func TestApplyDelta_Bspatch(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer rc.Close()
+	defer funcutils.PanicOrLogOnErr(rc.Close, false, "")
 	data, err := io.ReadAll(rc)
 	if err != nil {
 		t.Error(err)
@@ -57,7 +59,7 @@ func TestApplyDelta_Tarpatch(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer rc.Close()
+	defer funcutils.PanicOrLogOnErr(rc.Close, false, "")
 	gz, err := gzip.NewReader(bytes.NewReader(to))
 	if err != nil {
 		t.Error(err)

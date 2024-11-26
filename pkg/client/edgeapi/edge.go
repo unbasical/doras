@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/unbasical/doras-server/internal/pkg/client"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -86,7 +88,7 @@ func (c *Client) fetchArtifact(target v1.Descriptor) (io.ReadCloser, error) {
 }
 
 func (c *Client) ReadDelta(from, to string, acceptedAlgorithms []string) (io.ReadCloser, error) {
-
+	log.Warnf("acceptedAlgorithms are not used: %s", acceptedAlgorithms)
 	url := buildurl.New(
 		buildurl.WithBasePath(c.base.DorasURL),
 		buildurl.WithPathElement(apicommon.ApiBasePath),

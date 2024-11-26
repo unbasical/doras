@@ -44,41 +44,8 @@ func BuildCloudAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
 	artifactsAPI.POST("/", func(context *gin.Context) {
 		createArtifact(&cloudAPI, context)
 	})
-	artifactsAPI.GET("/", func(c *gin.Context) {
-		readAllArtifacts(&cloudAPI, c)
-	})
-	artifactsAPI.GET("/:identifier", func(c *gin.Context) {
-		readArtifact(&cloudAPI, c)
-	})
-	artifactsAPI.GET("/named/:identifier", func(c *gin.Context) {
-		panic("todo")
-	})
-	artifactsAPI.DELETE("/named/:identifier", func(c *gin.Context) {
-		deleteArtifact(&cloudAPI, c)
-	})
-	artifactsAPI.DELETE("/:identifier", func(c *gin.Context) {
-		deleteNamedArtifact(&cloudAPI, c)
-	})
+
 	return r
-}
-
-//nolint:unparam // not yet implemented
-func deleteNamedArtifact(shared *CloudAPI, c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, "not implemented")
-}
-
-//nolint:unparam // not yet implemented
-func deleteArtifact(shared *CloudAPI, c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, "not implemented")
-}
-
-//nolint:unparam // not yet implemented
-func readAllArtifacts(shared *CloudAPI, c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, "not implemented")
-}
-
-func readArtifact(shared *CloudAPI, c *gin.Context) {
-	panic("todo")
 }
 
 type CreateArtifactResponse struct {

@@ -3,14 +3,16 @@ package readerutils
 import (
 	"compress/gzip"
 	"io"
+
+	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 )
 
 type ReaderChain struct {
 	r io.Reader
 }
 
-// TODO: rework this so it fits the actual pattern
 func New(options ...func(*ReaderChain) (io.Reader, error)) (*ReaderChain, error) {
+	// TODO: rework this so it fits the actual pattern
 	rd := &ReaderChain{}
 	for _, o := range options {
 		r, err := o(rd)
@@ -30,7 +32,7 @@ func WithGzipCompress(level int, content io.Reader) func(*ReaderChain) (io.Reade
 				if err != nil {
 					return err
 				}
-				defer gzr.Close()
+				defer funcutils.PanicOrLogOnErr(gzr.Close, true, "failed to close gzip writer")
 				_, err = io.Copy(gzr, content)
 				if err != nil {
 					return err

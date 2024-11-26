@@ -1,8 +1,9 @@
 package api
 
 import (
-	"github.com/unbasical/doras-server/internal/pkg/docs"
 	"net/http"
+
+	"github.com/unbasical/doras-server/internal/pkg/docs"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"

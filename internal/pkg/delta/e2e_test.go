@@ -3,11 +3,12 @@ package delta
 import (
 	"bytes"
 	"compress/gzip"
-	"github.com/unbasical/doras-server/internal/pkg/fileutils"
-	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 	"io"
 	"strings"
 	"testing"
+
+	"github.com/unbasical/doras-server/internal/pkg/fileutils"
+	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
