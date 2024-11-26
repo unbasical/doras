@@ -94,3 +94,23 @@ func ExtractFile(c *gin.Context, name string) ([]byte, error) {
 	}
 	return data[:n], nil
 }
+
+func RespondWithError(c *gin.Context, statusCode int, err error, errorContext string) {
+	c.JSON(statusCode, APIError{
+		Error: APIErrorInner{
+			Code:         statusCode,
+			Message:      err.Error(),
+			ErrorContext: errorContext,
+		},
+	})
+}
+
+type APIError struct {
+	Error APIErrorInner `json:"error"`
+}
+
+type APIErrorInner struct {
+	Code         int    `json:"code"`
+	Message      string `json:"message,omitempty"`
+	ErrorContext string `json:"context,omitempty"`
+}

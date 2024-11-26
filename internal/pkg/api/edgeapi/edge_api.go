@@ -1,6 +1,7 @@
 package edgeapi
 
 import (
+	dorasErrors "github.com/unbasical/doras-server/internal/pkg/error"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -8,7 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
 	"github.com/unbasical/doras-server/internal/pkg/delta"
-	dorasErrors "github.com/unbasical/doras-server/internal/pkg/error"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
 )
@@ -49,6 +49,7 @@ func BuildEdgeAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
 	return r
 }
 
+// TODO: update this
 // @BasePath /api/v1/delta
 // PingExample godoc
 // @Summary Request Delta
@@ -65,7 +66,8 @@ func readDelta(c *gin.Context) {
 	var shared *EdgeAPI
 	err := apicommon.ExtractStateFromContext(c, &shared)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		apicommon.RespondWithError(c, http.StatusInternalServerError, dorasErrors.ErrInternal, "")
+		return
 	}
 	var req apicommon.ReadDeltaRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -73,11 +75,13 @@ func readDelta(c *gin.Context) {
 	}
 	from := c.Query("from")
 	if from == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing 'from' parameter"})
+		apicommon.RespondWithError(c, http.StatusBadRequest, dorasErrors.ErrMissingQueryParam, "from")
+		return
 	}
 	to := c.Query("to")
 	if to == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing 'to' parameter"})
+		apicommon.RespondWithError(c, http.StatusBadRequest, dorasErrors.ErrMissingQueryParam, "to")
+		return
 	}
 
 	// TODO: consider parallelizing resolve with channels
@@ -91,30 +95,28 @@ func readDelta(c *gin.Context) {
 		repo, tag, err := apicommon.ParseOciImageString(t.i)
 		if err != nil {
 			log.Errorf("Failed to parse OCI image: %s", err)
-			c.JSON(http.StatusInternalServerError, dorasErrors.APIError{})
+			apicommon.RespondWithError(c, http.StatusInternalServerError, dorasErrors.ErrInternal, "")
 			return
 		}
 		src, err := shared.getOrasSource(repo)
 		if err != nil {
 			log.Errorf("Failed to get oras source: %s", err)
-			// unknown source
-			c.JSON(http.StatusInternalServerError, dorasErrors.APIError{})
+			apicommon.RespondWithError(c, http.StatusInternalServerError, dorasErrors.ErrInternal, "")
 			return
 		}
 		*t.t = src
 		d, err := src.Resolve(c, tag)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, dorasErrors.APIError{})
+			apicommon.RespondWithError(c, http.StatusInternalServerError, dorasErrors.ErrInternal, "")
 			return
 		}
 		*t.d = d
 	}
 	dst, err := shared.artifactStorageProvider.GetStorage("deltas")
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dorasErrors.APIError{})
+		apicommon.RespondWithError(c, http.StatusInternalServerError, dorasErrors.ErrInternal, "")
 		return
 	}
-
 	log.Warnf("currently always using the toImage registry as the source for fetches")
 	log.Warn("currently not using the provided accepted algorithms")
 	finished := make(chan *v1.Descriptor, 1)
@@ -129,10 +131,10 @@ func readDelta(c *gin.Context) {
 	}()
 	desc := <-finished
 	if desc == nil {
-		c.JSON(http.StatusInternalServerError, dorasErrors.APIError{})
+		apicommon.RespondWithError(c, http.StatusInternalServerError, dorasErrors.ErrInternal, "")
 		return
 	}
-	c.JSON(http.StatusOK, apicommon.ReadDeltaResponse{*desc})
+	c.JSON(http.StatusOK, apicommon.ReadDeltaResponse{Desc: *desc})
 }
 
 func (edgeApi *EdgeAPI) getOrasSource(repoUrl string) (oras.ReadOnlyTarget, error) {

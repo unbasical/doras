@@ -2,10 +2,11 @@ package cloudapi
 
 import (
 	"context"
-	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 
 	"github.com/gin-gonic/gin"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -15,6 +16,16 @@ import (
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
 )
+
+// CloudAPI
+// TODO:
+//   - handle/prevent resource conflicts
+//   - replace config with interfaces that provide functionality
+//   - move to separate file
+type CloudAPI struct {
+	storageProvider apicommon.DorasStorage
+	repoClients     map[string]remote.Client
+}
 
 func BuildCloudAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
 	log.Debug("Building cloudapi API")
@@ -76,6 +87,7 @@ type CreateArtifactResponse struct {
 	Tag  string `json:"tag"`
 }
 
+// TODO: update this
 // @BasePath /api/v1/create
 // PingExample godoc
 // @Summary ping example
@@ -99,20 +111,20 @@ func createArtifact(shared *CloudAPI, c *gin.Context) {
 		var requestBody CreateOCIArtifactRequest
 		if err := c.BindJSON(&requestBody); err != nil {
 			log.Errorf("Failed to bind request body: %s", err)
-			c.JSON(http.StatusInternalServerError, dorasErrors.APIError{})
+			c.JSON(http.StatusBadRequest, apicommon.APIError{})
+			apicommon.RespondWithError(c, http.StatusBadRequest, dorasErrors.ErrUnmarshal, "")
 			return
 		}
 		repo, tag, err := apicommon.ParseOciImageString(requestBody.Image)
 		if err != nil {
 			log.Errorf("Failed to parse OCI image: %s", err)
-			c.JSON(http.StatusInternalServerError, dorasErrors.APIError{})
+			apicommon.RespondWithError(c, http.StatusBadRequest, dorasErrors.ErrInvalidOciImage, requestBody.Image)
 			return
 		}
 		src, err := shared.getOrasSource(repo)
 		if err != nil {
 			log.Errorf("Failed to get oras source: %s", err)
-			// unknown source
-			c.JSON(http.StatusInternalServerError, dorasErrors.APIError{})
+			apicommon.RespondWithError(c, http.StatusInternalServerError, dorasErrors.ErrInternal, "")
 			return
 		}
 		dstPath := strings.ReplaceAll(repo, ".", "/")
@@ -120,30 +132,20 @@ func createArtifact(shared *CloudAPI, c *gin.Context) {
 		d, err := shared.createArtifactFromOCIReference(src, dstPath, tag)
 		if err != nil {
 			log.Errorf("Failed to create artifact from OCI image: %s", err)
-			c.JSON(http.StatusInternalServerError, dorasErrors.APIError{})
+			apicommon.RespondWithError(c, http.StatusInternalServerError, dorasErrors.ErrInternal, "")
 			return
 		}
-		// TODO: return URI here?
+		// TODO: evaluate returning URI instead of descriptor here.
 		c.JSON(http.StatusCreated, gin.H{"success": CreateArtifactResponse{
 			Path: dstPath,
 			Tag:  tag,
 			Hash: d.Digest.Encoded(),
 		}})
 	case apicommon.ArtifactSourceParamValueUrl:
-		c.JSON(http.StatusNotImplemented, "not implemented")
+		apicommon.RespondWithError(c, http.StatusNotImplemented, dorasErrors.ErrNotYetImplemented, from)
 	default:
-		c.JSON(http.StatusBadRequest, "bad artifact source")
+		apicommon.RespondWithError(c, http.StatusBadRequest, dorasErrors.ErrBadRequest, from)
 	}
-}
-
-// CloudAPI
-// TODO:
-//   - handle/prevent resource conflicts
-//   - replace config with interfaces that provide functionality
-//   - move to separate file
-type CloudAPI struct {
-	storageProvider apicommon.DorasStorage
-	repoClients     map[string]remote.Client
 }
 
 func (cloudAPI *CloudAPI) getOrasSource(repoUrl string) (oras.ReadOnlyTarget, error) {
