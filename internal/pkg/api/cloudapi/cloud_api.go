@@ -2,19 +2,15 @@ package cloudapi
 
 import (
 	"context"
-	"crypto/sha256"
 	"github.com/unbasical/doras-server/internal/pkg/funcutils"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
-	"github.com/unbasical/doras-server/internal/pkg/artifact"
 	dorasErrors "github.com/unbasical/doras-server/internal/pkg/error"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
@@ -98,23 +94,7 @@ func createArtifact(shared *CloudAPI, c *gin.Context) {
 	from := c.Query(apicommon.ArtifactSourceParamKey)
 	switch from {
 	case apicommon.ArtifactSourceParamValueUpload:
-		data, err := extractFile(c, "artifact")
-		if err != nil {
-			log.Errorf("Failed to extract artifact %s", err)
-			c.JSON(http.StatusBadRequest, dorasErrors.APIError{
-				Error: dorasErrors.APIErrorInner{
-					Code:    dorasErrors.ErrArtifactNotProvided,
-					Message: "artifact not provided in request body",
-				},
-			})
-			return
-		}
-		_, err = shared.createArtifact(&artifact.RawBytesArtifact{Data: data})
-		if err != nil {
-			log.Errorf("Failed to create artifact %s", err)
-			c.JSON(http.StatusInternalServerError, dorasErrors.APIError{Error: dorasErrors.APIErrorInner{Code: dorasErrors.ErrInternal}})
-		}
-		panic("todo")
+		c.JSON(http.StatusNotImplemented, "not implemented")
 	case apicommon.ArtifactSourceParamValueOci:
 		var requestBody CreateOCIArtifactRequest
 		if err := c.BindJSON(&requestBody); err != nil {
@@ -202,38 +182,6 @@ func (cloudAPI *CloudAPI) createArtifactFromOCIReference(src oras.ReadOnlyTarget
 	return d, nil
 }
 
-func (cloudAPI *CloudAPI) createArtifact(artfct artifact.Artifact) (string, error) {
-	data := artfct.GetBytes()
-	expected := getDescriptor(data)
-	s, err := cloudAPI.storageProvider.GetStorage("blobs")
-	if err != nil {
-		log.Errorf("Failed to get oras storage: %s", err)
-		return "", err
-	}
-	err = s.Push(context.Background(), expected, artfct.GetReader())
-	if err != nil {
-		return "", err
-	}
-	return expected.Digest.Encoded(), nil
-}
-
-func extractFile(c *gin.Context, name string) ([]byte, error) {
-	formFile, err := c.FormFile(name)
-	if err != nil {
-		return nil, err
-	}
-	file, err := formFile.Open()
-	if err != nil {
-		return nil, err
-	}
-	data := make([]byte, formFile.Size)
-	n, err := file.Read(data)
-	if err != nil && err != io.EOF {
-		return nil, err
-	}
-	return data[:n], nil
-}
-
 type OciArtifact struct {
 	// MediaType is the media type of the object this schema refers to.
 	MediaType string `json:"mediaType"`
@@ -249,20 +197,4 @@ type OciArtifact struct {
 
 	// Annotations contains arbitrary metadata for the artifact manifest.
 	Annotations map[string]string `json:"annotations,omitempty"`
-}
-
-func getDescriptor(data []byte) v1.Descriptor {
-	hasher := sha256.New()
-	hasher.Write(data)
-	descriptor := v1.Descriptor{
-		MediaType:    "", // TODO: set media type
-		Digest:       digest.NewDigest("sha256", hasher),
-		Size:         int64(len(data)),
-		URLs:         nil,
-		Annotations:  nil, // TODO: add artifact name
-		Data:         nil,
-		Platform:     nil,
-		ArtifactType: "", // TODO: set artifact type
-	}
-	return descriptor
 }

@@ -1,8 +1,11 @@
 package ociutils
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go/v1"
 	"net/url"
 	"strings"
 
@@ -86,4 +89,20 @@ func NewImageIdentifier(image string) (*ImageIdentifier, error) {
 		}, nil
 	}
 	return nil, fmt.Errorf("invalid image URL (empty digest/tag): %s", image)
+}
+
+func GetDescriptor(data []byte) v1.Descriptor {
+	hasher := sha256.New()
+	hasher.Write(data)
+	descriptor := v1.Descriptor{
+		MediaType:    "", // TODO: set media type
+		Digest:       digest.NewDigest("sha256", hasher),
+		Size:         int64(len(data)),
+		URLs:         nil,
+		Annotations:  nil, // TODO: add artifact name
+		Data:         nil,
+		Platform:     nil,
+		ArtifactType: "", // TODO: set artifact type
+	}
+	return descriptor
 }

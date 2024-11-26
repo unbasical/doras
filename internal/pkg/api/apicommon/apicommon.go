@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"strings"
 
@@ -75,4 +76,21 @@ type ReadDeltaRequest struct {
 
 type ReadDeltaResponse struct {
 	Desc v1.Descriptor `json:"descriptor"`
+}
+
+func ExtractFile(c *gin.Context, name string) ([]byte, error) {
+	formFile, err := c.FormFile(name)
+	if err != nil {
+		return nil, err
+	}
+	file, err := formFile.Open()
+	if err != nil {
+		return nil, err
+	}
+	data := make([]byte, formFile.Size)
+	n, err := file.Read(data)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+	return data[:n], nil
 }
