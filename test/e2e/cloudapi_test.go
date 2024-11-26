@@ -27,8 +27,7 @@ import (
 
 func Test_AddAndLoadDelta(t *testing.T) {
 
-	log.SetLevel(log.DebugLevel)
-	log.SetFormatter(logutils.UTCFormatter{Formatter: &log.TextFormatter{FullTimestamp: true}})
+	logutils.SetupTestLogging()
 	ctx := context.Background()
 	uriSrc := testutils.LaunchRegistry(ctx)
 	uriDst := testutils.LaunchRegistry(ctx)
