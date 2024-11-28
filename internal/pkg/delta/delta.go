@@ -148,6 +148,14 @@ func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, 
 	for _, name := range fileNames {
 		fileDescriptor, err := fs.Add(ctx, name, mediaType, outputPath)
 		funcutils.PanicOrLogOnErr(funcutils.IdentityFunc(err), true, "failed to add file to storage object")
+		fromJson, errFrom := json.Marshal(fromImage)
+		toJson, errTo := json.Marshal(toImage)
+		err = funcutils.MultiError(errFrom, errTo)
+		if err != nil {
+			return nil, err
+		}
+		fileDescriptor.Annotations["from"] = string(fromJson)
+		fileDescriptor.Annotations["to"] = string(toJson)
 		fileDescriptors = append(fileDescriptors, fileDescriptor)
 	}
 

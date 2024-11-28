@@ -2,9 +2,8 @@ package readerutils
 
 import (
 	"compress/gzip"
-	"io"
-
 	"github.com/unbasical/doras-server/internal/pkg/funcutils"
+	"io"
 )
 
 type ReaderChain struct {
@@ -64,4 +63,25 @@ func WriterToReader(f func(io.Writer) error) (io.Reader, error) {
 // EOFCloser Turns io.ReadCloser into io.Reader without leaking by closing the original reader.
 func EOFCloser(io.ReadCloser) io.Reader {
 	panic("todo")
+}
+
+func ChainedCloser(this io.ReadCloser, other io.Closer) io.ReadCloser {
+	return struct {
+		io.Reader
+		io.Closer
+	}{
+		Reader: this,
+		Closer: closerFunc(func() error {
+			errOther := other.Close()
+			errThis := this.Close()
+			return funcutils.MultiError(errOther, errThis)
+		})}
+}
+
+// CloserFunc is the basic Close method defined in io.Closer.
+type closerFunc func() error
+
+// Close performs close operation by the CloserFunc.
+func (fn closerFunc) Close() error {
+	return fn()
 }

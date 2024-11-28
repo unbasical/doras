@@ -2,8 +2,11 @@ package e2e
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
+	"github.com/unbasical/doras-server/internal/pkg/delta"
+	"github.com/unbasical/doras-server/internal/pkg/ociutils"
 	"io"
 	"net/http"
 	"strings"
@@ -33,7 +36,14 @@ func Test_ReadDelta(t *testing.T) {
 	fromDataTarDiff := fileutils.ReadOrPanic("../../internal/pkg/delta/test-files/from.tar.gz")
 	toDataTarDiff := fileutils.ReadOrPanic("../../internal/pkg/delta/test-files/to.tar.gz")
 	deltaWantTarDiff := fileutils.ReadOrPanic("../../internal/pkg/delta/test-files/delta.patch.tardiff")
-
+	gzr, err := gzip.NewReader(bytes.NewBuffer(toDataTarDiff))
+	if err != nil {
+		t.Fatal(err)
+	}
+	toDataTarDiff, err = io.ReadAll(gzr)
+	if err != nil {
+		t.Fatal(err)
+	}
 	logutils.SetupTestLogging()
 	ctx := context.Background()
 
@@ -102,11 +112,15 @@ func Test_ReadDelta(t *testing.T) {
 	}
 	tags := []string{tag1Bsdiff, tag2Bsdiff, tag1Tardiff, tag2Tardiff}
 	_ = lo.Reduce(tags, func(agg map[string]v1.Descriptor, tag string, _ int) map[string]v1.Descriptor {
-		descriptor, err := oras.Copy(ctx, store, tag, repoArtifacts, tag, oras.DefaultCopyOptions)
+		rootDescriptor, err := oras.Copy(ctx, store, tag, repoArtifacts, tag, oras.DefaultCopyOptions)
 		if err != nil {
 			t.Fatal(err)
 		}
-		agg[tag] = descriptor
+		blobDescriptor, err := ociutils.GetBlobDescriptor(ctx, store, rootDescriptor)
+		if err != nil {
+			t.Fatal(err)
+		}
+		agg[tag] = *blobDescriptor
 		return agg
 	}, make(map[string]v1.Descriptor))
 
@@ -137,20 +151,36 @@ func Test_ReadDelta(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, tt := range []struct {
-		name string
-		from string
-		to   string
-		want []byte
+		name       string
+		from       string
+		to         string
+		fromReader io.Reader
+		toReader   io.Reader
+		want       []byte
 	}{
-		{name: "bsdiff", from: tag1Bsdiff, to: tag2Bsdiff, want: deltaWantBsdiff},
-		{name: "tardiff", from: tag1Tardiff, to: tag2Tardiff, want: deltaWantTarDiff},
+		{
+			name:       "bsdiff",
+			from:       tag1Bsdiff,
+			fromReader: bytes.NewBuffer(fromDataBsdiff),
+			to:         tag2Bsdiff,
+			toReader:   bytes.NewBuffer(toDataBsdiff),
+			want:       deltaWantBsdiff,
+		},
+		{
+			name:       "tardiff",
+			from:       tag1Tardiff,
+			fromReader: bytes.NewBuffer(fromDataTarDiff),
+			to:         tag2Tardiff,
+			toReader:   bytes.NewBuffer(toDataTarDiff),
+			want:       deltaWantTarDiff,
+		},
 	} {
 		imageFrom := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tt.from)
 		imageTo := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tt.to)
 
 		r, err := edgeClient.ReadDeltaAsStream(imageFrom, imageTo, nil)
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 		deltaGot, err := io.ReadAll(r)
 		if err != nil {
@@ -158,6 +188,25 @@ func Test_ReadDelta(t *testing.T) {
 		}
 		if !bytes.Equal(deltaGot, tt.want) {
 			t.Errorf("got:\n%x\nwant:\n%x", deltaGot, tt.want)
+		}
+		patchedReader, err := delta.ApplyDelta(
+			tt.name,
+			bytes.NewReader(deltaGot),
+			tt.fromReader,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		patchedData, err := io.ReadAll(patchedReader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		toWant, err := io.ReadAll(tt.toReader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(patchedData, toWant) {
+			t.Errorf("got:\n%x\nwant:\n%x", patchedData, toWant)
 		}
 	}
 

@@ -47,12 +47,8 @@ func Test_BsdiffDeltaE2E(t *testing.T) {
 	if ext != "bsdiff" {
 		t.Error("wrong delta type")
 	}
-	deltaDescriptor := v1.Descriptor{
-		Annotations: map[string]string{
-			"org.opencontainers.image.title": "foo.patch." + ext,
-		},
-	}
-	rc, err = ApplyDelta(deltaDescriptor, rc, strings.NewReader(from))
+
+	rc, err = ApplyDelta(ext, rc, strings.NewReader(from))
 	if err != nil {
 		t.Error(err)
 	}
@@ -99,12 +95,8 @@ func Test_TardiffDeltaE2E(t *testing.T) {
 	if ext != "bsdiff" {
 		t.Error("wrong delta type")
 	}
-	deltaDescriptor := v1.Descriptor{
-		Annotations: map[string]string{
-			"org.opencontainers.image.title": "foo.patch." + ext,
-		},
-	}
-	rc, err = ApplyDelta(deltaDescriptor, rc, bytes.NewReader(from))
+
+	rc, err = ApplyDelta(ext, rc, bytes.NewReader(from))
 	if err != nil {
 		t.Error(err)
 	}

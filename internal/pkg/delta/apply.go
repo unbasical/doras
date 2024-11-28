@@ -14,24 +14,28 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-func ApplyDelta(target v1.Descriptor, diff io.Reader, content io.Reader) (io.ReadCloser, error) {
-	name, ok := target.Annotations["org.opencontainers.image.title"]
+func ApplyDelta(deltaKind string, diff io.Reader, content io.Reader) (io.ReadCloser, error) {
+	switch deltaKind {
+	case "tardiff":
+		return Tarpatch(content, diff)
+	case "bsdiff":
+		return Bspatch(content, diff)
+	default:
+		return nil, fmt.Errorf("unsupported delta algorithm: %q", deltaKind)
+	}
+}
+
+func ApplyDeltaWithBlobDescrsiptor(blobDescriptor v1.Descriptor, diff io.Reader, content io.Reader) (io.ReadCloser, error) {
+	name, ok := blobDescriptor.Annotations["org.opencontainers.image.title"]
 	if !ok || name == "" {
-		return nil, fmt.Errorf("missing file name in annotations: %v", target.Annotations)
+		return nil, fmt.Errorf("missing file name in annotations: %v", blobDescriptor.Annotations)
 	}
 	split := strings.Split(name, ".")
 	if len(split) < 2 {
 		return nil, fmt.Errorf("invalid file name, missing extension: %q", name)
 	}
 	fileExtension := split[len(split)-1]
-	switch fileExtension {
-	case "tardiff":
-		return Tarpatch(content, diff)
-	case "bsdiff":
-		return Bspatch(content, diff)
-	default:
-		return nil, fmt.Errorf("unsupported delta algorithm: %q", fileExtension)
-	}
+	return ApplyDelta(fileExtension, diff, content)
 }
 
 func Bspatch(old io.Reader, patch io.Reader) (io.ReadCloser, error) {

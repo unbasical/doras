@@ -6,7 +6,6 @@ import (
 	"io"
 	"testing"
 
-	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/unbasical/doras-server/internal/pkg/fileutils"
 	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 
@@ -21,11 +20,7 @@ func TestApplyDelta_Bspatch(t *testing.T) {
 		t.Error(err)
 	}
 	rc, err := ApplyDelta(
-		v1.Descriptor{
-			Annotations: map[string]string{
-				"org.opencontainers.image.title": "delta.patch.bsdiff",
-			},
-		},
+		"bsdiff",
 		bytes.NewReader(bsDiffPatch),
 		bytes.NewReader(from),
 	)
@@ -48,11 +43,7 @@ func TestApplyDelta_Tarpatch(t *testing.T) {
 	to := fileutils.ReadOrPanic("test-files/to.tar.gz")
 
 	rc, err := ApplyDelta(
-		v1.Descriptor{
-			Annotations: map[string]string{
-				"org.opencontainers.image.title": "delta.patch.tardiff",
-			},
-		},
+		"tardiff",
 		bytes.NewReader(diff),
 		bytes.NewReader(from),
 	)

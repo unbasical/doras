@@ -1,10 +1,15 @@
 package ociutils
 
 import (
+	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/unbasical/doras-server/internal/pkg/funcutils"
+	"io"
 	"net/url"
+	"oras.land/oras-go/v2"
 	"strings"
 
 	"github.com/opencontainers/go-digest"
@@ -90,6 +95,39 @@ func NewImageIdentifier(image string) (*ImageIdentifier, error) {
 		}, nil
 	}
 	return nil, fmt.Errorf("invalid image URL (empty digest/tag): %s", image)
+}
+
+func GetLayers(ctx context.Context, src oras.ReadOnlyTarget, rootDescriptor v1.Descriptor) ([]v1.Descriptor, error) {
+	r, err := src.Fetch(ctx, rootDescriptor)
+	if err != nil {
+		return nil, err
+	}
+	defer funcutils.PanicOrLogOnErr(r.Close, false, "failed to close fetch reader")
+	mf, err := ParseManifestJSON(r)
+	if err != nil {
+		return nil, err
+	}
+	return mf.Layers, nil
+}
+
+func GetBlobDescriptor(ctx context.Context, src oras.ReadOnlyTarget, rootDescriptor v1.Descriptor) (*v1.Descriptor, error) {
+	layers, err := GetLayers(ctx, src, rootDescriptor)
+	if err != nil {
+		return nil, err
+	}
+	if len(layers) != 1 {
+		return nil, fmt.Errorf("unexpected amount of layer (!= 1): %v", layers)
+	}
+	return &layers[0], nil
+}
+
+func ParseManifestJSON(data io.Reader) (*v1.Manifest, error) {
+	var manifest *v1.Manifest
+	err := json.NewDecoder(data).Decode(&manifest)
+	if err != nil {
+		return nil, err
+	}
+	return manifest, nil
 }
 
 func GetDescriptor(data []byte) v1.Descriptor {
