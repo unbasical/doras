@@ -38,9 +38,6 @@ func BuildCloudAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
 		repoClients:     config.RepoClients,
 	}
 
-	artifactsAPI.PUT("/named/:identifier", func(context *gin.Context) {
-		panic("todo")
-	})
 	artifactsAPI.POST("/", func(context *gin.Context) {
 		createArtifact(&cloudAPI, context)
 	})
