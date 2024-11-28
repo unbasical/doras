@@ -87,7 +87,15 @@ func (c *Client) fetchArtifact(target v1.Descriptor) (io.ReadCloser, error) {
 	return rc, nil
 }
 
-func (c *Client) ReadDelta(from, to string, acceptedAlgorithms []string) (io.ReadCloser, error) {
+func (c *Client) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string) (io.ReadCloser, error) {
+	descriptor, err := c.ReadDeltaAsDescriptor(from, to, acceptedAlgorithms)
+	if err != nil {
+		return nil, err
+	}
+	return c.fetchArtifact(*descriptor)
+}
+
+func (c *Client) ReadDeltaAsDescriptor(from, to string, acceptedAlgorithms []string) (*v1.Descriptor, error) {
 	log.Warnf("acceptedAlgorithms are not used: %s", acceptedAlgorithms)
 	url := buildurl.New(
 		buildurl.WithBasePath(c.base.DorasURL),
@@ -110,5 +118,5 @@ func (c *Client) ReadDelta(from, to string, acceptedAlgorithms []string) (io.Rea
 	if err != nil {
 		return nil, err
 	}
-	return c.fetchArtifact(resBody.Desc)
+	return &resBody.Desc, nil
 }

@@ -148,7 +148,7 @@ func Test_ReadDelta(t *testing.T) {
 		imageFrom := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tt.from)
 		imageTo := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tt.to)
 
-		r, err := edgeClient.ReadDelta(imageFrom, imageTo, nil)
+		r, err := edgeClient.ReadDeltaAsStream(imageFrom, imageTo, nil)
 		if err != nil {
 			t.Error(err)
 		}
