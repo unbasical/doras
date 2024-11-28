@@ -9,8 +9,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/unbasical/doras-server/internal/pkg/client"
-
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
 	"github.com/unbasical/doras-server/internal/pkg/buildurl"
@@ -18,25 +16,7 @@ import (
 	"github.com/unbasical/doras-server/internal/pkg/ociutils"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
-	"oras.land/oras-go/v2/registry/remote"
 )
-
-type Client struct {
-	base *client.DorasBaseClient
-	reg  *remote.Registry
-}
-
-func NewEdgeClient(serverURL, registry string, allowHttp bool) (*Client, error) {
-	reg, err := remote.NewRegistry(registry)
-	if err != nil {
-		return nil, err
-	}
-	reg.PlainHTTP = allowHttp
-	return &Client{
-		base: client.NewBaseClient(serverURL),
-		reg:  reg,
-	}, nil
-}
 
 func (c *Client) LoadArtifact(artifactURL, outdir string) error {
 	identifier, err := ociutils.NewImageIdentifier(artifactURL)

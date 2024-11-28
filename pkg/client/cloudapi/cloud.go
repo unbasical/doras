@@ -6,19 +6,9 @@ import (
 
 	"github.com/unbasical/doras-server/internal/pkg/buildurl"
 
-	"github.com/unbasical/doras-server/internal/pkg/client"
-
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
 	"github.com/unbasical/doras-server/internal/pkg/api/cloudapi"
 )
-
-type Client struct {
-	base *client.DorasBaseClient
-}
-
-func NewClient(serverURL string) *Client {
-	return &Client{base: client.NewBaseClient(serverURL)}
-}
 
 func (c *Client) CreateArtifactFromOCIReference(image string) (string, string, error) {
 	request := apicommon.CreateOCIArtifactRequest{
