@@ -72,7 +72,7 @@ func createArtifact(shared *CloudAPI, c *gin.Context) {
 	case apicommon.ArtifactSourceParamValueUpload:
 		c.JSON(http.StatusNotImplemented, "not implemented")
 	case apicommon.ArtifactSourceParamValueOci:
-		var requestBody CreateOCIArtifactRequest
+		var requestBody apicommon.CreateOCIArtifactRequest
 		if err := c.BindJSON(&requestBody); err != nil {
 			log.Errorf("Failed to bind request body: %s", err)
 			c.JSON(http.StatusBadRequest, apicommon.APIError{})
@@ -124,10 +124,6 @@ func (cloudAPI *CloudAPI) getOrasSource(repoUrl string) (oras.ReadOnlyTarget, er
 		log.Debugf("did not find client configuration for %s, using default config", repoUrl)
 	}
 	return src, nil
-}
-
-type CreateOCIArtifactRequest struct {
-	Image string `json:"image"`
 }
 
 func (cloudAPI *CloudAPI) createArtifactFromOCIReference(src oras.ReadOnlyTarget, base, tag string) (v1.Descriptor, error) {

@@ -21,7 +21,7 @@ func NewClient(serverURL string) *Client {
 }
 
 func (c *Client) CreateArtifactFromOCIReference(image string) (string, string, error) {
-	request := cloudapi.CreateOCIArtifactRequest{
+	request := apicommon.CreateOCIArtifactRequest{
 		Image: image,
 	}
 	requestJSON, err := json.Marshal(request)

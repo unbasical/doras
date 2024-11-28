@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
@@ -68,16 +67,6 @@ func ParseOciImageString(r string) (string, string, error) {
 	return u.Host + split[0], split[1], nil
 }
 
-type ReadDeltaRequest struct {
-	From               string   `json:"from"`
-	To                 string   `json:"to"`
-	AcceptedAlgorithms []string `json:"accepted_algorithms"`
-}
-
-type ReadDeltaResponse struct {
-	Desc v1.Descriptor `json:"descriptor"`
-}
-
 func ExtractFile(c *gin.Context, name string) ([]byte, error) {
 	formFile, err := c.FormFile(name)
 	if err != nil {
@@ -103,14 +92,4 @@ func RespondWithError(c *gin.Context, statusCode int, err error, errorContext st
 			ErrorContext: errorContext,
 		},
 	})
-}
-
-type APIError struct {
-	Error APIErrorInner `json:"error"`
-}
-
-type APIErrorInner struct {
-	Code         int    `json:"code"`
-	Message      string `json:"message,omitempty"`
-	ErrorContext string `json:"context,omitempty"`
 }
