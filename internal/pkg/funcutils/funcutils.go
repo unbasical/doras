@@ -37,3 +37,9 @@ func MultiError(errs ...error) error {
 	msg := strings.Join(errStrings, "\n")
 	return fmt.Errorf("received the following errors:\n%s", msg)
 }
+
+func MultiErrFunc(funcs ...func() error) error {
+	return MultiError(lo.Map(funcs, func(f func() error, _ int) error {
+		return f()
+	})...)
+}

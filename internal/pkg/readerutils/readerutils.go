@@ -72,9 +72,10 @@ func ChainedCloser(this io.ReadCloser, other io.Closer) io.ReadCloser {
 	}{
 		Reader: this,
 		Closer: closerFunc(func() error {
-			errOther := other.Close()
-			errThis := this.Close()
-			return funcutils.MultiError(errOther, errThis)
+			return funcutils.MultiError(
+				other.Close(),
+				this.Close(),
+			)
 		})}
 }
 
