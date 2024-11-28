@@ -5,13 +5,15 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"github.com/unbasical/doras-server/internal/pkg/delta"
-	"github.com/unbasical/doras-server/internal/pkg/ociutils"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/unbasical/doras-server/internal/pkg/delta"
+	"github.com/unbasical/doras-server/internal/pkg/logutils"
+	"github.com/unbasical/doras-server/internal/pkg/ociutils"
 
 	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -19,14 +21,16 @@ import (
 	"github.com/unbasical/doras-server/configs"
 	"github.com/unbasical/doras-server/internal/pkg/core"
 	"github.com/unbasical/doras-server/internal/pkg/fileutils"
-	"github.com/unbasical/doras-server/internal/pkg/logutils"
 	"github.com/unbasical/doras-server/internal/pkg/testutils"
 	"github.com/unbasical/doras-server/pkg/client/edgeapi"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
 )
 
-func Test_ReadDelta(t *testing.T) {
+func Test_ReadAndApplyDelta(t *testing.T) {
+	ctx := context.Background()
+	logutils.SetupTestLogging()
+
 	fromDataBsdiff := []byte("foo")
 	toDataBsdiff := []byte("bar")
 	deltaWantBsdiff, err := bsdiff.Bytes(fromDataBsdiff, toDataBsdiff)
@@ -36,6 +40,8 @@ func Test_ReadDelta(t *testing.T) {
 	fromDataTarDiff := fileutils.ReadOrPanic("../../internal/pkg/delta/test-files/from.tar.gz")
 	toDataTarDiff := fileutils.ReadOrPanic("../../internal/pkg/delta/test-files/to.tar.gz")
 	deltaWantTarDiff := fileutils.ReadOrPanic("../../internal/pkg/delta/test-files/delta.patch.tardiff")
+
+	// decompress tar because the ApplyDelta has an uncompressed tar as the output
 	gzr, err := gzip.NewReader(bytes.NewBuffer(toDataTarDiff))
 	if err != nil {
 		t.Fatal(err)
@@ -44,8 +50,6 @@ func Test_ReadDelta(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	logutils.SetupTestLogging()
-	ctx := context.Background()
 
 	regUri := testutils.LaunchRegistry(ctx)
 
@@ -75,6 +79,7 @@ func Test_ReadDelta(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// populate the oras internal registry with files from which deltas will be created
 	tempDir := t.TempDir()
 	tag1Bsdiff := "v1-bsdiff"
 	tag2Bsdiff := "v2-bsdiff"
@@ -124,6 +129,7 @@ func Test_ReadDelta(t *testing.T) {
 		return agg
 	}, make(map[string]v1.Descriptor))
 
+	// make sure server has launched
 	for {
 		res, err := http.DefaultClient.Get(fmt.Sprintf("http://%s/api/v1/ping", host))
 		if err != nil {
@@ -178,6 +184,7 @@ func Test_ReadDelta(t *testing.T) {
 		imageFrom := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tt.from)
 		imageTo := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tt.to)
 
+		// read delta from sever
 		r, err := edgeClient.ReadDeltaAsStream(imageFrom, imageTo, nil)
 		if err != nil {
 			t.Fatal(err)
@@ -189,6 +196,8 @@ func Test_ReadDelta(t *testing.T) {
 		if !bytes.Equal(deltaGot, tt.want) {
 			t.Errorf("got:\n%x\nwant:\n%x", deltaGot, tt.want)
 		}
+
+		// apply the requested data
 		patchedReader, err := delta.ApplyDelta(
 			tt.name,
 			bytes.NewReader(deltaGot),
