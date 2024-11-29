@@ -67,12 +67,16 @@ func (c *Client) fetchArtifact(target v1.Descriptor) (io.ReadCloser, error) {
 	return rc, nil
 }
 
-func (c *Client) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string) (io.ReadCloser, error) {
+func (c *Client) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string) (*v1.Descriptor, io.ReadCloser, error) {
 	descriptor, err := c.ReadDeltaAsDescriptor(from, to, acceptedAlgorithms)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return c.fetchArtifact(*descriptor)
+	rc, err := c.fetchArtifact(*descriptor)
+	if err != nil {
+		return nil, nil, err
+	}
+	return descriptor, rc, nil
 }
 
 func (c *Client) ReadDeltaAsDescriptor(from, to string, acceptedAlgorithms []string) (*v1.Descriptor, error) {
