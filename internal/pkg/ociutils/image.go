@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/url"
 	"oras.land/oras-go/v2"
+	"regexp"
 	"strings"
 
 	"github.com/opencontainers/go-digest"
@@ -144,4 +145,10 @@ func GetDescriptor(data []byte) v1.Descriptor {
 		ArtifactType: "", // TODO: set artifact type
 	}
 	return descriptor
+}
+
+var reDigest = regexp.MustCompile(`\S*@sha256:[a-f0-9]{64}$`)
+
+func IsDigest(imageOrTag string) bool {
+	return reDigest.MatchString(imageOrTag)
 }
