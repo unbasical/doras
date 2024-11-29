@@ -80,14 +80,19 @@ func readDelta(c *gin.Context) {
 	var srcFrom, srcTo oras.ReadOnlyTarget
 	var descFrom, descTo v1.Descriptor
 	for _, t := range []struct {
-		t *oras.ReadOnlyTarget
-		i string
-		d *v1.Descriptor
-	}{{&srcFrom, from, &descFrom}, {&srcTo, to, &descTo}} {
-		repo, tag, err := apicommon.ParseOciImageString(t.i)
+		t            *oras.ReadOnlyTarget
+		i            string
+		d            *v1.Descriptor
+		mustBeDigest bool
+	}{{&srcFrom, from, &descFrom, true}, {&srcTo, to, &descTo, false}} {
+		repo, tag, isDigest, err := apicommon.ParseOciImageString(t.i)
 		if err != nil {
 			log.Errorf("Failed to parse OCI image: %s", err)
 			apicommon.RespondWithError(c, http.StatusInternalServerError, dorasErrors.ErrInternal, "")
+			return
+		}
+		if !isDigest && t.mustBeDigest {
+			apicommon.RespondWithError(c, http.StatusBadRequest, dorasErrors.ErrBadRequest, "from image must be digest")
 			return
 		}
 		src, err := shared.getOrasSource(repo)

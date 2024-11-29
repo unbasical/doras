@@ -79,7 +79,7 @@ func createArtifact(shared *CloudAPI, c *gin.Context) {
 			apicommon.RespondWithError(c, http.StatusBadRequest, dorasErrors.ErrUnmarshal, "")
 			return
 		}
-		repo, tag, err := apicommon.ParseOciImageString(requestBody.Image)
+		repo, tag, _, err := apicommon.ParseOciImageString(requestBody.Image)
 		if err != nil {
 			log.Errorf("Failed to parse OCI image: %s", err)
 			apicommon.RespondWithError(c, http.StatusBadRequest, dorasErrors.ErrInvalidOciImage, requestBody.Image)

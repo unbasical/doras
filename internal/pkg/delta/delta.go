@@ -174,11 +174,11 @@ func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, 
 	if err = fs.Tag(ctx, manifestDescriptor, tag); err != nil {
 		return nil, fmt.Errorf("failed to tag delta manifest descriptor (%v): %v", manifestDescriptor, err)
 	}
-	descriptor, err := oras.Copy(ctx, fs, tag, dst, tag, oras.DefaultCopyOptions)
+	_, err = oras.Copy(ctx, fs, tag, dst, tag, oras.DefaultCopyOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to copy delta: %v", err)
 	}
-	return &descriptor, nil
+	return &manifestDescriptor, nil
 }
 
 func deltaTag(from v1.Descriptor, to v1.Descriptor) string {

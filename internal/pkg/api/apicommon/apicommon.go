@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -49,22 +50,34 @@ func ExtractStateFromContext[T any](c *gin.Context, target *T) error {
 	return nil
 }
 
-func ParseOciImageString(r string) (string, string, error) {
+const patternOCIImage = `^/([a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*(\/[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*)*)((:([a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}))|(@sha256:[a-f0-9]{64}))$`
+
+var regexOCIImage = regexp.MustCompile(patternOCIImage)
+
+func ParseOciImageString(r string) (repoName string, tag string, isDigest bool, err error) {
 	if !strings.HasPrefix(r, "oci://") {
 		r = "oci://" + r
 	}
 	logrus.Debugf("Parsing OCI image: %s", r)
 	u, err := url.Parse(r)
 	if err != nil {
-		return "", "", err
+		return "", "", false, err
 	}
-	logrus.Debugf("parsed URL: %s", u)
-	split := strings.SplitN(u.Path, ":", 2)
-
-	if len(split) != 2 {
-		return "", "", fmt.Errorf("invalid oci image: %s", u.Path)
+	matches := regexOCIImage.FindSubmatch([]byte(u.Path))
+	if matches == nil {
+		return "", "", false, errors.New("invalid OCI image")
 	}
-	return u.Host + split[0], split[1], nil
+	if repoName = string(matches[1]); repoName == "" {
+		return "", "", false, errors.New("invalid OCI image")
+	}
+	if tag = string(matches[9]); tag == "" {
+		if tag = string(matches[10]); tag == "" {
+			return "", "", false, errors.New("invalid OCI image")
+		}
+		isDigest = true
+	}
+	repoName = fmt.Sprintf("%s/%s", u.Host, repoName)
+	return
 }
 
 func ExtractFile(c *gin.Context, name string) ([]byte, error) {

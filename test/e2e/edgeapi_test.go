@@ -11,16 +11,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/unbasical/doras-server/internal/pkg/delta"
-	"github.com/unbasical/doras-server/internal/pkg/logutils"
-	"github.com/unbasical/doras-server/internal/pkg/ociutils"
-
 	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/samber/lo"
 	"github.com/unbasical/doras-server/configs"
 	"github.com/unbasical/doras-server/internal/pkg/core"
+	"github.com/unbasical/doras-server/internal/pkg/delta"
 	"github.com/unbasical/doras-server/internal/pkg/fileutils"
+	"github.com/unbasical/doras-server/internal/pkg/logutils"
 	"github.com/unbasical/doras-server/internal/pkg/testutils"
 	"github.com/unbasical/doras-server/pkg/client/edgeapi"
 	"oras.land/oras-go/v2"
@@ -116,16 +114,12 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 		t.Fatal(err)
 	}
 	tags := []string{tag1Bsdiff, tag2Bsdiff, tag1Tardiff, tag2Tardiff}
-	_ = lo.Reduce(tags, func(agg map[string]v1.Descriptor, tag string, _ int) map[string]v1.Descriptor {
+	descriptors := lo.Reduce(tags, func(agg map[string]v1.Descriptor, tag string, _ int) map[string]v1.Descriptor {
 		rootDescriptor, err := oras.Copy(ctx, store, tag, repoArtifacts, tag, oras.DefaultCopyOptions)
 		if err != nil {
 			t.Fatal(err)
 		}
-		blobDescriptor, err := ociutils.GetBlobDescriptor(ctx, store, rootDescriptor)
-		if err != nil {
-			t.Fatal(err)
-		}
-		agg[tag] = *blobDescriptor
+		agg[tag] = rootDescriptor
 		return agg
 	}, make(map[string]v1.Descriptor))
 
@@ -159,6 +153,7 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
 		from       string
+		fromDesc   v1.Descriptor
 		to         string
 		fromReader io.Reader
 		toReader   io.Reader
@@ -167,6 +162,7 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 		{
 			name:       "bsdiff",
 			from:       tag1Bsdiff,
+			fromDesc:   descriptors["v1-bsdiff"],
 			fromReader: bytes.NewBuffer(fromDataBsdiff),
 			to:         tag2Bsdiff,
 			toReader:   bytes.NewBuffer(toDataBsdiff),
@@ -175,6 +171,7 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 		{
 			name:       "tardiff",
 			from:       tag1Tardiff,
+			fromDesc:   descriptors["v1-tardiff"],
 			fromReader: bytes.NewBuffer(fromDataTarDiff),
 			to:         tag2Tardiff,
 			toReader:   bytes.NewBuffer(toDataTarDiff),
@@ -183,9 +180,13 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 	} {
 		imageFrom := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tt.from)
 		imageTo := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tt.to)
-
+		imageFromDigest := fmt.Sprintf("%s/%s@sha256:%s", regUri, "artifacts", tt.fromDesc.Digest.Encoded())
 		// read delta from sever
-		desc, r, err := edgeClient.ReadDeltaAsStream(imageFrom, imageTo, nil)
+		_, _, err := edgeClient.ReadDeltaAsStream(imageFrom, imageTo, nil)
+		if err == nil {
+			t.Fatal(err)
+		}
+		desc, r, err := edgeClient.ReadDeltaAsStream(imageFromDigest, imageTo, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
