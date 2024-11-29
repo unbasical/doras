@@ -2,8 +2,9 @@ package funcutils
 
 import (
 	"fmt"
-	"github.com/samber/lo"
 	"strings"
+
+	"github.com/samber/lo"
 )
 
 func PanicOrLogOnErr(f func() error, panicOnErr bool, msg string) {
