@@ -88,6 +88,10 @@ func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, 
 	// - consider one of these two
 	//   - use a local OCI layout for storage instead of writeBlobToTempfile
 	//   - stream the data directly into the delta creation
+
+	fromDigest := "sha256:" + fromImage.Digest.Encoded()
+	toDigest := "sha256:" + toImage.Digest.Hex()
+
 	fromDescriptor, fromBlobReader, err := getBlobReaderForArtifact(ctx, src, fromImage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get from blob for from-image (%v): %v", fromImage, err)
@@ -148,14 +152,6 @@ func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, 
 	for _, name := range fileNames {
 		fileDescriptor, err := fs.Add(ctx, name, mediaType, outputPath)
 		funcutils.PanicOrLogOnErr(funcutils.IdentityFunc(err), true, "failed to add file to storage object")
-		fromJson, errFrom := json.Marshal(fromImage)
-		toJson, errTo := json.Marshal(toImage)
-		err = funcutils.MultiError(errFrom, errTo)
-		if err != nil {
-			return nil, err
-		}
-		fileDescriptor.Annotations["from"] = string(fromJson)
-		fileDescriptor.Annotations["to"] = string(toJson)
 		fileDescriptors = append(fileDescriptors, fileDescriptor)
 	}
 
@@ -163,7 +159,13 @@ func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, 
 	artifactType := "application/vnd.test.artifact"
 	opts := oras.PackManifestOptions{
 		Layers: fileDescriptors,
+		ManifestAnnotations: map[string]string{
+			"from":      fromDigest,
+			"to":        toDigest,
+			"algorithm": algo,
+		},
 	}
+
 	manifestDescriptor, err := oras.PackManifest(ctx, fs, oras.PackManifestVersion1_1, artifactType, opts)
 	funcutils.PanicOrLogOnErr(funcutils.IdentityFunc(err), true, "failed to pack manifest")
 	fmt.Println("manifest descriptor:", manifestDescriptor)

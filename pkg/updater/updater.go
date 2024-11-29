@@ -23,7 +23,7 @@ func patchStorage(src oras.ReadOnlyTarget, dst oras.Target, old, new v1.Descript
 	if err != nil {
 		return err
 	}
-	newReader, err := delta.ApplyDeltaWithBlobDescrsiptor(new, oldReader, deltaFile)
+	newReader, err := delta.ApplyDeltaWithBlobDescriptor(new, oldReader, deltaFile)
 	if err != nil {
 		return err
 	}

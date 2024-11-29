@@ -2,8 +2,9 @@ package readerutils
 
 import (
 	"compress/gzip"
-	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 	"io"
+
+	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 )
 
 type ReaderChain struct {
@@ -23,23 +24,23 @@ func New(options ...func(*ReaderChain) (io.Reader, error)) (*ReaderChain, error)
 	return rd, nil
 }
 
-func WithGzipCompress(level int, content io.Reader) func(*ReaderChain) (io.Reader, error) {
-	return func(rd *ReaderChain) (io.Reader, error) {
-		return WriterToReader(
-			func(w io.Writer) error {
-				gzr, err := gzip.NewWriterLevel(w, level)
-				if err != nil {
-					return err
-				}
-				defer funcutils.PanicOrLogOnErr(gzr.Close, true, "failed to close gzip writer")
-				_, err = io.Copy(gzr, content)
-				if err != nil {
-					return err
-				}
-				return nil
-			})
-	}
-}
+//func WithGzipCompress(level int, content io.Reader) func(*ReaderChain) (io.Reader, error) {
+//	return func(rd *ReaderChain) (io.Reader, error) {
+//		return WriterToReader(
+//			func(w io.Writer) error {
+//				gzr, err := gzip.NewWriterLevel(w, level)
+//				if err != nil {
+//					return err
+//				}
+//				defer funcutils.PanicOrLogOnErr(gzr.Close, true, "failed to close gzip writer")
+//				_, err = io.Copy(gzr, content)
+//				if err != nil {
+//					return err
+//				}
+//				return nil
+//			})
+//	}
+//}
 
 func WithGzipDecompress() func(*ReaderChain) (io.Reader, error) {
 	return func(rd *ReaderChain) (io.Reader, error) {
@@ -47,10 +48,10 @@ func WithGzipDecompress() func(*ReaderChain) (io.Reader, error) {
 	}
 }
 
-func WriterToReader(f func(io.Writer) error) (io.Reader, error) {
+func WriterToReader(f func(io.Writer, io.Reader) error, content io.Reader) (io.Reader, error) {
 	pr, pw := io.Pipe()
 	go func() {
-		err := f(pw)
+		err := f(pw, content)
 		if err != nil {
 			_ = pw.CloseWithError(err)
 		}

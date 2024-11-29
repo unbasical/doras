@@ -153,6 +153,17 @@ func TestCreateDelta(t *testing.T) {
 			if gotFileName != expectedFileName {
 				t.Errorf("unexpected file name \ngot:%q\nwant%q", gotFileName, expectedFileName)
 			}
+			fromDigest := fmt.Sprintf("sha256:%s", tt.args.fromImage.Digest.Encoded())
+			if manifest.Annotations["from"] != fromDigest {
+				t.Errorf("unexpected annotation for 'from' \ngot:%s\nwant:%s", manifest.Annotations["from"], fromDigest)
+			}
+			toDigest := fmt.Sprintf("sha256:%s", tt.args.toImage.Digest.Encoded())
+			if manifest.Annotations["to"] != toDigest {
+				t.Errorf("unexpected annotation for 'to' \ngot:%s\nwant:%s", manifest.Annotations["to"], toDigest)
+			}
+			if manifest.Annotations["algorithm"] != tt.wantDiffAlg {
+				t.Errorf("unexpected algorithm: got %q, want %q", manifest.Annotations["algorithm"], tt.wantDiffAlg)
+			}
 			dataDiff, err := dst.Fetch(tt.args.ctx, layerDesc)
 			if err != nil {
 				t.Error(err)

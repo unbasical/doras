@@ -4,7 +4,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/unbasical/doras-server/internal/pkg/delta/tarfsdatasource"
 	"github.com/unbasical/doras-server/internal/pkg/funcutils"
@@ -25,17 +24,16 @@ func ApplyDelta(deltaKind string, diff io.Reader, content io.Reader) (io.ReadClo
 	}
 }
 
-func ApplyDeltaWithBlobDescrsiptor(blobDescriptor v1.Descriptor, diff io.Reader, content io.Reader) (io.ReadCloser, error) {
+func ApplyDeltaWithBlobDescriptor(blobDescriptor v1.Descriptor, diff io.Reader, content io.Reader) (io.ReadCloser, error) {
 	name, ok := blobDescriptor.Annotations["org.opencontainers.image.title"]
 	if !ok || name == "" {
 		return nil, fmt.Errorf("missing file name in annotations: %v", blobDescriptor.Annotations)
 	}
-	split := strings.Split(name, ".")
-	if len(split) < 2 {
-		return nil, fmt.Errorf("invalid file name, missing extension: %q", name)
+	algorithm, ok := blobDescriptor.Annotations["algorithm"]
+	if !ok || algorithm == "" {
+		return nil, fmt.Errorf("missing delta algorithm in annotations: %v", blobDescriptor.Annotations)
 	}
-	fileExtension := split[len(split)-1]
-	return ApplyDelta(fileExtension, diff, content)
+	return ApplyDelta(algorithm, diff, content)
 }
 
 func Bspatch(old io.Reader, patch io.Reader) (io.ReadCloser, error) {
