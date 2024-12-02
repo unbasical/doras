@@ -60,7 +60,7 @@ func Test_AddAndLoadDelta(t *testing.T) {
 	for _, name := range fileNames {
 		fileDescriptor, err := store.Add(ctx, name, mediaType, path.Join(tempDir, name))
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		fileDescriptors = append(fileDescriptors, fileDescriptor)
 		fmt.Printf("file descriptor for %s: %v\n", name, fileDescriptor)
@@ -73,13 +73,13 @@ func Test_AddAndLoadDelta(t *testing.T) {
 	}
 	manifestDescriptor, err := oras.PackManifest(ctx, store, oras.PackManifestVersion1_1, artifactType, opts)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	fmt.Println("manifest descriptor:", manifestDescriptor)
 
 	tag := "v1"
 	if err = store.Tag(ctx, manifestDescriptor, tag); err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	// populate source repository
 	_, err = oras.Copy(ctx, store, "v1", repoSrc, "v1", oras.DefaultCopyOptions)
@@ -125,7 +125,7 @@ func Test_AddAndLoadDelta(t *testing.T) {
 	orasClient := cloudapi.NewClient("http://localhost:8080")
 	repoPath, tag, err := orasClient.CreateArtifactFromOCIReference(uriSrc + "/hello:v1")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	tempDir = t.TempDir()
 
@@ -136,7 +136,7 @@ func Test_AddAndLoadDelta(t *testing.T) {
 
 	err = edgeClient.LoadArtifact(uriDst+"/"+repoPath+":"+tag, tempDir)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	helloPath = path.Join(tempDir, "hello")
