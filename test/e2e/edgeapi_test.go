@@ -177,20 +177,29 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 			toReader:   bytes.NewBuffer(toDataTarDiff),
 			want:       deltaWantTarDiff,
 		},
+		{
+			name:       "same bsdiff again to test repeated requests",
+			from:       tag1Bsdiff,
+			fromDesc:   descriptors["v1-bsdiff"],
+			fromReader: bytes.NewBuffer(fromDataBsdiff),
+			to:         tag2Bsdiff,
+			toReader:   bytes.NewBuffer(toDataBsdiff),
+			want:       deltaWantBsdiff,
+		},
 	} {
 		imageFrom := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tt.from)
 		imageTo := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tt.to)
 		imageFromDigest := fmt.Sprintf("%s/%s@sha256:%s", regUri, "artifacts", tt.fromDesc.Digest.Encoded())
 		// read delta from sever
-		_, _, err := edgeClient.ReadDeltaAsStream(imageFrom, imageTo, nil)
+		_, _, _, err := edgeClient.ReadDeltaAsStream(imageFrom, imageTo, nil)
 		if err == nil {
 			t.Fatal(err)
 		}
-		desc, r, err := edgeClient.ReadDeltaAsStream(imageFromDigest, imageTo, nil)
+		_, algo, rc, err := edgeClient.ReadDeltaAsStream(imageFromDigest, imageTo, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		deltaGot, err := io.ReadAll(r)
+		deltaGot, err := io.ReadAll(rc)
 		if err != nil {
 			t.Error(err)
 		}
@@ -200,12 +209,13 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 
 		// apply the requested data
 		patchedReader, err := delta.ApplyDelta(
-			desc.Annotations["algorithm"],
+			algo,
 			bytes.NewReader(deltaGot),
 			tt.fromReader,
 		)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			continue
 		}
 		patchedData, err := io.ReadAll(patchedReader)
 		if err != nil {

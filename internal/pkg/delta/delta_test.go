@@ -130,6 +130,9 @@ func TestCreateDelta(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
+			// annotations are not always added by the resolver
+			// remove them to make sure this test is independent of the resolver
+			want.Annotations = nil
 			if !reflect.DeepEqual(*got, want) {
 				t.Errorf("CreateDelta() got = %v, want %v", got, tt.wantTag)
 			}

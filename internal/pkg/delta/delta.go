@@ -90,7 +90,12 @@ func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, 
 	// - consider one of these two
 	//   - use a local OCI layout for storage instead of writeBlobToTempfile
 	//   - stream the data directly into the delta creation
+	tag := deltaTag(fromImage, toImage)
 
+	existingDescriptor, err := oras.Resolve(ctx, dst, tag, oras.DefaultResolveOptions)
+	if err == nil {
+		return &existingDescriptor, nil
+	}
 	fromDigest := "sha256:" + fromImage.Digest.Encoded()
 	toDigest := "sha256:" + toImage.Digest.Hex()
 
@@ -166,9 +171,6 @@ func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, 
 		return nil, fmt.Errorf("failed to push delta output file (%v): %v", outputPath, err)
 	}
 
-	// 2. Pack the files and tag the packed manifest
-	artifactType := "application/vnd.test.artifact"
-
 	opts := oras.PackManifestOptions{
 		Layers: []v1.Descriptor{d},
 		ManifestAnnotations: map[string]string{
@@ -177,16 +179,17 @@ func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, 
 			constants.DorasAnnotationAlgorithm: algo,
 		},
 	}
-
+	artifactType := "application/vnd.test.artifact"
 	manifestDescriptor, err := oras.PackManifest(ctx, dst, oras.PackManifestVersion1_1, artifactType, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to pack delta manifest (%v): %v", outputPath, err)
 	}
-	tag := deltaTag(fromImage, toImage)
+
 	if err = dst.Tag(ctx, manifestDescriptor, tag); err != nil {
 		return nil, fmt.Errorf("failed to tag delta manifest descriptor (%v): %v", manifestDescriptor, err)
 	}
-
+	// Annotations are not reliably stored in the descriptor, delete them so no one relies on them.
+	manifestDescriptor.Annotations = nil
 	return &manifestDescriptor, nil
 }
 

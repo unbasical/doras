@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/unbasical/doras-server/pkg/constants"
 	"io"
 	"net/http"
 
@@ -38,45 +39,50 @@ func (c *Client) LoadArtifact(artifactURL, outdir string) error {
 	return nil
 }
 
-func (c *Client) fetchArtifact(target v1.Descriptor) (io.ReadCloser, error) {
+func (c *Client) fetchManifestAndArtifact(target v1.Descriptor) (*v1.Manifest, io.ReadCloser, error) {
 	// fetch manifest
 	// fetch artifact via descriptor in manifest
 	// consider using an oras storage to copy and then call fetch on local storage
 	ctx := context.Background()
 	repository, err := c.reg.Repository(ctx, "deltas")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	rc, err := repository.Fetch(ctx, target)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer funcutils.PanicOrLogOnErr(rc.Close, false, "failed to close fetch reader")
 	var mf v1.Manifest
 	err = json.NewDecoder(rc).Decode(&mf)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if len(mf.Layers) != 1 {
-		return nil, fmt.Errorf("unsupported number of layers %d", len(mf.Layers))
+		return nil, nil, fmt.Errorf("unsupported number of layers %d", len(mf.Layers))
 	}
 	rc, err = repository.Blobs().Fetch(ctx, mf.Layers[0])
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return rc, nil
+	return &mf, rc, nil
 }
 
-func (c *Client) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string) (*v1.Descriptor, io.ReadCloser, error) {
+func (c *Client) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string) (*v1.Descriptor, string, io.ReadCloser, error) {
 	descriptor, err := c.ReadDeltaAsDescriptor(from, to, acceptedAlgorithms)
 	if err != nil {
-		return nil, nil, err
+		return nil, "", nil, err
 	}
-	rc, err := c.fetchArtifact(*descriptor)
+	mf, rc, err := c.fetchManifestAndArtifact(*descriptor)
 	if err != nil {
-		return nil, nil, err
+		return nil, "", nil, err
 	}
-	return descriptor, rc, nil
+	algo, ok := mf.Annotations[constants.DorasAnnotationAlgorithm]
+	if !ok {
+		return nil, "", nil, fmt.Errorf("no algorithm found in manifest")
+	}
+
+	return descriptor, algo, rc, nil
 }
 
 func (c *Client) ReadDeltaAsDescriptor(from, to string, acceptedAlgorithms []string) (*v1.Descriptor, error) {
