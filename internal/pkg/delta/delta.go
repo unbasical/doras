@@ -5,12 +5,13 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"github.com/opencontainers/go-digest"
-	"github.com/unbasical/doras-server/pkg/constants"
 	"io"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/opencontainers/go-digest"
+	"github.com/unbasical/doras-server/pkg/constants"
 
 	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 

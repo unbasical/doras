@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/unbasical/doras-server/pkg/constants"
 	"io"
 	"net/http"
+
+	"github.com/unbasical/doras-server/pkg/constants"
 
 	log "github.com/sirupsen/logrus"
 
