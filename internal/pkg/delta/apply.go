@@ -3,16 +3,15 @@ package delta
 import (
 	"compress/gzip"
 	"fmt"
+	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"io"
 
 	"github.com/unbasical/doras-server/pkg/constants"
 
-	"github.com/unbasical/doras-server/internal/pkg/delta/tarfsdatasource"
-	"github.com/unbasical/doras-server/internal/pkg/funcutils"
-
 	tarpatch "github.com/containers/tar-diff/pkg/tar-patch"
 	"github.com/gabstv/go-bsdiff/pkg/bspatch"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/unbasical/doras-server/internal/pkg/delta/tarfsdatasource"
 )
 
 func ApplyDelta(deltaKind string, diff io.Reader, content io.Reader) (io.ReadCloser, error) {

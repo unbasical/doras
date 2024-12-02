@@ -5,6 +5,9 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"github.com/unbasical/doras-server/internal/pkg/utils/fileutils"
+	"github.com/unbasical/doras-server/internal/pkg/utils/logutils"
+	testutils2 "github.com/unbasical/doras-server/internal/pkg/utils/testutils"
 	"io"
 	"net/http"
 	"strings"
@@ -17,9 +20,6 @@ import (
 	"github.com/unbasical/doras-server/configs"
 	"github.com/unbasical/doras-server/internal/pkg/core"
 	"github.com/unbasical/doras-server/internal/pkg/delta"
-	"github.com/unbasical/doras-server/internal/pkg/fileutils"
-	"github.com/unbasical/doras-server/internal/pkg/logutils"
-	"github.com/unbasical/doras-server/internal/pkg/testutils"
 	"github.com/unbasical/doras-server/pkg/client/edgeapi"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
@@ -49,7 +49,7 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	regUri := testutils.LaunchRegistry(ctx)
+	regUri := testutils2.LaunchRegistry(ctx)
 
 	host := "localhost:8081"
 	config := configs.DorasServerConfig{
@@ -83,9 +83,9 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 	tag2Bsdiff := "v2-bsdiff"
 	tag1Tardiff := "v1-tardiff"
 	tag2Tardiff := "v2-tardiff"
-	store, err := testutils.StorageFromFiles(ctx,
+	store, err := testutils2.StorageFromFiles(ctx,
 		tempDir,
-		[]testutils.FileDescription{
+		[]testutils2.FileDescription{
 			{
 				Name: "test-artifact",
 				Data: fromDataBsdiff,

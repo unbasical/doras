@@ -2,9 +2,8 @@ package readerutils
 
 import (
 	"compress/gzip"
+	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"io"
-
-	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 )
 
 type ReaderChain struct {

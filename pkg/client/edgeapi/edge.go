@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/unbasical/doras-server/internal/pkg/utils/buildurl"
+	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
+	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
 	"io"
 	"net/http"
 
@@ -13,9 +16,6 @@ import (
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
-	"github.com/unbasical/doras-server/internal/pkg/buildurl"
-	"github.com/unbasical/doras-server/internal/pkg/funcutils"
-	"github.com/unbasical/doras-server/internal/pkg/ociutils"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
 )

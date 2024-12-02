@@ -4,10 +4,9 @@ import (
 	"archive/tar"
 	"errors"
 	"fmt"
+	"github.com/unbasical/doras-server/internal/pkg/utils/readseekcloserwrapper"
 	"io"
 	"path"
-
-	"github.com/unbasical/doras-server/internal/pkg/readseekcloserwrapper"
 )
 
 // entry represents an entry in a tar archive.

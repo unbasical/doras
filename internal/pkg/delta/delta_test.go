@@ -6,17 +6,16 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/unbasical/doras-server/internal/pkg/utils/fileutils"
+	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
+	"github.com/unbasical/doras-server/internal/pkg/utils/testutils"
 	"io"
 	"os"
 	"path"
 	"reflect"
 	"testing"
 
-	"github.com/unbasical/doras-server/internal/pkg/fileutils"
-	"github.com/unbasical/doras-server/internal/pkg/funcutils"
-
 	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
-	"github.com/unbasical/doras-server/internal/pkg/testutils"
 	"oras.land/oras-go/v2/content/oci"
 
 	"github.com/opencontainers/go-digest"

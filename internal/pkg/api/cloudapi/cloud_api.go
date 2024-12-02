@@ -2,11 +2,10 @@ package cloudapi
 
 import (
 	"context"
+	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"net/http"
 	"net/url"
 	"strings"
-
-	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 
 	"github.com/gin-gonic/gin"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"

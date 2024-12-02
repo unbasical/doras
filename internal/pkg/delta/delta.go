@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"io"
 	"os"
 	"path"
@@ -12,8 +13,6 @@ import (
 
 	"github.com/opencontainers/go-digest"
 	"github.com/unbasical/doras-server/pkg/constants"
-
-	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 
 	tarDiff "github.com/containers/tar-diff/pkg/tar-diff"
 	"github.com/gabstv/go-bsdiff/pkg/bsdiff"

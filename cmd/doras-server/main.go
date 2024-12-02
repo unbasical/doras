@@ -1,13 +1,12 @@
 package main
 
 import (
+	"github.com/unbasical/doras-server/internal/pkg/utils/fileutils"
 	"os"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/unbasical/doras-server/configs"
-	"github.com/unbasical/doras-server/internal/pkg/fileutils"
-
 	log "github.com/sirupsen/logrus"
+	"github.com/unbasical/doras-server/configs"
 	"github.com/unbasical/doras-server/internal/pkg/core"
 )
 

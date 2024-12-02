@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/unbasical/doras-server/internal/pkg/funcutils"
+	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"io"
 	"net/url"
 	"oras.land/oras-go/v2"

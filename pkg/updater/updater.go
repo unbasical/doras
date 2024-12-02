@@ -3,9 +3,8 @@ package updater
 
 import (
 	"context"
+	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"io"
-
-	"github.com/unbasical/doras-server/internal/pkg/funcutils"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/unbasical/doras-server/internal/pkg/delta"
