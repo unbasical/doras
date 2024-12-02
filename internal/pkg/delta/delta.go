@@ -2,8 +2,11 @@ package delta
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/opencontainers/go-digest"
+	"github.com/unbasical/doras-server/pkg/constants"
 	"io"
 	"os"
 	"path"
@@ -15,7 +18,6 @@ import (
 	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content/file"
 )
 
 const (
@@ -126,58 +128,65 @@ func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, 
 	if err != nil {
 		return nil, err
 	}
+	defer funcutils.PanicOrLogOnErr(content.Close, false, "failed to close delta reader")
 	fName := fmt.Sprintf("%s.patch.%s", deltaTag(fromImage, toImage), algo)
-	fileNames := []string{fName}
-	outputDir := tempDir
-	outputPath := path.Join(outputDir, fName)
+	outputPath := path.Join(tempDir, fName)
 
 	fOut, err := os.OpenFile(outputPath, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open delta output file (%v): %v", outputPath, err)
 	}
 
-	_, err = io.Copy(fOut, content)
+	hasher := sha256.New()
+	contentReader := io.TeeReader(content, hasher)
+	_, err = io.Copy(fOut, contentReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write to delta output file (%v): %v", outputPath, err)
 	}
-
-	// 0. Create a file store
-	fs, err := file.New(outputDir)
-	funcutils.PanicOrLogOnErr(funcutils.IdentityFunc(err), true, "failed to create storage object")
-	defer funcutils.PanicOrLogOnErr(fs.Close, false, "failed to close oras file storage")
-
-	// 1. Add files to the file store
-	mediaType := "application/octet-stream"
-	fileDescriptors := make([]v1.Descriptor, 0, len(fileNames))
-	for _, name := range fileNames {
-		fileDescriptor, err := fs.Add(ctx, name, mediaType, outputPath)
-		funcutils.PanicOrLogOnErr(funcutils.IdentityFunc(err), true, "failed to add file to storage object")
-		fileDescriptors = append(fileDescriptors, fileDescriptor)
+	stat, err := os.Stat(outputPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat delta output file (%v): %v", outputPath, err)
+	}
+	deltaDigest := digest.NewDigest("sha256", hasher)
+	d := v1.Descriptor{
+		MediaType: "application/vnd.oci.image.layer.v1.tar",
+		Digest:    deltaDigest,
+		Size:      stat.Size(),
+		Annotations: map[string]string{
+			"org.opencontainers.image.title": fName,
+		},
+		ArtifactType: "application/vnd.test.artifact",
+	}
+	f, err := os.Open(fOut.Name())
+	if err != nil {
+		return nil, fmt.Errorf("failed to open delta output file (%v): %v", outputPath, err)
+	}
+	err = dst.Push(ctx, d, f)
+	if err != nil {
+		return nil, fmt.Errorf("failed to push delta output file (%v): %v", outputPath, err)
 	}
 
 	// 2. Pack the files and tag the packed manifest
 	artifactType := "application/vnd.test.artifact"
+
 	opts := oras.PackManifestOptions{
-		Layers: fileDescriptors,
+		Layers: []v1.Descriptor{d},
 		ManifestAnnotations: map[string]string{
-			"from":      fromDigest,
-			"to":        toDigest,
-			"algorithm": algo,
+			constants.DorasAnnotationFrom:      fromDigest,
+			constants.DorasAnnotationTo:        toDigest,
+			constants.DorasAnnotationAlgorithm: algo,
 		},
 	}
 
-	manifestDescriptor, err := oras.PackManifest(ctx, fs, oras.PackManifestVersion1_1, artifactType, opts)
-	funcutils.PanicOrLogOnErr(funcutils.IdentityFunc(err), true, "failed to pack manifest")
-	fmt.Println("manifest descriptor:", manifestDescriptor)
-
+	manifestDescriptor, err := oras.PackManifest(ctx, dst, oras.PackManifestVersion1_1, artifactType, opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to pack delta manifest (%v): %v", outputPath, err)
+	}
 	tag := deltaTag(fromImage, toImage)
-	if err = fs.Tag(ctx, manifestDescriptor, tag); err != nil {
+	if err = dst.Tag(ctx, manifestDescriptor, tag); err != nil {
 		return nil, fmt.Errorf("failed to tag delta manifest descriptor (%v): %v", manifestDescriptor, err)
 	}
-	_, err = oras.Copy(ctx, fs, tag, dst, tag, oras.DefaultCopyOptions)
-	if err != nil {
-		return nil, fmt.Errorf("failed to copy delta: %v", err)
-	}
+
 	return &manifestDescriptor, nil
 }
 

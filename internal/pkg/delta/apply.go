@@ -3,6 +3,7 @@ package delta
 import (
 	"compress/gzip"
 	"fmt"
+	"github.com/unbasical/doras-server/pkg/constants"
 	"io"
 
 	"github.com/unbasical/doras-server/internal/pkg/delta/tarfsdatasource"
@@ -29,7 +30,7 @@ func ApplyDeltaWithBlobDescriptor(blobDescriptor v1.Descriptor, diff io.Reader, 
 	if !ok || name == "" {
 		return nil, fmt.Errorf("missing file name in annotations: %v", blobDescriptor.Annotations)
 	}
-	algorithm, ok := blobDescriptor.Annotations["algorithm"]
+	algorithm, ok := blobDescriptor.Annotations[constants.DorasAnnotationAlgorithm]
 	if !ok || algorithm == "" {
 		return nil, fmt.Errorf("missing delta algorithm in annotations: %v", blobDescriptor.Annotations)
 	}
