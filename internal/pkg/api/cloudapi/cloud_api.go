@@ -115,7 +115,7 @@ func createArtifact(shared *CloudAPI, c *gin.Context) {
 func (cloudAPI *CloudAPI) getOrasSource(repoUrl string) (oras.ReadOnlyTarget, error) {
 	src, err := remote.NewRepository(repoUrl)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	src.PlainHTTP = true
 	if c, ok := cloudAPI.repoClients[repoUrl]; ok {

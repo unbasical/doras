@@ -137,7 +137,7 @@ func readDelta(c *gin.Context) {
 func (edgeApi *EdgeAPI) getOrasSource(repoUrl string) (oras.ReadOnlyTarget, error) {
 	src, err := remote.NewRepository(repoUrl)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	src.PlainHTTP = true
 	if c, ok := edgeApi.repoClients[repoUrl]; ok {

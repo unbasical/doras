@@ -27,7 +27,7 @@ func (c *Client) CreateArtifactFromOCIReference(image string) (string, string, e
 	)
 	res, err := c.base.Client.Post(reqUrl, "application/json", bytes.NewReader(requestJSON))
 	if err != nil {
-		panic(err)
+		return "", "", err
 	}
 	var resParsed apicommon.SuccessResponse[cloudapi.CreateArtifactResponse]
 	err = json.NewDecoder(res.Body).Decode(&resParsed)
