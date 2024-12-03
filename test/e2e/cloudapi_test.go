@@ -122,22 +122,25 @@ func Test_AddAndLoadDelta(t *testing.T) {
 			t.Error(err)
 		}
 	}
+	log.Debugf("---- attempting to create artifact ----")
 	orasClient := cloudapi.NewClient("http://localhost:8080")
 	repoPath, tag, err := orasClient.CreateArtifactFromOCIReference(uriSrc + "/hello:v1")
 	if err != nil {
 		t.Fatal(err)
 	}
+	log.Debugf("fetched artifact, %s:%s", repoPath, tag)
 	tempDir = t.TempDir()
-
+	log.Debugf("---- attempting to load artifact ----")
 	edgeClient, err := edgeapi.NewEdgeClient("http://localhost:8080", uriDst, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	log.Debugf("created edge client")
 	err = edgeClient.LoadArtifact(uriDst+"/"+repoPath+":"+tag, tempDir)
 	if err != nil {
 		t.Fatal(err)
 	}
+	log.Debugf("successfully loaded artifact")
 
 	helloPath = path.Join(tempDir, "hello")
 
