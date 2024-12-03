@@ -35,9 +35,9 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fromDataTarDiff := fileutils.ReadOrPanic("../../internal/pkg/delta/test-files/from.tar.gz")
-	toDataTarDiff := fileutils.ReadOrPanic("../../internal/pkg/delta/test-files/to.tar.gz")
-	deltaWantTarDiff := fileutils.ReadOrPanic("../../internal/pkg/delta/test-files/delta.patch.tardiff")
+	fromDataTarDiff := fileutils.ReadOrPanic("../test-files/from.tar.gz")
+	toDataTarDiff := fileutils.ReadOrPanic("../test-files/to.tar.gz")
+	deltaWantTarDiff := fileutils.ReadOrPanic("../test-files/delta.patch.tardiff")
 
 	// decompress tar because the ApplyDelta has an uncompressed tar as the output
 	gzr, err := gzip.NewReader(bytes.NewBuffer(toDataTarDiff))

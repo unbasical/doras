@@ -3,11 +3,12 @@ package delta
 import (
 	"bytes"
 	"compress/gzip"
-	"github.com/unbasical/doras-server/internal/pkg/utils/fileutils"
-	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"io"
 	"strings"
 	"testing"
+
+	"github.com/unbasical/doras-server/internal/pkg/utils/fileutils"
+	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -62,8 +63,8 @@ func Test_BsdiffDeltaE2E(t *testing.T) {
 }
 
 func Test_TardiffDeltaE2E(t *testing.T) {
-	from := fileutils.ReadOrPanic("test-files/from.tar.gz")
-	to := fileutils.ReadOrPanic("test-files/to.tar.gz")
+	from := fileutils.ReadOrPanic("../../../test/test-files/from.tar.gz")
+	to := fileutils.ReadOrPanic("../../../test/test-files/to.tar.gz")
 	fromDigest, err := digest.FromReader(strings.NewReader("from"))
 	if err != nil {
 		t.Fatal(err)

@@ -1,25 +1,26 @@
 package delta
 
 import (
-	"compress/gzip"
 	"fmt"
-	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
+
 	"io"
 
+	"github.com/unbasical/doras-server/internal/pkg/delta/tardiff"
+
+	"github.com/unbasical/doras-server/internal/pkg/delta/bsdiff"
 	"github.com/unbasical/doras-server/pkg/constants"
 
-	tarpatch "github.com/containers/tar-diff/pkg/tar-patch"
-	"github.com/gabstv/go-bsdiff/pkg/bspatch"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/unbasical/doras-server/internal/pkg/delta/tarfsdatasource"
 )
 
 func ApplyDelta(deltaKind string, diff io.Reader, content io.Reader) (io.ReadCloser, error) {
 	switch deltaKind {
 	case "tardiff":
-		return Tarpatch(content, diff)
+		r, err := (&tardiff.Applier{}).Apply(content, diff)
+		return io.NopCloser(r), err
 	case "bsdiff":
-		return Bspatch(content, diff)
+		r, err := (&bsdiff.Applier{}).Apply(content, diff)
+		return io.NopCloser(r), err
 	default:
 		return nil, fmt.Errorf("unsupported delta algorithm: %q", deltaKind)
 	}
@@ -35,36 +36,4 @@ func ApplyDeltaWithBlobDescriptor(blobDescriptor v1.Descriptor, diff io.Reader, 
 		return nil, fmt.Errorf("missing delta algorithm in annotations: %v", blobDescriptor.Annotations)
 	}
 	return ApplyDelta(algorithm, diff, content)
-}
-
-func Bspatch(old io.Reader, patch io.Reader) (io.ReadCloser, error) {
-	pr, pw := io.Pipe()
-	go func() {
-		err := bspatch.Reader(old, pw, patch)
-		if err != nil {
-			errInner := pw.CloseWithError(err)
-			funcutils.PanicOrLogOnErr(funcutils.IdentityFunc(errInner), false, "failed to close pipe writer after error")
-		}
-		funcutils.PanicOrLogOnErr(pw.Close, true, "failed to close pipe writer")
-	}()
-	return pr, nil
-}
-func Tarpatch(old io.Reader, patch io.Reader) (io.ReadCloser, error) {
-	pr, pw := io.Pipe()
-	dataSource := tarfsdatasource.New(old, func(reader io.Reader) io.Reader {
-		gzr, err := gzip.NewReader(reader)
-		if err != nil {
-			panic(err)
-		}
-		return gzr
-	})
-	go func() {
-		err := tarpatch.Apply(patch, dataSource, pw)
-		if err != nil {
-			errInner := pw.CloseWithError(err)
-			funcutils.PanicOrLogOnErr(funcutils.IdentityFunc(errInner), false, "failed to close pipe writer after error")
-		}
-		funcutils.PanicOrLogOnErr(pw.Close, true, "failed to close pipe writer")
-	}()
-	return pr, nil
 }

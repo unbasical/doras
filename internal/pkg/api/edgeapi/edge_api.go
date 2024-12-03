@@ -1,6 +1,8 @@
 package edgeapi
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/url"
 
@@ -20,6 +22,10 @@ func SharedStateMiddleware(state *EdgeAPI) gin.HandlerFunc {
 		c.Set("sharedState", state)
 		c.Next()
 	}
+}
+
+type DorasContext interface {
+	HandleError(err error, msg string)
 }
 
 type EdgeAPI struct {
@@ -58,7 +64,9 @@ func BuildEdgeAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
 // readDelta
 // Stores the artifact provided as a file in the request body.
 func readDelta(c *gin.Context) {
+	dorasContext := GinDorasContext{c: c}
 	var shared *EdgeAPI
+
 	err := apicommon.ExtractStateFromContext(c, &shared)
 	if err != nil {
 		apicommon.RespondWithError(c, http.StatusInternalServerError, dorasErrors.ErrInternal, "")
@@ -75,7 +83,60 @@ func readDelta(c *gin.Context) {
 		apicommon.RespondWithError(c, http.StatusBadRequest, dorasErrors.ErrMissingQueryParam, "to")
 		return
 	}
+	deltaResponse, err, msg := readDeltaImpl(from, to, shared)
+	if err != nil {
+		dorasContext.HandleError(err, msg)
+	}
+	c.JSON(http.StatusOK, deltaResponse)
+}
 
+type GinDorasContext struct {
+	c *gin.Context
+}
+
+func (g *GinDorasContext) HandleError(err error, msg string) {
+	var statusCode int
+	if errors.Is(err, dorasErrors.ErrAliasNotFound) {
+		statusCode = http.StatusNotFound
+	}
+	if errors.Is(err, dorasErrors.ErrDeltaNotFound) {
+		statusCode = http.StatusNotFound
+	}
+	if errors.Is(err, dorasErrors.ErrArtifactNotFound) {
+		statusCode = http.StatusNotFound
+	}
+	if errors.Is(err, dorasErrors.ErrArtifactNotProvided) {
+		statusCode = http.StatusBadRequest
+	}
+	if errors.Is(err, dorasErrors.ErrInternal) {
+		statusCode = http.StatusInternalServerError
+	}
+	if errors.Is(err, dorasErrors.ErrMissingRequestBody) {
+		statusCode = http.StatusBadRequest
+	}
+	if errors.Is(err, dorasErrors.ErrUnsupportedDiffingAlgorithm) {
+		statusCode = http.StatusBadRequest
+	}
+	if errors.Is(err, dorasErrors.ErrUnmarshal) {
+		statusCode = http.StatusBadRequest
+	}
+	if errors.Is(err, dorasErrors.ErrNotYetImplemented) {
+		statusCode = http.StatusNotImplemented
+	}
+	if errors.Is(err, dorasErrors.ErrBadRequest) {
+		statusCode = http.StatusBadRequest
+	}
+	if errors.Is(err, dorasErrors.ErrInvalidOciImage) {
+		statusCode = http.StatusBadRequest
+	}
+	if errors.Is(err, dorasErrors.ErrMissingQueryParam) {
+		statusCode = http.StatusBadRequest
+	}
+	apicommon.RespondWithError(g.c, statusCode, err, msg)
+}
+
+func readDeltaImpl(from string, to string, shared *EdgeAPI) (*apicommon.ReadDeltaResponse, error, string) {
+	// Get oras targets and resolve the images into descriptors
 	// TODO: consider parallelizing resolve with channels
 	var srcFrom, srcTo oras.ReadOnlyTarget
 	var descFrom, descTo v1.Descriptor
@@ -87,51 +148,37 @@ func readDelta(c *gin.Context) {
 	}{{&srcFrom, from, &descFrom, true}, {&srcTo, to, &descTo, false}} {
 		repo, tag, isDigest, err := apicommon.ParseOciImageString(t.i)
 		if err != nil {
-			log.Errorf("Failed to parse OCI image: %s", err)
-			apicommon.RespondWithError(c, http.StatusInternalServerError, dorasErrors.ErrInternal, "")
-			return
+			return nil, dorasErrors.ErrInternal, ""
 		}
+		// check for digest to make sure the request is not using a tagged image
 		if !isDigest && t.mustBeDigest {
-			apicommon.RespondWithError(c, http.StatusBadRequest, dorasErrors.ErrBadRequest, "from image must be digest")
-			return
+			return nil, dorasErrors.ErrBadRequest, "from image must be digest"
 		}
 		src, err := shared.getOrasSource(repo)
 		if err != nil {
 			log.Errorf("Failed to get oras source: %s", err)
-			apicommon.RespondWithError(c, http.StatusInternalServerError, dorasErrors.ErrInternal, "")
-			return
+			return nil, dorasErrors.ErrInternal, ""
 		}
 		*t.t = src
-		d, err := src.Resolve(c, tag)
+		d, err := src.Resolve(context.Background(), tag)
 		if err != nil {
-			apicommon.RespondWithError(c, http.StatusInternalServerError, dorasErrors.ErrInternal, "")
-			return
+			return nil, dorasErrors.ErrInternal, ""
 		}
 		*t.d = d
 	}
+	// Get an oras target for where we store the delta
 	dst, err := shared.artifactStorageProvider.GetStorage("deltas")
 	if err != nil {
-		apicommon.RespondWithError(c, http.StatusInternalServerError, dorasErrors.ErrInternal, "")
-		return
+		return nil, dorasErrors.ErrInternal, ""
 	}
 	log.Warnf("currently always using the toImage registry as the source for fetches")
 	log.Warn("currently not using the provided accepted algorithms")
-	finished := make(chan *v1.Descriptor, 1)
-	go func() {
-		descDelta, err := delta.CreateDelta(c, srcTo, dst, descFrom, descTo)
-		if err != nil {
-			log.WithError(err).Error("Failed to create delta")
-			finished <- nil
-			return
-		}
-		finished <- descDelta
-	}()
-	desc := <-finished
-	if desc == nil {
-		apicommon.RespondWithError(c, http.StatusInternalServerError, dorasErrors.ErrInternal, "")
-		return
+
+	descDelta, err := delta.CreateDelta(context.Background(), srcTo, dst, descFrom, descTo)
+	if err != nil {
+		return nil, dorasErrors.ErrInternal, "failed to create delta"
 	}
-	c.JSON(http.StatusOK, apicommon.ReadDeltaResponse{Desc: *desc})
+	return &apicommon.ReadDeltaResponse{Desc: *descDelta}, nil, ""
 }
 
 func (edgeApi *EdgeAPI) getOrasSource(repoUrl string) (oras.ReadOnlyTarget, error) {

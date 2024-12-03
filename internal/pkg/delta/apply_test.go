@@ -37,9 +37,9 @@ func TestApplyDelta_Bspatch(t *testing.T) {
 }
 
 func TestApplyDelta_Tarpatch(t *testing.T) {
-	diff := fileutils.ReadOrPanic("test-files/delta.patch.tardiff")
-	from := fileutils.ReadOrPanic("test-files/from.tar.gz")
-	to := fileutils.ReadOrPanic("test-files/to.tar.gz")
+	diff := fileutils.ReadOrPanic("../../../test/test-files/delta.patch.tardiff")
+	from := fileutils.ReadOrPanic("../../../test/test-files/from.tar.gz")
+	to := fileutils.ReadOrPanic("../../../test/test-files/to.tar.gz")
 
 	rc, err := ApplyDelta(
 		"tardiff",
@@ -65,103 +65,5 @@ func TestApplyDelta_Tarpatch(t *testing.T) {
 	}
 	if !bytes.Equal(want, got) {
 		t.Errorf("got %q, want %q", got, want)
-	}
-}
-
-func TestBspatch(t *testing.T) {
-	from := []byte("Hello")
-	to := []byte("Hello World")
-	bsDiffPatch, err := bsdiff.Bytes(from, to)
-
-	if err != nil {
-		t.Error(err)
-	}
-	type args struct {
-		old   io.Reader
-		patch io.Reader
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    []byte
-		wantErr bool
-	}{
-		{name: "success", args: args{
-			old:   bytes.NewReader(from),
-			patch: bytes.NewReader(bsDiffPatch),
-		}, want: to, wantErr: false},
-		{name: "error", args: args{
-			old:   bytes.NewReader(from),
-			patch: bytes.NewReader([]byte{}),
-		}, want: to, wantErr: true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, _ := Bspatch(tt.args.old, tt.args.patch)
-			data, err := io.ReadAll(got)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Bspatch() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if (err != nil) && tt.wantErr {
-				return
-			}
-
-			if !bytes.Equal(data, tt.want) {
-				t.Errorf("Bspatch()\ngot = %v,\n want %v", data, tt.want)
-			}
-		})
-	}
-}
-
-func TestTarpatch(t *testing.T) {
-	diff := fileutils.ReadOrPanic("test-files/delta.patch.tardiff")
-	from := fileutils.ReadOrPanic("test-files/from.tar.gz")
-	to := fileutils.ReadOrPanic("test-files/to.tar.gz")
-
-	type args struct {
-		old   io.Reader
-		patch io.Reader
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    []byte
-		wantErr bool
-	}{
-		{name: "success", args: args{
-			old:   bytes.NewReader(from),
-			patch: bytes.NewReader(diff),
-		}, want: to, wantErr: false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := Tarpatch(tt.args.old, tt.args.patch)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Bspatch() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if (err != nil) && tt.wantErr {
-				return
-			}
-			data, err := io.ReadAll(got)
-			if err != nil {
-				t.Error(err)
-			}
-			gzr, err := gzip.NewReader(bytes.NewReader(tt.want))
-			if err != nil {
-				t.Error(err)
-			}
-			if err != nil {
-				t.Error(err)
-			}
-			want, err := io.ReadAll(gzr)
-			if err != nil {
-				t.Error(err)
-			}
-
-			if !bytes.Equal(data, want) {
-				t.Errorf("Bspatch()\ngot = %v,\n want %v", data, want)
-			}
-		})
 	}
 }

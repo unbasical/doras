@@ -6,14 +6,15 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"github.com/unbasical/doras-server/internal/pkg/utils/fileutils"
-	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
-	"github.com/unbasical/doras-server/internal/pkg/utils/testutils"
 	"io"
 	"os"
 	"path"
 	"reflect"
 	"testing"
+
+	"github.com/unbasical/doras-server/internal/pkg/utils/fileutils"
+	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
+	"github.com/unbasical/doras-server/internal/pkg/utils/testutils"
 
 	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
 	"oras.land/oras-go/v2/content/oci"
@@ -32,9 +33,9 @@ func TestCreateDelta(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tardiffData := fileutils.ReadOrPanic("test-files/delta.patch.tardiff")
-	dataTarV1 := fileutils.ReadOrPanic("test-files/from.tar.gz")
-	dataTarV2 := fileutils.ReadOrPanic("test-files/to.tar.gz")
+	tardiffData := fileutils.ReadOrPanic("../../../test/test-files/delta.patch.tardiff")
+	dataTarV1 := fileutils.ReadOrPanic("../../../test/test-files/from.tar.gz")
+	dataTarV2 := fileutils.ReadOrPanic("../../../test/test-files/to.tar.gz")
 	src, err := testutils.StorageFromFiles(
 		ctx,
 		t.TempDir(),
@@ -102,7 +103,7 @@ func TestCreateDelta(t *testing.T) {
 		wantDiffAlg string
 	}{
 		{
-			name:        "create delta binary",
+			name:        "create delta bsdiff",
 			args:        args{ctx: ctx, src: src, dst: dst, fromImage: from, toImage: to},
 			wantTag:     deltaTag(from, to),
 			wantDiff:    bsdiffData,
@@ -274,9 +275,9 @@ func Test_writeBlobToTempfile(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			wantBytes := []byte(tt.want)
 			content := bytes.NewReader(wantBytes)
-			got, err := writeBlobToTempfile(tt.args.outdir, tt.args.target, content)
+			got, err := writeBlobToTempFile(tt.args.outdir, tt.args.target, content)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("writeBlobToTempfile() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("writeBlobToTempFile() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if (err != nil) && tt.wantErr {
@@ -296,7 +297,7 @@ func Test_writeBlobToTempfile(t *testing.T) {
 			}
 			// does the file content match the input?
 			if !bytes.Equal(data, wantBytes) {
-				t.Errorf("writeBlobToTempfile() got = %q, want %q", string(data), tt.want)
+				t.Errorf("writeBlobToTempFile() got = %q, want %q", string(data), tt.want)
 			}
 		})
 	}
@@ -395,17 +396,17 @@ func Test_createDeltaBinary(t *testing.T) {
 }
 
 func Test_createDeltaTardiff(t *testing.T) {
-	from, err := os.ReadFile("./test-files/from.tar.gz")
+	from, err := os.ReadFile("../../../test/test-files/from.tar.gz")
 	if err != nil {
 		t.Error(err)
 	}
-	to, err := os.ReadFile("./test-files/to.tar.gz")
+	to, err := os.ReadFile("../../../test/test-files/to.tar.gz")
 	if err != nil {
 		t.Error(err)
 	}
 	fromDigest := sha256.Sum256(from)
 	toDigest := sha256.Sum256(to)
-	patch, err := os.ReadFile("./test-files/delta.patch.tardiff")
+	patch, err := os.ReadFile("../../../test/test-files/delta.patch.tardiff")
 	if err != nil {
 		t.Error(err)
 	}
@@ -494,7 +495,7 @@ func Test_createDeltaTardiff(t *testing.T) {
 				t.Error(err)
 			}
 			if !bytes.Equal(gotBytes, wantBytes) {
-				t.Errorf("createDelta()\ngot1 = %v\nwant %v", gotBytes, wantBytes)
+				t.Errorf("createDelta()\ngot1 = %v\nwant = %v", gotBytes, wantBytes)
 			}
 		})
 	}
