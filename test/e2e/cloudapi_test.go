@@ -146,6 +146,7 @@ func Test_AddAndLoadDelta(t *testing.T) {
 
 	data, err := os.ReadFile(helloPath)
 	if err != nil {
+		log.Debug(err)
 		t.Fatal(err)
 	}
 	if string(data) != "Hello World!" {
