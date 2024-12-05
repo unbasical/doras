@@ -50,17 +50,6 @@ func BuildEdgeAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
 	return r
 }
 
-// TODO: update this
-// @BasePath /api/v1/delta
-// PingExample godoc
-// @Summary Request Delta
-// @Schemes
-// @Description do ping
-// @Tags EdgeAPI
-// @Accept json
-// @Produce json
-// @Success 200 {string} {"message":"pong"}
-// @Router /api/v1/artifacts/create [get]
 // readDelta
 // Stores the artifact provided as a file in the request body.
 func readDelta(c *gin.Context) {
