@@ -1,4 +1,4 @@
-package edgeapi
+package deltaapi
 
 import (
 	"context"
