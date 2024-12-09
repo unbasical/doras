@@ -17,7 +17,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 )
 
-func SharedStateMiddleware(state *EdgeAPI) gin.HandlerFunc {
+func SharedStateMiddleware(state *DeltaAPI) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Set("sharedState", state)
 		c.Next()
@@ -28,14 +28,14 @@ type DorasContext interface {
 	HandleError(err error, msg string)
 }
 
-type EdgeAPI struct {
+type DeltaAPI struct {
 	artifactStorageProvider apicommon.DorasStorage
 	repoClients             map[string]remote.Client
 }
 
 func BuildEdgeAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
 	log.Debug("Building edgeapi API")
-	shared := &EdgeAPI{
+	shared := &DeltaAPI{
 		artifactStorageProvider: config.ArtifactStorage,
 		repoClients:             config.RepoClients,
 	}
@@ -54,7 +54,7 @@ func BuildEdgeAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
 // Stores the artifact provided as a file in the request body.
 func readDelta(c *gin.Context) {
 	dorasContext := GinDorasContext{c: c}
-	var shared *EdgeAPI
+	var shared *DeltaAPI
 
 	err := apicommon.ExtractStateFromContext(c, &shared)
 	if err != nil {
@@ -124,7 +124,7 @@ func (g *GinDorasContext) HandleError(err error, msg string) {
 	apicommon.RespondWithError(g.c, statusCode, err, msg)
 }
 
-func readDeltaImpl(from string, to string, shared *EdgeAPI) (*apicommon.ReadDeltaResponse, error, string) {
+func readDeltaImpl(from string, to string, shared *DeltaAPI) (*apicommon.ReadDeltaResponse, error, string) {
 	// Get oras targets and resolve the images into descriptors
 	// TODO: consider parallelizing resolve with channels
 	var srcFrom, srcTo oras.ReadOnlyTarget
@@ -170,7 +170,7 @@ func readDeltaImpl(from string, to string, shared *EdgeAPI) (*apicommon.ReadDelt
 	return &apicommon.ReadDeltaResponse{Desc: *descDelta}, nil, ""
 }
 
-func (edgeApi *EdgeAPI) getOrasSource(repoUrl string) (oras.ReadOnlyTarget, error) {
+func (edgeApi *DeltaAPI) getOrasSource(repoUrl string) (oras.ReadOnlyTarget, error) {
 	src, err := remote.NewRepository(repoUrl)
 	if err != nil {
 		return nil, err
