@@ -79,13 +79,13 @@ func createDelta(fromImage, toImage v1.Descriptor, fromReader, toReader io.Reade
 
 func createBsdiff(fromReader io.Reader, toReader io.Reader) (io.ReadCloser, error) {
 	creator := bsdiff2.NewCreator()
-	r, err := creator.Create(fromReader, toReader)
+	r, err := creator.Diff(fromReader, toReader)
 	return io.NopCloser(r), err
 }
 
 func createTardiff(fromReader io.Reader, toReader io.Reader) (io.ReadCloser, error) {
 	creator := tardiff.NewCreator()
-	r, err := creator.Create(fromReader, toReader)
+	r, err := creator.Diff(fromReader, toReader)
 	return io.NopCloser(r), err
 }
 

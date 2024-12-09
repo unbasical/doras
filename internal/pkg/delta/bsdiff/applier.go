@@ -23,6 +23,6 @@ func Bspatch(old io.Reader, patch io.Reader) (io.ReadCloser, error) {
 type Applier struct {
 }
 
-func (a *Applier) Apply(old io.Reader, new io.Reader) (io.Reader, error) {
+func (a *Applier) Patch(old io.Reader, new io.Reader) (io.Reader, error) {
 	return Bspatch(old, new)
 }

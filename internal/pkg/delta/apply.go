@@ -16,10 +16,10 @@ import (
 func ApplyDelta(deltaKind string, diff io.Reader, content io.Reader) (io.ReadCloser, error) {
 	switch deltaKind {
 	case "tardiff":
-		r, err := (&tardiff.Applier{}).Apply(content, diff)
+		r, err := (&tardiff.Applier{}).Patch(content, diff)
 		return io.NopCloser(r), err
 	case "bsdiff":
-		r, err := (&bsdiff.Applier{}).Apply(content, diff)
+		r, err := (&bsdiff.Applier{}).Patch(content, diff)
 		return io.NopCloser(r), err
 	default:
 		return nil, fmt.Errorf("unsupported delta algorithm: %q", deltaKind)

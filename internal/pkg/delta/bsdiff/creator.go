@@ -12,11 +12,11 @@ import (
 type creator struct {
 }
 
-func NewCreator() delta.Creator {
+func NewCreator() delta.Differ {
 	return &creator{}
 }
 
-func (c *creator) Create(old io.Reader, new io.Reader) (io.Reader, error) {
+func (c *creator) Diff(old io.Reader, new io.Reader) (io.Reader, error) {
 	pr, pw := io.Pipe()
 	go func() {
 		err := bsdiff2.Reader(old, new, pw)

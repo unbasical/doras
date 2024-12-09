@@ -35,7 +35,7 @@ func TestApplier_Apply(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := applier.Apply(tt.args.old, tt.args.patch)
+			got, err := applier.Patch(tt.args.old, tt.args.patch)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Bspatch() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -66,9 +66,9 @@ func TestApplier_Apply(t *testing.T) {
 	}
 }
 
-func TestApplier_Interface(t *testing.T) {
+func TestPatcher_Interface(t *testing.T) {
 	var c any = &Applier{}
-	_, ok := (c).(delta.Applier)
+	_, ok := (c).(delta.Patcher)
 	if !ok {
 		t.Error("interface not implemented")
 	}

@@ -2,8 +2,9 @@ package tardiff
 
 import (
 	"compress/gzip"
-	tar_patch "github.com/containers/tar-diff/pkg/tar-patch"
 	"io"
+
+	tar_patch "github.com/containers/tar-diff/pkg/tar-patch"
 
 	"github.com/unbasical/doras-server/internal/pkg/delta/tarfsdatasource"
 	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
@@ -12,7 +13,7 @@ import (
 type Applier struct {
 }
 
-func (a *Applier) Apply(old io.Reader, patch io.Reader) (io.Reader, error) {
+func (a *Applier) Patch(old io.Reader, patch io.Reader) (io.Reader, error) {
 	pr, pw := io.Pipe()
 	dataSource := tarfsdatasource.New(old, func(reader io.Reader) io.Reader {
 		gzr, err := gzip.NewReader(reader)

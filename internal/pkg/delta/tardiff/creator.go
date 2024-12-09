@@ -2,10 +2,11 @@ package tardiff
 
 import (
 	"errors"
-	tar_diff "github.com/containers/tar-diff/pkg/tar-diff"
-	"github.com/unbasical/doras-server/pkg/delta"
 	"io"
 	"os"
+
+	tar_diff "github.com/containers/tar-diff/pkg/tar-diff"
+	"github.com/unbasical/doras-server/pkg/delta"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -13,11 +14,11 @@ import (
 type Creator struct {
 }
 
-func NewCreator() delta.Creator {
+func NewCreator() delta.Differ {
 	return &Creator{}
 }
 
-func (c *Creator) Create(old io.Reader, new io.Reader) (io.Reader, error) {
+func (c *Creator) Diff(old io.Reader, new io.Reader) (io.Reader, error) {
 	// parallelize loading the files, as they might be coming from a remote location
 	fromFinished := make(chan func() (*os.File, error), 1)
 	toFinished := make(chan func() (*os.File, error), 1)

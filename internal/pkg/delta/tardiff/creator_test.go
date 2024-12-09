@@ -1,15 +1,16 @@
 package tardiff
 
 import (
-	"github.com/unbasical/doras-server/pkg/delta"
 	"io"
 	"reflect"
 	"testing"
+
+	"github.com/unbasical/doras-server/pkg/delta"
 )
 
-func TestCreator_Interface(t *testing.T) {
+func TestDiffer_Interface(t *testing.T) {
 	var c any = &Creator{}
-	_, ok := (c).(delta.Creator)
+	_, ok := (c).(delta.Differ)
 	if !ok {
 		t.Error("interface not implemented")
 	}
@@ -31,13 +32,13 @@ func TestCreator_Create(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Creator{}
-			got, err := c.Create(tt.args.old, tt.args.new)
+			got, err := c.Diff(tt.args.old, tt.args.new)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Create() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Diff() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Create() got = %v, want %v", got, tt.want)
+				t.Errorf("Diff() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
