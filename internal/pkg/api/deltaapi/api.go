@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/unbasical/doras-server/pkg/constants"
+
 	dorasErrors "github.com/unbasical/doras-server/internal/pkg/error"
 
 	"github.com/gin-gonic/gin"
@@ -62,14 +64,14 @@ func readDelta(c *gin.Context) {
 		return
 	}
 
-	from := c.Query("from")
+	from := c.Query(constants.QueryKeyFromDigest)
 	if from == "" {
-		apicommon.RespondWithError(c, http.StatusBadRequest, dorasErrors.ErrMissingQueryParam, "from")
+		apicommon.RespondWithError(c, http.StatusBadRequest, dorasErrors.ErrMissingQueryParam, constants.QueryKeyFromDigest)
 		return
 	}
-	to := c.Query("to")
+	to := c.Query(constants.QueryKeyToTag)
 	if to == "" {
-		apicommon.RespondWithError(c, http.StatusBadRequest, dorasErrors.ErrMissingQueryParam, "to")
+		apicommon.RespondWithError(c, http.StatusBadRequest, dorasErrors.ErrMissingQueryParam, constants.QueryKeyToTag)
 		return
 	}
 	deltaResponse, err, msg := readDeltaImpl(from, to, shared)

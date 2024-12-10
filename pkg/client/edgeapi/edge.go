@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/unbasical/doras-server/internal/pkg/utils/buildurl"
 	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
-	"io"
-	"net/http"
 
 	"github.com/unbasical/doras-server/pkg/constants"
 
@@ -92,8 +93,8 @@ func (c *Client) ReadDeltaAsDescriptor(from, to string, acceptedAlgorithms []str
 		buildurl.WithBasePath(c.base.DorasURL),
 		buildurl.WithPathElement(apicommon.ApiBasePath),
 		buildurl.WithPathElement(apicommon.DeltaApiPath),
-		buildurl.WithQueryParam("from", from),
-		buildurl.WithQueryParam("to", to),
+		buildurl.WithQueryParam(constants.QueryKeyFromDigest, from),
+		buildurl.WithQueryParam(constants.QueryKeyToTag, to),
 	)
 
 	resp, err := c.base.Client.Get(url)
