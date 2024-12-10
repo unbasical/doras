@@ -106,3 +106,10 @@ func RespondWithError(c *gin.Context, statusCode int, err error, errorContext st
 		},
 	})
 }
+
+func SharedStateMiddleware[T any](state *T) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set("sharedState", state)
+		c.Next()
+	}
+}
