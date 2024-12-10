@@ -1,0 +1,137 @@
+openapi: 3.0.3
+info:
+  title: DORAS Server
+  description: |-
+    Doras does delta updates.
+    
+    Some useful links:
+    - [The Doras repository](https://github.com/unbasical/doras-server)
+  version: 1.0.0
+tags:
+  - name: CloudAPI
+    description: Request deltas.
+paths:
+  /api/v1/delta:
+    get:
+      tags:
+        - CloudAPI
+      summary: Request a delta between two OCI images.
+      description: Request a delta between two OCI images.
+      operationId: readDelta
+      parameters:
+        - name: from_digest
+          in: query
+          description: image identified by a digest from which a delta is requested
+          required: true
+          schema:
+            type: string
+            format: url
+          example: registry.example.org/foo@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+        - name: to_digest
+          in: query
+          description: image identified by a digest to which a delta is requested (required if `to_tag` is omitted)
+          required: false
+          schema:
+            type: string
+            format: url
+          example: registry.example.org/foo@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+        - name: to_image
+          in: query
+          description: image identified by a tag to which a delta is requested (required if `to_digest` is omitted)
+          required: false
+          schema:
+            type: string
+            format: url
+          example: registry.example.org/foo:bar
+        - name: accepted_algorithms
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - bsdiff
+                - tardiff
+          description: List of accepted algorithms
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadDeltaResponse'
+        '202':
+          description: Request was accepted and the delta will be available in the future.
+        '400':
+          description: Bad request (e.g. missing required parameters).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadDeltaErrorBadRequest'
+        '404':
+          description: Images are not resolvable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadDeltaErrorNotFound'
+        '406':
+          description: Requested delta algorithm is not supported or images are not compatible.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadDeltaErrorUnacceptableRequest'
+components:
+  schemas:
+    ReadDeltaResponse:
+      type: object
+      properties:
+        delta_image:
+          type: string
+          format: url
+          example: registry.example.org/foo@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    ReadDeltaErrorBadRequest:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            desc:
+              type: string
+              example: "could not fulfill request, missing `from_digest`"
+            code:
+              type: string
+              enum:
+                - MissingParameters
+                - ExtraParameters
+                - InvalidAlgorithm
+              example: MissingParameters
+    ReadDeltaErrorUnacceptableRequest:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            desc:
+              type: string
+              example: "will not fulfill request"
+            code:
+              type: string
+              enum:
+                - IncompatibleImages
+                - NoValidAlgorithm
+              example: IncompatibleImages
+    ReadDeltaErrorNotFound:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            desc:
+              type: string
+              example: "could not fulfill request"
+            code:
+              type: string
+              enum:
+                - IncompatibleImages
+                - NoValidAlgorithm
+              example: IncompatibleImages
