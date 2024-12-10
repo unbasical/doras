@@ -27,6 +27,7 @@ func SharedStateMiddleware(state *DeltaAPI) gin.HandlerFunc {
 }
 
 type DorasContext interface {
+	ExtractParams() (fromImage, toImage string, acceptedAlgoritms []string, err error)
 	HandleError(err error, msg string)
 }
 
@@ -60,23 +61,18 @@ func readDelta(c *gin.Context) {
 
 	err := apicommon.ExtractStateFromContext(c, &shared)
 	if err != nil {
-		apicommon.RespondWithError(c, http.StatusInternalServerError, dorasErrors.ErrInternal, "")
+		dorasContext.HandleError(dorasErrors.ErrInternal, "")
 		return
 	}
 
-	from := c.Query(constants.QueryKeyFromDigest)
-	if from == "" {
-		apicommon.RespondWithError(c, http.StatusBadRequest, dorasErrors.ErrMissingQueryParam, constants.QueryKeyFromDigest)
-		return
+	fromDigest, toTarget, _, err := dorasContext.ExtractParams()
+	if err != nil {
+		dorasContext.HandleError(dorasErrors.ErrInternal, "")
 	}
-	to := c.Query(constants.QueryKeyToTag)
-	if to == "" {
-		apicommon.RespondWithError(c, http.StatusBadRequest, dorasErrors.ErrMissingQueryParam, constants.QueryKeyToTag)
-		return
-	}
-	deltaResponse, err, msg := readDeltaImpl(from, to, shared)
+	deltaResponse, err, msg := readDeltaImpl(fromDigest, toTarget, shared)
 	if err != nil {
 		dorasContext.HandleError(err, msg)
+		return
 	}
 	c.JSON(http.StatusOK, deltaResponse)
 }
@@ -124,6 +120,29 @@ func (g *GinDorasContext) HandleError(err error, msg string) {
 		statusCode = http.StatusBadRequest
 	}
 	apicommon.RespondWithError(g.c, statusCode, err, msg)
+}
+
+func (g *GinDorasContext) ExtractParams() (fromImage, toImage string, acceptedAlgorithms []string, err error) {
+	fromImage = g.c.Query(constants.QueryKeyFromDigest)
+	if fromImage == "" {
+		return "", "", []string{}, dorasErrors.ErrMissingQueryParam
+	}
+	toTag := g.c.Query(constants.QueryKeyToTag)
+	toDigest := g.c.Query(constants.QueryKeyToDigest)
+	if (toTag == "" && toDigest == "") || (toTag != "" && toDigest != "") {
+		return "", "", []string{}, dorasErrors.ErrMissingQueryParam
+	}
+	if toTag != "" {
+		toImage = toTag
+	}
+	if toDigest != "" {
+		toImage = toDigest
+	}
+	acceptedAlgorithms = g.c.QueryArray("acceptedAlgorithms")
+	if len(acceptedAlgorithms) == 0 {
+		acceptedAlgorithms = constants.DefaultAlgorithms()
+	}
+	return fromImage, toImage, acceptedAlgorithms, nil
 }
 
 func readDeltaImpl(from string, to string, shared *DeltaAPI) (*apicommon.ReadDeltaResponse, error, string) {
