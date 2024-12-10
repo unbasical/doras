@@ -4,6 +4,6 @@ const DorasAnnotationFrom = "from"
 const DorasAnnotationTo = "to"
 const DorasAnnotationAlgorithm = "algorithm"
 
-const QueryKeyFromDigest = "from"
-const QueryKeyToTag = "to"
+const QueryKeyFromDigest = "from_digest"
+const QueryKeyToTag = "to_tag"
 const QueryKeyToDigest = "to_digest"
