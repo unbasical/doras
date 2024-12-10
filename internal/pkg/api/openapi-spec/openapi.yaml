@@ -43,7 +43,7 @@ paths:
             type: string
             format: url
           example: registry.example.org/foo:bar
-        - name: accepted_algorithms
+        - name: accepted_algorithm
           in: query
           schema:
             type: array
