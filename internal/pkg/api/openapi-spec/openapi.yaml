@@ -29,7 +29,7 @@ paths:
           example: registry.example.org/foo@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
         - name: to_digest
           in: query
-          description: image identified by a digest to which a delta is requested (required if `to_tag` is omitted)
+          description: image identified by a digest to which a delta is requested (one and only one of `to_digest` and `from_digest` has to be provided)
           required: false
           schema:
             type: string
@@ -37,7 +37,7 @@ paths:
           example: registry.example.org/foo@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
         - name: to_image
           in: query
-          description: image identified by a tag to which a delta is requested (required if `to_digest` is omitted)
+          description: image identified by a tag to which a delta is requested (one and only one of `to_digest` and `from_digest` has to be provided)
           required: false
           schema:
             type: string
