@@ -52,7 +52,9 @@ paths:
               enum:
                 - bsdiff
                 - tardiff
-          description: List of accepted algorithms
+                - gzip
+                - zstd
+          description: List of accepted algorithms (both compression and delta), has to include at least one delta algorithm. Compression algorithms can be omitted, resulting in an uncompressed delta.
       responses:
         '200':
           description: successful operation
