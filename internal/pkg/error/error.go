@@ -13,6 +13,7 @@ var (
 	ErrInternal                    = errors.New("internal")
 	ErrMissingRequestBody          = errors.New("missing request body")
 	ErrUnsupportedDiffingAlgorithm = errors.New("unsupported diffing algorithm")
+	ErrIncompatibleArtifacts       = errors.New("artifacts are not compatible")
 	ErrUnmarshal                   = errors.New("failed to unmarshall request body")
 	ErrNotYetImplemented           = errors.New("not yet implemented")
 	ErrBadRequest                  = errors.New("bad request")

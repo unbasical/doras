@@ -15,7 +15,8 @@ import (
 )
 
 type RegistryExecuter interface {
-	Resolve(target string, expectDigest bool) (v1.Descriptor, error)
+	ResolveAndLoad(target string, expectDigest bool) (v1.Descriptor, io.ReadCloser, error)
+	Load(v1.Descriptor) (io.ReadCloser, error)
 	CreateDummy(target string) error
 	IsDummy(target string) (bool, error)
 	PushDelta(target string, content io.Reader) error
@@ -26,23 +27,27 @@ type DeltaEngine struct {
 	repoClients             map[string]remote.Client
 }
 
-func (e *DeltaEngine) Resolve(target string, expectDigest bool) (v1.Descriptor, error) {
+func (e *DeltaEngine) ResolveAndLoad(target string, expectDigest bool) (v1.Descriptor, io.ReadCloser, error) {
 	repo, tag, isDigest, err := apicommon.ParseOciImageString(target)
 	if err != nil {
-		return v1.Descriptor{}, err
+		return v1.Descriptor{}, nil, err
 	}
 	if expectDigest && !isDigest {
-		return v1.Descriptor{}, errors.New("expected digest")
+		return v1.Descriptor{}, nil, errors.New("expected digest")
 	}
 	source, err := e.getOrasSource(repo)
 	if err != nil {
-		return v1.Descriptor{}, err
+		return v1.Descriptor{}, nil, err
 	}
 	d, err := source.Resolve(context.Background(), tag)
 	if err != nil {
-		return v1.Descriptor{}, err
+		return v1.Descriptor{}, nil, err
 	}
-	return d, nil
+	rc, err := source.Fetch(context.Background(), d)
+	if err != nil {
+		return v1.Descriptor{}, nil, err
+	}
+	return d, rc, nil
 }
 
 func (e *DeltaEngine) CreateDummy(target string) error {

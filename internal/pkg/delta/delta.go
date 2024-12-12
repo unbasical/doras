@@ -5,18 +5,18 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	bsdiff2 "github.com/unbasical/doras-server/internal/pkg/delta/bsdiff"
-	"github.com/unbasical/doras-server/internal/pkg/delta/tardiff"
 	"io"
 	"os"
 	"path"
 	"strings"
 
+	bsdiff2 "github.com/unbasical/doras-server/internal/pkg/delta/bsdiff"
+	"github.com/unbasical/doras-server/internal/pkg/delta/tardiff"
+	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
+
 	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 
 	"github.com/opencontainers/go-digest"
-	"github.com/unbasical/doras-server/pkg/constants"
-
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
 )
@@ -97,8 +97,6 @@ func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, 
 	if err == nil {
 		return &existingDescriptor, nil
 	}
-	fromDigest := "sha256:" + fromImage.Digest.Encoded()
-	toDigest := "sha256:" + toImage.Digest.Hex()
 
 	fromDescriptor, fromBlobReader, err := getBlobReaderForArtifact(ctx, src, fromImage)
 	if err != nil {
@@ -112,6 +110,7 @@ func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, 
 	}
 	defer funcutils.PanicOrLogOnErr(toBlobReader.Close, true, "failed to close reader")
 
+	// TODO: add appropriate error here that can be checked with errors.Is()
 	if fromDescriptor.Annotations[ContentUnpack] != toDescriptor.Annotations[ContentUnpack] {
 		return nil, fmt.Errorf("mismatched contents, both need to be packed or not %v, %v", toDescriptor, toDescriptor)
 	}
@@ -136,21 +135,17 @@ func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, 
 	// calculate the hash while writing to the disk
 	hasher := sha256.New()
 	contentReader := io.TeeReader(content, hasher)
-	_, err = io.Copy(fOut, contentReader)
+	n, err := io.Copy(fOut, contentReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write to delta output file (%v): %v", fOut.Name(), err)
 	}
 
 	// produce OCI descriptor meta data
-	stat, err := os.Stat(fOut.Name())
-	if err != nil {
-		return nil, fmt.Errorf("failed to stat delta output file (%v): %v", fOut.Name(), err)
-	}
 	deltaDigest := digest.NewDigest("sha256", hasher)
-	d := v1.Descriptor{
+	deltaLayer := v1.Descriptor{
 		MediaType: "application/vnd.oci.image.layer.v1.tar",
 		Digest:    deltaDigest,
-		Size:      stat.Size(),
+		Size:      n,
 		Annotations: map[string]string{
 			"org.opencontainers.image.title": fName,
 		},
@@ -161,19 +156,12 @@ func CreateDelta(ctx context.Context, src oras.ReadOnlyTarget, dst oras.Target, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to seek delta output file (%v): %v", fOut.Name(), err)
 	}
-	err = dst.Push(ctx, d, fOut)
+	err = dst.Push(ctx, deltaLayer, fOut)
 	if err != nil {
 		return nil, fmt.Errorf("failed to push delta output file (%v): %v", fOut.Name(), err)
 	}
 
-	opts := oras.PackManifestOptions{
-		Layers: []v1.Descriptor{d},
-		ManifestAnnotations: map[string]string{
-			constants.DorasAnnotationFrom:      fromDigest,
-			constants.DorasAnnotationTo:        toDigest,
-			constants.DorasAnnotationAlgorithm: algo,
-		},
-	}
+	opts := ociutils.GetDeltaManifest(fromImage, toImage, []v1.Descriptor{deltaLayer}, algo)
 	artifactType := "application/vnd.test.artifact"
 	manifestDescriptor, err := oras.PackManifest(ctx, dst, oras.PackManifestVersion1_1, artifactType, opts)
 	if err != nil {
