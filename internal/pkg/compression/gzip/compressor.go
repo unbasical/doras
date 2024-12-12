@@ -2,9 +2,10 @@ package gzip
 
 import (
 	"compress/gzip"
+	"io"
+
 	"github.com/unbasical/doras-server/internal/pkg/utils/compressionutils"
 	"github.com/unbasical/doras-server/pkg/compression"
-	"io"
 )
 
 func NewCompressor() compression.Compressor {
