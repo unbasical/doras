@@ -15,3 +15,9 @@ func DefaultAlgorithms() []string {
 		"tardiff",
 	}
 }
+
+const (
+	MediaTypeApplicationBsdiff     = "application/bsdiff"
+	MediaTypeApplicationBsdiffGzip = "application/bsdiff+gzip"
+	MediaTypeApplicationTardiff    = "application/tardiff"
+)
