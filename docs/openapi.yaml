@@ -71,11 +71,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               example:
-                type: https://github.com/unbasical/doras-server/internal/pkg/api/openapi-spec/cloud-api.md
+                type: https://github.com/unbasical/doras-server/docs/cloud-api.md
                 title: example title
                 status: 400
                 detail: missing query parameter `from_digest`
-                instance: https://github.com/unbasical/doras-server/internal/pkg/api/openapi-spec/cloud-api.md#missing-parameter
+                instance: https://github.com/unbasical/doras-server/docs/cloud-api.md#missing-parameter
         '404':
           description: Images are not resolvable.
           content:
@@ -83,11 +83,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               example:
-                type: https://github.com/unbasical/doras-server/internal/pkg/api/openapi-spec/cloud-api.md
+                type: https://github.com/unbasical/doras-server/docs/cloud-api.md
                 title: failed to resolve image(s)
                 status: 404
                 detail: could not resolve from_digest=registry.example.org/foo@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-                instance: https://github.com/unbasical/doras-server/internal/pkg/api/openapi-spec/cloud-api.md#failed-to-resolve-image
+                instance: https://github.com/unbasical/doras-server/docs/cloud-api.md#failed-to-resolve-image
         '406':
           description: Requested delta algorithm is not supported or images are not compatible.
           content:
@@ -95,11 +95,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               example:
-                type: https://github.com/unbasical/doras-server/internal/pkg/api/openapi-spec/cloud-api.md
+                type: https://github.com/unbasical/doras-server/docs/cloud-api.md
                 title: Unsupported delta algorithm.
                 status: 406
                 detail: Algorithm `foodiff` is not supported.
-                instance: https://github.com/unbasical/doras-server/internal/pkg/api/openapi-spec/cloud-api.md#unsupported-algorithm
+                instance: https://github.com/unbasical/doras-server/docs/cloud-api.md#unsupported-algorithm
 components:
   schemas:
     ReadDeltaResponse:
