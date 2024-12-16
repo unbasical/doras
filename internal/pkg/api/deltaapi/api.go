@@ -81,7 +81,6 @@ func readDelta(apiDelegate APIDelegate) {
 		TargetImage:     toTarget,
 		DeltaDescriptor: *deltaDescriptor,
 	}
-
 	apiDelegate.HandleSuccess(deltaResponse)
 }
 

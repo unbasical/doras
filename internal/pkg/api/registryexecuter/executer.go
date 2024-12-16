@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"io"
+
+	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	log "github.com/sirupsen/logrus"
@@ -19,14 +20,31 @@ import (
 type RegistryExecuter interface {
 	ResolveAndLoadManifest(target string, expectDigest bool) (v1.Descriptor, v1.Manifest, error)
 	Load(v1.Descriptor) (io.ReadCloser, error)
-	CreateDummy(target string) error
-	IsDummy(target string) (bool, error)
+	CreateDummy(target oras.Target, tag string) error
+	IsDummy(mf v1.Manifest) (bool, error)
 	PushDelta(target string, content io.Reader) error
+	ResolveDelta(from v1.Descriptor, to v1.Descriptor) (v1.Descriptor, error)
 }
 
 type DeltaEngine struct {
 	artifactStorageProvider apicommon.ArtifactStorage
+	deltaStorageProvider    apicommon.DeltaStorage
 	repoClients             map[string]remote.Client
+}
+
+func (e *DeltaEngine) Load(descriptor v1.Descriptor) (io.ReadCloser, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (e *DeltaEngine) CreateDummy(target oras.Target, tag string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (e *DeltaEngine) IsDummy(mf v1.Manifest) (bool, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (e *DeltaEngine) ResolveAndLoadManifest(target string, expectDigest bool) (v1.Descriptor, v1.Manifest, oras.ReadOnlyTarget, error) {
@@ -59,19 +77,31 @@ func (e *DeltaEngine) ResolveAndLoadManifest(target string, expectDigest bool) (
 	return d, mf, source, nil
 }
 
-func (e *DeltaEngine) CreateDummy(target string) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (e *DeltaEngine) IsDummy(target string) (bool, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (e *DeltaEngine) PushDelta(target string, content io.Reader) error {
 	//TODO implement me
 	panic("implement me")
+}
+
+func (e *DeltaEngine) ResolveDelta(from v1.Descriptor, to v1.Descriptor, tag string) (v1.Manifest, error) {
+	_, target, err := e.deltaStorageProvider.GetDeltaStorage(from, to)
+	if err != nil {
+		return v1.Manifest{}, err
+	}
+	d, err := target.Resolve(context.Background(), tag)
+	if err != nil {
+		return v1.Manifest{}, err
+	}
+	rc, err := target.Fetch(context.Background(), d)
+	if err != nil {
+		return v1.Manifest{}, err
+	}
+	defer funcutils.PanicOrLogOnErr(rc.Close, false, "failed to close reader")
+	mf := v1.Manifest{}
+	err = json.NewDecoder(rc).Decode(&mf)
+	if err != nil {
+		return v1.Manifest{}, err
+	}
+	return mf, nil
 }
 
 func NewDeltaEngine(artifactStorageProvider apicommon.ArtifactStorage, repoClients map[string]remote.Client) *DeltaEngine {
