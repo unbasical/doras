@@ -6,9 +6,14 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"slices"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/unbasical/doras-server/internal/pkg/compression/gzip"
 	delta2 "github.com/unbasical/doras-server/internal/pkg/delta"
+	"github.com/unbasical/doras-server/internal/pkg/delta/bsdiff"
+	"github.com/unbasical/doras-server/internal/pkg/delta/tardiff"
+	"github.com/unbasical/doras-server/internal/pkg/utils/compressionutils"
 	"github.com/unbasical/doras-server/pkg/delta"
 
 	"github.com/unbasical/doras-server/internal/pkg/api/registryexecuter"
@@ -48,7 +53,7 @@ func readDelta(apiDelegate APIDelegate) {
 		apiDelegate.HandleError(err, err.Error())
 		return
 	}
-	fromDigest, toTarget, _, err := apiDelegate.ExtractParams()
+	fromDigest, toTarget, acceptedAlgorithms, err := apiDelegate.ExtractParams()
 	if err != nil {
 		apiDelegate.HandleError(dorasErrors.ErrInternal, "")
 		return
@@ -69,7 +74,15 @@ func readDelta(apiDelegate APIDelegate) {
 		apiDelegate.HandleError(dorasErrors.ErrIncompatibleArtifacts, err.Error())
 		return
 	}
-	// TODO extract parameter verification from ReadDeltaImpl
+
+	manifOpts := registryexecuter.DeltaManifestOptions{
+		From:            "",
+		To:              "",
+		AlgorithmChoice: chooseAlgorithm(acceptedAlgorithms, &mfFrom, &mfTo),
+	}
+	_ = shared.CreateDummy(manifOpts)
+
+	// TODO extract parameter verification From ReadDeltaImpl
 	deltaDescriptor, err, msg := shared.ReadDeltaImpl(source, dFrom, dTo)
 	if err != nil {
 		apiDelegate.HandleError(err, msg)
@@ -82,6 +95,22 @@ func readDelta(apiDelegate APIDelegate) {
 		DeltaDescriptor: *deltaDescriptor,
 	}
 	apiDelegate.HandleSuccess(deltaResponse)
+}
+
+func chooseAlgorithm(acceptedAlgorithms []string, mfFrom, mfTo *v1.Manifest) registryexecuter.AlgorithmChoice {
+	_ = mfTo
+
+	algorithm := registryexecuter.AlgorithmChoice{
+		Differ:     bsdiff.NewCreator(),
+		Compressor: compressionutils.NewNopCompressor(),
+	}
+	if mfFrom.Annotations[delta2.ContentUnpack] == "true" && slices.Contains(acceptedAlgorithms, "tardiff") {
+		algorithm.Differ = tardiff.NewCreator()
+	}
+	if slices.Contains(acceptedAlgorithms, "gzip") {
+		algorithm.Compressor = gzip.NewCompressor()
+	}
+	return algorithm
 }
 
 func ParseManifest(content io.Reader) (v1.Manifest, error) {

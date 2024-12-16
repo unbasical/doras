@@ -6,6 +6,9 @@ import (
 	"errors"
 	"io"
 
+	"github.com/unbasical/doras-server/pkg/compression"
+	delta2 "github.com/unbasical/doras-server/pkg/delta"
+
 	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -20,7 +23,7 @@ import (
 type RegistryExecuter interface {
 	ResolveAndLoadManifest(target string, expectDigest bool) (v1.Descriptor, v1.Manifest, error)
 	Load(v1.Descriptor) (io.ReadCloser, error)
-	CreateDummy(target oras.Target, tag string) error
+	CreateDummy(mfOpts DeltaManifestOptions) error
 	IsDummy(mf v1.Manifest) (bool, error)
 	PushDelta(target string, content io.Reader) error
 	ResolveDelta(from v1.Descriptor, to v1.Descriptor) (v1.Descriptor, error)
@@ -37,9 +40,9 @@ func (e *DeltaEngine) Load(descriptor v1.Descriptor) (io.ReadCloser, error) {
 	panic("implement me")
 }
 
-func (e *DeltaEngine) CreateDummy(target oras.Target, tag string) error {
+func (e *DeltaEngine) CreateDummy(mfOpts DeltaManifestOptions) error {
 	//TODO implement me
-	panic("implement me")
+	return errors.New("not implemented")
 }
 
 func (e *DeltaEngine) IsDummy(mf v1.Manifest) (bool, error) {
@@ -138,4 +141,22 @@ func (e *DeltaEngine) ReadDeltaImpl(source oras.ReadOnlyTarget, from, to v1.Desc
 		return nil, dorasErrors.ErrInternal, "failed to create delta"
 	}
 	return descDelta, nil, ""
+}
+
+type DeltaManifestOptions struct {
+	From string
+	To   string
+	AlgorithmChoice
+}
+
+type AlgorithmChoice struct {
+	delta2.Differ
+	compression.Compressor
+}
+
+func (c *AlgorithmChoice) GetTag() string {
+	if compressorName := c.Compressor.Name(); compressorName != "" {
+		return c.Differ.Name() + "_" + compressorName
+	}
+	return c.Differ.Name()
 }
