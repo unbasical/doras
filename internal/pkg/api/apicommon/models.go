@@ -6,10 +6,6 @@ type SuccessResponse[T any] struct {
 	Success T `json:"success"`
 }
 
-type CreateOCIArtifactRequest struct {
-	Image string `json:"image"`
-}
-
 type ReadDeltaRequest struct {
 	From               string   `json:"from"`
 	To                 string   `json:"to"`
@@ -17,7 +13,8 @@ type ReadDeltaRequest struct {
 }
 
 type ReadDeltaResponse struct {
-	Desc v1.Descriptor `json:"descriptor"`
+	TargetImage     string        `json:"target_image"`
+	DeltaDescriptor v1.Descriptor `json:"delta_descriptor"`
 }
 
 type APIError struct {

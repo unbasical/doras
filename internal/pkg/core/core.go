@@ -40,7 +40,7 @@ func (d *Doras) Init(config configs.DorasServerConfig) *Doras {
 	}
 
 	appConfig := &apicommon.Config{
-		ArtifactStorage: apicommon.NewRegistryStorage(reg),
+		ArtifactStorage: apicommon.NewRegistryStorage(reg, ""),
 		RepoClients:     clientConfigs,
 	}
 	d.engine = api.BuildApp(appConfig)

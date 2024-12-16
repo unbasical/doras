@@ -9,7 +9,6 @@ import (
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	delta2 "github.com/unbasical/doras-server/internal/pkg/delta"
-	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"github.com/unbasical/doras-server/pkg/delta"
 
 	"github.com/unbasical/doras-server/internal/pkg/api/registryexecuter"
@@ -54,36 +53,24 @@ func readDelta(apiDelegate APIDelegate) {
 		apiDelegate.HandleError(dorasErrors.ErrInternal, "")
 		return
 	}
-	_, rcFrom, err := shared.ResolveAndLoad(fromDigest, true)
+	dFrom, mfFrom, source, err := shared.ResolveAndLoadManifest(fromDigest, true)
 	if err != nil {
 		apiDelegate.HandleError(dorasErrors.ErrInvalidOciImage, fromDigest)
 		return
 	}
-	defer funcutils.PanicOrLogOnErr(rcFrom.Close, false, "failed to close reader")
 
-	dTo, rcTo, err := shared.ResolveAndLoad(toTarget, false)
+	dTo, mfTo, _, err := shared.ResolveAndLoadManifest(toTarget, false)
 	if err != nil {
 		apiDelegate.HandleError(dorasErrors.ErrInternal, toTarget)
 		return
 	}
-	defer funcutils.PanicOrLogOnErr(rcFrom.Close, false, "failed to close reader")
 
-	mfFrom, err := ParseManifest(rcFrom)
-	if err != nil {
-		apiDelegate.HandleError(dorasErrors.ErrInternal, "invalid manifest")
-		return
-	}
-	mfTo, err := ParseManifest(rcTo)
-	if err != nil {
-		apiDelegate.HandleError(dorasErrors.ErrInternal, "invalid manifest")
-		return
-	}
 	if err := checkCompatability(&mfFrom, &mfTo); err != nil {
 		apiDelegate.HandleError(dorasErrors.ErrIncompatibleArtifacts, err.Error())
 		return
 	}
 	// TODO extract parameter verification from ReadDeltaImpl
-	deltaDescriptor, err, msg := shared.ReadDeltaImpl(fromDigest, toTarget)
+	deltaDescriptor, err, msg := shared.ReadDeltaImpl(source, dFrom, dTo)
 	if err != nil {
 		apiDelegate.HandleError(err, msg)
 		return
