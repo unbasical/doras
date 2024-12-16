@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/url"
 	"path"
 	"regexp"
@@ -95,23 +94,6 @@ func ParseOciImageString(r string) (repoName string, tag string, isDigest bool, 
 	}
 	repoName = fmt.Sprintf("%s/%s", u.Host, repoName)
 	return
-}
-
-func ExtractFile(c *gin.Context, name string) ([]byte, error) {
-	formFile, err := c.FormFile(name)
-	if err != nil {
-		return nil, err
-	}
-	file, err := formFile.Open()
-	if err != nil {
-		return nil, err
-	}
-	data := make([]byte, formFile.Size)
-	n, err := file.Read(data)
-	if err != nil && err != io.EOF {
-		return nil, err
-	}
-	return data[:n], nil
 }
 
 func RespondWithError(c *gin.Context, statusCode int, err error, errorContext string) {
