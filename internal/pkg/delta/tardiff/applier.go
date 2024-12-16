@@ -32,3 +32,6 @@ func (a *Applier) Patch(old io.Reader, patch io.Reader) (io.Reader, error) {
 	}()
 	return pr, nil
 }
+func (a *Applier) Name() string {
+	return "tardiff"
+}

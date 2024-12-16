@@ -86,3 +86,7 @@ func (c *Creator) Diff(old io.Reader, new io.Reader) (io.Reader, error) {
 	}()
 	return pr, nil
 }
+
+func (a *Creator) Name() string {
+	return "tardiff"
+}

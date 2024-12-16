@@ -12,11 +12,14 @@ func NewDecompressor() compression.Decompressor {
 	return struct {
 		compression.Decompressor
 	}{
-		Decompressor: compressionutils.CompressorFunc(func(reader io.Reader) (io.Reader, error) {
-			return writerToReader(reader, func(writer io.Writer) io.Writer {
-				return gzip.NewWriter(writer)
-			})
-		}),
+		Decompressor: &compressionutils.Decompressor{
+			Func: func(reader io.Reader) (io.Reader, error) {
+				return writerToReader(reader, func(writer io.Writer) io.Writer {
+					return gzip.NewWriter(writer)
+				})
+			},
+			Algo: "gzip",
+		},
 	}
 }
 
