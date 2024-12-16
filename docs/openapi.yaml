@@ -108,6 +108,10 @@ components:
         delta_image:
           type: string
           format: url
+          example: registry.example.org/deltas/e3...b0c/44...298:bsdiff_gzip
+        to_image:
+          type: string
+          format: url
           example: registry.example.org/foo@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
     Problem:
       type: object
