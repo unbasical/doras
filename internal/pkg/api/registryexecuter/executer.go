@@ -85,7 +85,7 @@ func (e *DeltaEngine) getOrasSource(repoUrl string) (oras.ReadOnlyTarget, error)
 	}
 	return src, nil
 }
-func (e *DeltaEngine) ReadDeltaImpl(from string, to string) (*apicommon.ReadDeltaResponse, error, string) {
+func (e *DeltaEngine) ReadDeltaImpl(from string, to string) (*v1.Descriptor, error, string) {
 	// Get oras targets and resolve the images into descriptors
 	// TODO: consider parallelizing resolve with channels
 	var srcFrom, srcTo oras.ReadOnlyTarget
@@ -127,5 +127,5 @@ func (e *DeltaEngine) ReadDeltaImpl(from string, to string) (*apicommon.ReadDelt
 	if err != nil {
 		return nil, dorasErrors.ErrInternal, "failed to create delta"
 	}
-	return &apicommon.ReadDeltaResponse{Desc: *descDelta}, nil, ""
+	return descDelta, nil, ""
 }

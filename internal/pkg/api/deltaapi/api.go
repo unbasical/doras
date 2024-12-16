@@ -3,6 +3,7 @@ package deltaapi
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/url"
 
@@ -60,7 +61,7 @@ func readDelta(apiDelegate APIDelegate) {
 	}
 	defer funcutils.PanicOrLogOnErr(rcFrom.Close, false, "failed to close reader")
 
-	_, rcTo, err := shared.ResolveAndLoad(toTarget, false)
+	dTo, rcTo, err := shared.ResolveAndLoad(toTarget, false)
 	if err != nil {
 		apiDelegate.HandleError(dorasErrors.ErrInternal, toTarget)
 		return
@@ -82,12 +83,19 @@ func readDelta(apiDelegate APIDelegate) {
 		return
 	}
 	// TODO extract parameter verification from ReadDeltaImpl
-	deltaResponse, err, msg := shared.ReadDeltaImpl(fromDigest, toTarget)
+	deltaDescriptor, err, msg := shared.ReadDeltaImpl(fromDigest, toTarget)
 	if err != nil {
 		apiDelegate.HandleError(err, msg)
 		return
 	}
-	apiDelegate.HandleSuccess(*deltaResponse)
+	name, _, _, _ := apicommon.ParseOciImageString(toTarget)
+	toTarget = fmt.Sprintf("%s@sha256:%s", name, dTo.Digest.Encoded())
+	deltaResponse := apicommon.ReadDeltaResponse{
+		TargetImage:     toTarget,
+		DeltaDescriptor: *deltaDescriptor,
+	}
+
+	apiDelegate.HandleSuccess(deltaResponse)
 }
 
 func ParseManifest(content io.Reader) (v1.Manifest, error) {
