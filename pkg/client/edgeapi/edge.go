@@ -3,6 +3,7 @@ package edgeapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,6 +21,34 @@ import (
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
 )
+
+func (c *Client) ReadDelta(from, to string, acceptedAlgorithms []string) (*apicommon.ReadDeltaResponse, bool, error) {
+	log.Warnf("acceptedAlgorithms are not used: %s", acceptedAlgorithms)
+	url := buildurl.New(
+		buildurl.WithBasePath(c.base.DorasURL),
+		buildurl.WithPathElement(apicommon.ApiBasePath),
+		buildurl.WithPathElement(apicommon.DeltaApiPath),
+		buildurl.WithQueryParam(constants.QueryKeyFromDigest, from),
+		buildurl.WithQueryParam(constants.QueryKeyToTag, to),
+	)
+
+	resp, err := c.base.Client.Get(url)
+	if err != nil {
+		return nil, false, err
+	}
+	defer funcutils.PanicOrLogOnErr(resp.Body.Close, false, "failed to close response body")
+	switch resp.StatusCode {
+	case http.StatusOK:
+		var resBody apicommon.ReadDeltaResponse
+		err = json.NewDecoder(resp.Body).Decode(&resBody)
+		if err != nil {
+			return nil, false, err
+		}
+		return &resBody, true, nil
+	default:
+		return nil, false, errors.New(resp.Status)
+	}
+}
 
 func (c *Client) LoadArtifact(artifactURL, outdir string) error {
 	identifier, err := ociutils.NewImageIdentifier(artifactURL)
@@ -110,5 +139,5 @@ func (c *Client) ReadDeltaAsDescriptor(from, to string, acceptedAlgorithms []str
 	if err != nil {
 		return nil, err
 	}
-	return &resBody.Desc, nil
+	return &resBody.DeltaDescriptor, nil
 }

@@ -3,6 +3,7 @@ package constants
 const DorasAnnotationFrom = "from"
 const DorasAnnotationTo = "to"
 const DorasAnnotationAlgorithm = "algorithm"
+const DorasAnnotationIsDummy = "dummy"
 
 const QueryKeyFromDigest = "from_digest"
 const QueryKeyToTag = "to_tag"
@@ -14,3 +15,9 @@ func DefaultAlgorithms() []string {
 		"tardiff",
 	}
 }
+
+const (
+	MediaTypeApplicationBsdiff     = "application/bsdiff"
+	MediaTypeApplicationBsdiffGzip = "application/bsdiff+gzip"
+	MediaTypeApplicationTardiff    = "application/tardiff"
+)

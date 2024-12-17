@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/url"
+	"path"
 	"regexp"
 	"strings"
+
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -16,25 +18,39 @@ import (
 )
 
 type Config struct {
-	ArtifactStorage DorasStorage
+	ArtifactStorage ArtifactStorage
 	RepoClients     map[string]remote.Client
 }
 
-type DorasStorage interface {
-	GetStorage(base string) (oras.Target, error)
+type ArtifactStorage interface {
+	GetStorage(repoPath string) (string, oras.Target, error)
+}
+
+type DeltaStorage interface {
+	GetDeltaStorage(from, to v1.Descriptor) (string, oras.Target, error)
 }
 
 type RegistryStorage struct {
-	reg *remote.Registry
+	baseRepo string
+	reg      *remote.Registry
 }
 
-func (r *RegistryStorage) GetStorage(base string) (oras.Target, error) {
-	repo, err := r.reg.Repository(context.Background(), base)
-	return repo, err
+func (r *RegistryStorage) GetDeltaStorage(from, to v1.Descriptor) (string, oras.Target, error) {
+	repoPath := path.Join(
+		from.Digest.Encoded(),
+		to.Digest.Encoded(),
+	)
+	return r.GetStorage(repoPath)
 }
 
-func NewRegistryStorage(reg *remote.Registry) *RegistryStorage {
-	return &RegistryStorage{reg: reg}
+func (r *RegistryStorage) GetStorage(repoPath string) (string, oras.Target, error) {
+	repoPath = path.Join(r.baseRepo, repoPath)
+	repo, err := r.reg.Repository(context.Background(), repoPath)
+	return repoPath, repo, err
+}
+
+func NewRegistryStorage(reg *remote.Registry, baseRepo string) *RegistryStorage {
+	return &RegistryStorage{reg: reg, baseRepo: baseRepo}
 }
 
 func ExtractStateFromContext[T any](c *gin.Context, target *T) error {
@@ -78,23 +94,6 @@ func ParseOciImageString(r string) (repoName string, tag string, isDigest bool, 
 	}
 	repoName = fmt.Sprintf("%s/%s", u.Host, repoName)
 	return
-}
-
-func ExtractFile(c *gin.Context, name string) ([]byte, error) {
-	formFile, err := c.FormFile(name)
-	if err != nil {
-		return nil, err
-	}
-	file, err := formFile.Open()
-	if err != nil {
-		return nil, err
-	}
-	data := make([]byte, formFile.Size)
-	n, err := file.Read(data)
-	if err != nil && err != io.EOF {
-		return nil, err
-	}
-	return data[:n], nil
 }
 
 func RespondWithError(c *gin.Context, statusCode int, err error, errorContext string) {

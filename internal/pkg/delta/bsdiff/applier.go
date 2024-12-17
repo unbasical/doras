@@ -26,3 +26,6 @@ type Applier struct {
 func (a *Applier) Patch(old io.Reader, new io.Reader) (io.Reader, error) {
 	return Bspatch(old, new)
 }
+func (a *Applier) Name() string {
+	return "bsdiff"
+}
