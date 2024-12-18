@@ -9,9 +9,9 @@ import (
 	"github.com/unbasical/doras-server/internal/pkg/api/apidelegate"
 	"github.com/unbasical/doras-server/internal/pkg/api/deltadelegate"
 	"github.com/unbasical/doras-server/internal/pkg/api/registrydelegate"
-	"github.com/unbasical/doras-server/internal/pkg/delta"
 	error2 "github.com/unbasical/doras-server/internal/pkg/error"
 	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
+	"github.com/unbasical/doras-server/pkg/constants"
 )
 
 type DeltaEngine interface {
@@ -147,7 +147,7 @@ func checkCompatability(from *v1.Manifest, to *v1.Manifest) error {
 	if len(from.Layers) != len(to.Layers) {
 		return errors.New("incompatible amount of layers")
 	}
-	if from.Annotations[delta.ContentUnpack] != to.Annotations[delta.ContentUnpack] {
+	if from.Annotations[constants.ContentUnpack] != to.Annotations[constants.ContentUnpack] {
 		return errors.New("incompatible artifacts")
 	}
 	return nil

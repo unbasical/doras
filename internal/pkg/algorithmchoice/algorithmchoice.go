@@ -2,11 +2,11 @@ package algorithmchoice
 
 import (
 	"fmt"
+	"github.com/unbasical/doras-server/pkg/constants"
 	"slices"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/unbasical/doras-server/internal/pkg/compression/gzip"
-	delta2 "github.com/unbasical/doras-server/internal/pkg/delta"
 	"github.com/unbasical/doras-server/internal/pkg/delta/bsdiff"
 	"github.com/unbasical/doras-server/internal/pkg/delta/tardiff"
 	"github.com/unbasical/doras-server/internal/pkg/utils/compressionutils"
@@ -48,7 +48,7 @@ func ChooseAlgorithm(acceptedAlgorithms []string, mfFrom, mfTo *v1.Manifest) Alg
 		Differ:     bsdiff.NewCreator(),
 		Compressor: compressionutils.NewNopCompressor(),
 	}
-	if mfFrom.Layers[0].Annotations[delta2.ContentUnpack] == "true" && slices.Contains(acceptedAlgorithms, "tardiff") {
+	if mfFrom.Layers[0].Annotations[constants.ContentUnpack] == "true" && slices.Contains(acceptedAlgorithms, "tardiff") {
 		algorithm.Differ = tardiff.NewCreator()
 	}
 	if slices.Contains(acceptedAlgorithms, "gzip") {
