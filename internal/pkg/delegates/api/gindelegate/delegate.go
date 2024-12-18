@@ -2,7 +2,7 @@ package gindelegate
 
 import (
 	"errors"
-	"github.com/unbasical/doras-server/internal/pkg/delegates/api"
+	apidelegate "github.com/unbasical/doras-server/internal/pkg/delegates/api"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

@@ -2,8 +2,9 @@ package algorithmchoice
 
 import (
 	"fmt"
-	"github.com/unbasical/doras-server/pkg/constants"
 	"slices"
+
+	"github.com/unbasical/doras-server/pkg/constants"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/unbasical/doras-server/internal/pkg/compression/gzip"

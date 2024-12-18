@@ -5,14 +5,15 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	bsdiff2 "github.com/unbasical/doras-server/internal/pkg/delta/bsdiff"
-	"github.com/unbasical/doras-server/internal/pkg/delta/tardiff"
-	delta2 "github.com/unbasical/doras-server/pkg/delta"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	bsdiff2 "github.com/unbasical/doras-server/internal/pkg/delta/bsdiff"
+	"github.com/unbasical/doras-server/internal/pkg/delta/tardiff"
+	delta2 "github.com/unbasical/doras-server/pkg/delta"
 
 	"github.com/unbasical/doras-server/internal/pkg/utils/fileutils"
 	"github.com/unbasical/doras-server/internal/pkg/utils/logutils"

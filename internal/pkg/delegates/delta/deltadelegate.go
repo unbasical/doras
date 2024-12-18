@@ -3,10 +3,11 @@ package deltadelegate
 import (
 	"errors"
 	"fmt"
-	"github.com/unbasical/doras-server/internal/pkg/delegates/registry"
 	"io"
 	"strings"
 	"time"
+
+	registrydelegate "github.com/unbasical/doras-server/internal/pkg/delegates/registry"
 
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"

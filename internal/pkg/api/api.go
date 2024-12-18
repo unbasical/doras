@@ -1,12 +1,14 @@
 package api
 
 import (
-	"github.com/unbasical/doras-server/internal/pkg/core/deltaengine"
-	"github.com/unbasical/doras-server/internal/pkg/delegates/api/gindelegate"
-	"github.com/unbasical/doras-server/internal/pkg/delegates/delta"
-	"github.com/unbasical/doras-server/internal/pkg/delegates/registry"
 	"net/http"
 	"net/url"
+
+	deltadelegate "github.com/unbasical/doras-server/internal/pkg/delegates/delta"
+	registrydelegate "github.com/unbasical/doras-server/internal/pkg/delegates/registry"
+
+	"github.com/unbasical/doras-server/internal/pkg/core/deltaengine"
+	"github.com/unbasical/doras-server/internal/pkg/delegates/api/gindelegate"
 	"oras.land/oras-go/v2/registry/remote"
 
 	"github.com/gin-gonic/gin"
