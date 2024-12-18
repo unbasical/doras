@@ -13,6 +13,7 @@ func DefaultAlgorithms() []string {
 	return []string{
 		"bsdiff",
 		"tardiff",
+		"zstd",
 	}
 }
 
