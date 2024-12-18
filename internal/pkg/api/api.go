@@ -52,8 +52,8 @@ func BuildEdgeAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
 	}
 	edgeAPI := r.Group(edgeApiPath)
 	edgeAPI.GET("/", func(c *gin.Context) {
-		dorasContext := gindelegate.NewDelegate(c)
-		deltaEngine.HandleReadDelta(&dorasContext)
+		apiDelegate := gindelegate.NewDelegate(c)
+		deltaEngine.HandleReadDelta(apiDelegate)
 	})
 	return r
 }
