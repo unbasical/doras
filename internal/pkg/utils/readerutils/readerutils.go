@@ -47,19 +47,6 @@ func WithGzipDecompress() func(*ReaderChain) (io.Reader, error) {
 	}
 }
 
-func WriterToReader(f func(io.Writer, io.Reader) error, content io.Reader) (io.Reader, error) {
-	pr, pw := io.Pipe()
-	go func() {
-		err := f(pw, content)
-		if err != nil {
-			_ = pw.CloseWithError(err)
-		}
-
-		_ = pw.Close()
-	}()
-	return pr, nil
-}
-
 // EOFCloser Turns io.ReadCloser into io.Reader without leaking by closing the original reader.
 func EOFCloser(io.ReadCloser) io.Reader {
 	panic("todo")
@@ -85,4 +72,18 @@ type closerFunc func() error
 // Close performs close operation by the CloserFunc.
 func (fn closerFunc) Close() error {
 	return fn()
+}
+
+func WriterToReader(reader io.Reader, writerSource func(writer io.Writer) io.Writer) (io.Reader, error) {
+	pr, pw := io.Pipe()
+	go func() {
+		gzr := writerSource(pw)
+		_, err := io.ReadAll(io.TeeReader(reader, gzr))
+		if err != nil {
+			_ = pw.CloseWithError(err)
+			return
+		}
+		_ = pw.Close()
+	}()
+	return pr, nil
 }
