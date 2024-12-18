@@ -3,6 +3,7 @@ package deltadelegate
 import (
 	"errors"
 	"fmt"
+
 	"io"
 	"strings"
 	"time"
@@ -14,15 +15,15 @@ import (
 	"github.com/unbasical/doras-server/pkg/constants"
 )
 
-type DeltaDelegateImpl struct {
+type Delegate struct {
 	baseUrl string
 }
 
 func NewDeltaDelegate(baseUrl string) DeltaDelegate {
-	return &DeltaDelegateImpl{baseUrl: baseUrl}
+	return &Delegate{baseUrl: baseUrl}
 }
 
-func (d *DeltaDelegateImpl) IsDummy(mf v1.Manifest) (isDummy bool, expired bool) {
+func (d *Delegate) IsDummy(mf v1.Manifest) (isDummy bool, expired bool) {
 	if mf.Annotations[constants.DorasAnnotationIsDummy] != "true" {
 		return false, false
 	}
@@ -38,7 +39,7 @@ func (d *DeltaDelegateImpl) IsDummy(mf v1.Manifest) (isDummy bool, expired bool)
 	return
 }
 
-func (d *DeltaDelegateImpl) GetDeltaLocation(deltaMf registrydelegate.DeltaManifestOptions) (string, error) {
+func (d *Delegate) GetDeltaLocation(deltaMf registrydelegate.DeltaManifestOptions) (string, error) {
 	digestFrom, err := extractDigest(deltaMf.From)
 	if err != nil {
 		return "", err
@@ -64,7 +65,7 @@ func extractDigest(image string) (*digest.Digest, error) {
 	return &val, nil
 }
 
-func (d *DeltaDelegateImpl) CreateDelta(from, to io.ReadCloser, manifOpts registrydelegate.DeltaManifestOptions) (io.ReadCloser, error) {
+func (d *Delegate) CreateDelta(from, to io.ReadCloser, manifOpts registrydelegate.DeltaManifestOptions) (io.ReadCloser, error) {
 	deltaReader, err := manifOpts.Differ.Diff(from, to)
 	if err != nil {
 		return nil, err
