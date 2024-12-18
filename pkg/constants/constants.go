@@ -16,10 +16,4 @@ func DefaultAlgorithms() []string {
 	}
 }
 
-const (
-	MediaTypeApplicationBsdiff     = "application/bsdiff"
-	MediaTypeApplicationBsdiffGzip = "application/bsdiff+gzip"
-	MediaTypeApplicationTardiff    = "application/tardiff"
-)
-
 const ContentUnpack = "io.deis.oras.content.unpack"
