@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
-	"github.com/unbasical/doras-server/internal/pkg/api/registryexecuter"
 	error2 "github.com/unbasical/doras-server/internal/pkg/error"
 	"github.com/unbasical/doras-server/pkg/constants"
 )
@@ -14,7 +13,6 @@ import (
 type APIDelegate interface {
 	ExtractParams() (fromImage, toImage string, acceptedAlgorithms []string, err error)
 	HandleError(err error, msg string)
-	ExtractState() (*registryexecuter.DeltaEngine, error)
 	HandleSuccess(apicommon.ReadDeltaResponse)
 	HandleAccepted()
 }
@@ -85,16 +83,6 @@ func (g *GinDorasContext) ExtractParams() (fromImage, toImage string, acceptedAl
 		acceptedAlgorithms = constants.DefaultAlgorithms()
 	}
 	return fromImage, toImage, acceptedAlgorithms, nil
-}
-
-func (g *GinDorasContext) ExtractState() (*registryexecuter.DeltaEngine, error) {
-	var shared *registryexecuter.DeltaEngine
-
-	err := apicommon.ExtractStateFromContext(g.c, &shared)
-	if err != nil {
-		return nil, err
-	}
-	return shared, nil
 }
 
 func (g *GinDorasContext) HandleSuccess(deltaResponse apicommon.ReadDeltaResponse) {

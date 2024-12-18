@@ -1,7 +1,10 @@
 package ociutils
 
 import (
-	"github.com/opencontainers/image-spec/specs-go/v1"
+	"encoding/json"
+	"io"
+
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/unbasical/doras-server/pkg/constants"
 	"oras.land/oras-go/v2"
 )
@@ -35,4 +38,13 @@ func GetDeltaDummyManifest(fromImage v1.Descriptor, toImage v1.Descriptor, algo 
 		},
 	}
 	return opts
+}
+
+func ParseManifest(content io.Reader) (v1.Manifest, error) {
+	var mf v1.Manifest
+	err := json.NewDecoder(content).Decode(&mf)
+	if err != nil {
+		return v1.Manifest{}, err
+	}
+	return mf, nil
 }
