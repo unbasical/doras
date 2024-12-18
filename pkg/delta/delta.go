@@ -3,7 +3,7 @@ package delta
 import "io"
 
 type Patcher interface {
-	Patch(old io.Reader, new io.Reader) (io.Reader, error)
+	Patch(old io.Reader, patch io.Reader) (io.Reader, error)
 	Name() string
 }
 

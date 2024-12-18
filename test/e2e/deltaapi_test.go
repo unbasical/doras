@@ -5,6 +5,9 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	bsdiff2 "github.com/unbasical/doras-server/internal/pkg/delta/bsdiff"
+	"github.com/unbasical/doras-server/internal/pkg/delta/tardiff"
+	delta2 "github.com/unbasical/doras-server/pkg/delta"
 	"io"
 	"net/http"
 	"strings"
@@ -20,7 +23,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/unbasical/doras-server/configs"
 	"github.com/unbasical/doras-server/internal/pkg/core"
-	"github.com/unbasical/doras-server/internal/pkg/delta"
 	"github.com/unbasical/doras-server/pkg/client/edgeapi"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
@@ -207,12 +209,20 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 		if !bytes.Equal(deltaGot, tt.want) {
 			t.Errorf("%s: got:\n%x\nwant:\n%x", tt.name, deltaGot, tt.want)
 		}
-
+		var patcher delta2.Patcher
+		switch algo {
+		case "tardiff":
+			patcher = &tardiff.Applier{}
+		case "bsdiff":
+			patcher = &bsdiff2.Applier{}
+		default:
+			t.Error("unknown algorithm")
+			continue
+		}
 		// apply the requested data
-		patchedReader, err := delta.ApplyDelta(
-			algo,
-			bytes.NewReader(deltaGot),
+		patchedReader, err := patcher.Patch(
 			tt.fromReader,
+			bytes.NewReader(deltaGot),
 		)
 		if err != nil {
 			t.Error(err)
