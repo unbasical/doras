@@ -82,7 +82,7 @@ func (c *Client) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string)
 				return nil, "", nil, err
 			}
 			repo.Client = c.base.Client
-			repo.PlainHTTP = true
+			repo.PlainHTTP = c.reg.PlainHTTP
 			descriptor, rc, err := repo.FetchReference(context.Background(), tag)
 			if err != nil {
 				return nil, "", nil, err
