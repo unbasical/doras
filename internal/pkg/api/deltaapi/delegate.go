@@ -10,13 +10,6 @@ import (
 	"github.com/unbasical/doras-server/pkg/constants"
 )
 
-type APIDelegate interface {
-	ExtractParams() (fromImage, toImage string, acceptedAlgorithms []string, err error)
-	HandleError(err error, msg string)
-	HandleSuccess(apicommon.ReadDeltaResponse)
-	HandleAccepted()
-}
-
 type GinDorasContext struct {
 	c *gin.Context
 }
@@ -85,8 +78,8 @@ func (g *GinDorasContext) ExtractParams() (fromImage, toImage string, acceptedAl
 	return fromImage, toImage, acceptedAlgorithms, nil
 }
 
-func (g *GinDorasContext) HandleSuccess(deltaResponse apicommon.ReadDeltaResponse) {
-	g.c.JSON(http.StatusOK, deltaResponse)
+func (g *GinDorasContext) HandleSuccess(response any) {
+	g.c.JSON(http.StatusOK, response)
 }
 
 func (g *GinDorasContext) HandleAccepted() {
