@@ -75,35 +75,6 @@ func (c *Client) LoadArtifact(artifactURL, outdir string) error {
 	return nil
 }
 
-func (c *Client) fetchManifestAndArtifact(target v1.Descriptor) (*v1.Manifest, io.ReadCloser, error) {
-	// fetch manifest
-	// fetch artifact via descriptor in manifest
-	// consider using an oras storage to copy and then call fetch on local storage
-	ctx := context.Background()
-	repository, err := c.reg.Repository(ctx, "deltas")
-	if err != nil {
-		return nil, nil, err
-	}
-	rc, err := repository.Fetch(ctx, target)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer funcutils.PanicOrLogOnErr(rc.Close, false, "failed to close fetch reader")
-	var mf v1.Manifest
-	err = json.NewDecoder(rc).Decode(&mf)
-	if err != nil {
-		return nil, nil, err
-	}
-	if len(mf.Layers) != 1 {
-		return nil, nil, fmt.Errorf("unsupported number of layers %d", len(mf.Layers))
-	}
-	rc, err = repository.Blobs().Fetch(ctx, mf.Layers[0])
-	if err != nil {
-		return nil, nil, err
-	}
-	return &mf, rc, nil
-}
-
 func (c *Client) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string) (*v1.Descriptor, string, io.ReadCloser, error) {
 	for {
 		response, exists, err := c.ReadDelta(from, to, acceptedAlgorithms)

@@ -3,10 +3,11 @@ package delta
 import (
 	"bytes"
 	"compress/gzip"
-	"github.com/unbasical/doras-server/internal/pkg/utils/fileutils"
-	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"io"
 	"testing"
+
+	"github.com/unbasical/doras-server/internal/pkg/utils/fileutils"
+	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 
 	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
 )

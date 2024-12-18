@@ -2,9 +2,10 @@ package deltaapi
 
 import (
 	"errors"
+	"net/url"
+
 	"github.com/unbasical/doras-server/internal/pkg/algorithmchoice"
 	"github.com/unbasical/doras-server/internal/pkg/api/deltadelegate"
-	"net/url"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	delta2 "github.com/unbasical/doras-server/internal/pkg/delta"

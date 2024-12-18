@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"io"
 	"net/url"
-	"oras.land/oras-go/v2"
 	"regexp"
 	"strings"
+
+	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
+	"oras.land/oras-go/v2"
 
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"

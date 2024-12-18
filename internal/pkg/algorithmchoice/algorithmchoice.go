@@ -2,13 +2,14 @@ package algorithmchoice
 
 import (
 	"fmt"
-	"github.com/opencontainers/image-spec/specs-go/v1"
+	"slices"
+
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/unbasical/doras-server/internal/pkg/compression/gzip"
 	delta2 "github.com/unbasical/doras-server/internal/pkg/delta"
 	"github.com/unbasical/doras-server/internal/pkg/delta/bsdiff"
 	"github.com/unbasical/doras-server/internal/pkg/delta/tardiff"
 	"github.com/unbasical/doras-server/internal/pkg/utils/compressionutils"
-	"slices"
 
 	"github.com/unbasical/doras-server/pkg/compression"
 	"github.com/unbasical/doras-server/pkg/delta"

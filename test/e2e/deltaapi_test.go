@@ -5,14 +5,15 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"github.com/unbasical/doras-server/internal/pkg/utils/fileutils"
-	"github.com/unbasical/doras-server/internal/pkg/utils/logutils"
-	testutils2 "github.com/unbasical/doras-server/internal/pkg/utils/testutils"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/unbasical/doras-server/internal/pkg/utils/fileutils"
+	"github.com/unbasical/doras-server/internal/pkg/utils/logutils"
+	testutils2 "github.com/unbasical/doras-server/internal/pkg/utils/testutils"
 
 	"github.com/gabstv/go-bsdiff/pkg/bsdiff"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
