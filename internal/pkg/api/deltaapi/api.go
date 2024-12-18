@@ -55,6 +55,8 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 		apiDelegate.HandleError(dorasErrors.ErrInternal, "")
 		return
 	}
+
+	// resolve images to ensure they exist
 	srcFrom, fromImage, fromDescriptor, err := registry.Resolve(fromDigest, true)
 	if err != nil {
 		apiDelegate.HandleError(dorasErrors.ErrInvalidOciImage, fromDigest)
@@ -65,6 +67,8 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 		apiDelegate.HandleError(dorasErrors.ErrInvalidOciImage, toTarget)
 		return
 	}
+
+	// load manifests to check for compatability and algorithm selection
 	mfFrom, err := registry.LoadManifest(fromDescriptor, srcFrom)
 	if err != nil {
 		apiDelegate.HandleError(dorasErrors.ErrInternal, "")
@@ -84,6 +88,7 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 		To:              toImage,
 		AlgorithmChoice: algorithmchoice.ChooseAlgorithm(acceptedAlgorithms, &mfFrom, &mfTo),
 	}
+
 	deltaImage, err := delegate.GetDeltaLocation(manifOpts)
 	if err != nil {
 		apiDelegate.HandleError(dorasErrors.ErrInternal, "")
@@ -118,11 +123,14 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 		log.Debugf("failed to resolve delta %v", err)
 	}
 
+	// Push dummy to communicate that someone is working on the delta.
 	err = registry.PushDummy(deltaImageWithTag, manifOpts)
 	if err != nil {
 		apiDelegate.HandleError(dorasErrors.ErrInternal, "")
 		return
 	}
+
+	// load artifacts for delta calculation
 	rcFrom, err := registry.LoadArtifact(mfFrom, srcFrom)
 	if err != nil {
 		apiDelegate.HandleError(dorasErrors.ErrInternal, "")
