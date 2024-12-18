@@ -2,15 +2,15 @@ package compressionutils
 
 import "io"
 
-type CompressFunc func(reader io.Reader) (io.Reader, error)
+type CompressFunc func(reader io.ReadCloser) (io.ReadCloser, error)
 
 type Compressor struct {
 	Func CompressFunc
 	Algo string
 }
 
-func (c *Compressor) Compress(input io.Reader) (io.Reader, error) {
-	return c.Func(input)
+func (c *Compressor) Compress(in io.ReadCloser) (io.ReadCloser, error) {
+	return c.Func(in)
 }
 
 func (c *Compressor) Name() string {

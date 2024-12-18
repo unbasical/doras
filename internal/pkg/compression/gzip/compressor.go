@@ -13,7 +13,7 @@ func NewCompressor() compression.Compressor {
 		compression.Compressor
 	}{
 		Compressor: &compressionutils.Compressor{
-			Func: func(reader io.Reader) (io.Reader, error) {
+			Func: func(reader io.ReadCloser) (io.ReadCloser, error) {
 				newReader, err := gzip.NewReader(reader)
 				if err != nil {
 					return nil, err

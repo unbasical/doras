@@ -3,7 +3,7 @@ package compression
 import "io"
 
 type Compressor interface {
-	Compress(in io.Reader) (io.Reader, error)
+	Compress(in io.ReadCloser) (io.ReadCloser, error)
 	Name() string
 }
 

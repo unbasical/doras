@@ -21,7 +21,7 @@ func (n noCompression) Decompress(in io.Reader) (io.Reader, error) {
 	return in, nil
 }
 
-func (n noCompression) Compress(in io.Reader) (io.Reader, error) {
+func (n noCompression) Compress(in io.ReadCloser) (io.ReadCloser, error) {
 	return in, nil
 }
 

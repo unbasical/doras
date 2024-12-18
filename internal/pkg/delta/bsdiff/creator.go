@@ -16,7 +16,7 @@ func NewCreator() delta.Differ {
 	return &creator{}
 }
 
-func (c *creator) Diff(old io.Reader, new io.Reader) (io.Reader, error) {
+func (c *creator) Diff(old io.Reader, new io.Reader) (io.ReadCloser, error) {
 	pr, pw := io.Pipe()
 	go func() {
 		err := bsdiff2.Reader(old, new, pw)

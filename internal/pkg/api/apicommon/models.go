@@ -1,7 +1,5 @@
 package apicommon
 
-import v1 "github.com/opencontainers/image-spec/specs-go/v1"
-
 type SuccessResponse[T any] struct {
 	Success T `json:"success"`
 }
@@ -13,8 +11,8 @@ type ReadDeltaRequest struct {
 }
 
 type ReadDeltaResponse struct {
-	TargetImage     string        `json:"target_image"`
-	DeltaDescriptor v1.Descriptor `json:"delta_descriptor"`
+	TargetImage string `json:"target_image"`
+	DeltaImage  string `json:"delta_image"`
 }
 
 type APIError struct {

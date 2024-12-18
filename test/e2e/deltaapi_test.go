@@ -54,7 +54,7 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 	host := "localhost:8081"
 	config := configs.DorasServerConfig{
 		Sources: map[string]configs.OrasSourceConfiguration{
-			regUri + "/artifacts": {
+			regUri: {
 				EnableHTTP: false,
 			},
 		},
@@ -204,7 +204,7 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 			t.Error(err)
 		}
 		if !bytes.Equal(deltaGot, tt.want) {
-			t.Errorf("got:\n%x\nwant:\n%x", deltaGot, tt.want)
+			t.Errorf("%s: got:\n%x\nwant:\n%x", tt.name, deltaGot, tt.want)
 		}
 
 		// apply the requested data
@@ -226,7 +226,7 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !bytes.Equal(patchedData, toWant) {
-			t.Errorf("got:\n%x\nwant:\n%x", patchedData, toWant)
+			t.Errorf("%s: got:\n%x\nwant:\n%x", tt.name, patchedData, toWant)
 		}
 	}
 

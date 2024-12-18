@@ -8,6 +8,6 @@ type Patcher interface {
 }
 
 type Differ interface {
-	Diff(old io.Reader, new io.Reader) (io.Reader, error)
+	Diff(old io.Reader, new io.Reader) (io.ReadCloser, error)
 	Name() string
 }
