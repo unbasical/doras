@@ -1,7 +1,8 @@
-package deltaapi
+package gindelegate
 
 import (
 	"errors"
+	"github.com/unbasical/doras-server/internal/pkg/delegates/api"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,11 +11,15 @@ import (
 	"github.com/unbasical/doras-server/pkg/constants"
 )
 
-type GinDorasContext struct {
+type ginDorasContext struct {
 	c *gin.Context
 }
 
-func (g *GinDorasContext) HandleError(err error, msg string) {
+func NewDelegate(c *gin.Context) apidelegate.APIDelegate {
+	return &ginDorasContext{c: c}
+}
+
+func (g *ginDorasContext) HandleError(err error, msg string) {
 	var statusCode int
 	if errors.Is(err, error2.ErrAliasNotFound) {
 		statusCode = http.StatusNotFound
@@ -55,7 +60,7 @@ func (g *GinDorasContext) HandleError(err error, msg string) {
 	apicommon.RespondWithError(g.c, statusCode, err, msg)
 }
 
-func (g *GinDorasContext) ExtractParams() (fromImage, toImage string, acceptedAlgorithms []string, err error) {
+func (g *ginDorasContext) ExtractParams() (fromImage, toImage string, acceptedAlgorithms []string, err error) {
 	fromImage = g.c.Query(constants.QueryKeyFromDigest)
 	if fromImage == "" {
 		return "", "", []string{}, error2.ErrMissingQueryParam
@@ -78,10 +83,10 @@ func (g *GinDorasContext) ExtractParams() (fromImage, toImage string, acceptedAl
 	return fromImage, toImage, acceptedAlgorithms, nil
 }
 
-func (g *GinDorasContext) HandleSuccess(response any) {
+func (g *ginDorasContext) HandleSuccess(response any) {
 	g.c.JSON(http.StatusOK, response)
 }
 
-func (g *GinDorasContext) HandleAccepted() {
+func (g *ginDorasContext) HandleAccepted() {
 	g.c.Status(http.StatusAccepted)
 }
