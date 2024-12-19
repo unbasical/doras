@@ -2,6 +2,7 @@ package algorithmchoice
 
 import (
 	"fmt"
+	"github.com/unbasical/doras-server/internal/pkg/compression/zstd"
 	"slices"
 
 	"github.com/unbasical/doras-server/pkg/constants"
@@ -52,8 +53,12 @@ func ChooseAlgorithm(acceptedAlgorithms []string, mfFrom, mfTo *v1.Manifest) Alg
 	if mfFrom.Layers[0].Annotations[constants.ContentUnpack] == "true" && slices.Contains(acceptedAlgorithms, "tardiff") {
 		algorithm.Differ = tardiff.NewCreator()
 	}
+	// The order is inverse to the priority.
 	if slices.Contains(acceptedAlgorithms, "gzip") {
 		algorithm.Compressor = gzip.NewCompressor()
+	}
+	if slices.Contains(acceptedAlgorithms, "zstd") {
+		algorithm.Compressor = zstd.NewCompressor()
 	}
 	return algorithm
 }

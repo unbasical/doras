@@ -13,7 +13,7 @@ func NewNopCompressor() compression.Compressor {
 	return &noCompression{}
 }
 
-func NewNopDecompressor() compression.Compressor {
+func NewNopDecompressor() compression.Decompressor {
 	return &noCompression{}
 }
 

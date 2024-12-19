@@ -2,6 +2,8 @@ package readerutils
 
 import (
 	"compress/gzip"
+	"errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"io"
 )
@@ -47,11 +49,6 @@ func WithGzipDecompress() func(*ReaderChain) (io.Reader, error) {
 	}
 }
 
-// EOFCloser Turns io.ReadCloser into io.Reader without leaking by closing the original reader.
-func EOFCloser(io.ReadCloser) io.Reader {
-	panic("todo")
-}
-
 func ChainedCloser(this io.ReadCloser, other io.Closer) io.ReadCloser {
 	return struct {
 		io.Reader
@@ -74,15 +71,17 @@ func (fn closerFunc) Close() error {
 	return fn()
 }
 
-func WriterToReader(reader io.Reader, writerSource func(writer io.Writer) io.Writer) (io.Reader, error) {
+func WriterToReader(reader io.Reader, writerSource func(writer io.Writer) io.WriteCloser) (io.Reader, error) {
 	pr, pw := io.Pipe()
 	go func() {
 		gzr := writerSource(pw)
-		_, err := io.ReadAll(io.TeeReader(reader, gzr))
-		if err != nil {
+		n, err := io.Copy(gzr, reader)
+		errClose := gzr.Close()
+		if err := errors.Join(err, errClose); err != nil {
 			_ = pw.CloseWithError(err)
 			return
 		}
+		log.Debugf("wrote %d bytes", n)
 		_ = pw.Close()
 	}()
 	return pr, nil

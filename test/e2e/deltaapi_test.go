@@ -5,6 +5,9 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"github.com/unbasical/doras-server/internal/pkg/compression/zstd"
+	"github.com/unbasical/doras-server/internal/pkg/utils/compressionutils"
+	"github.com/unbasical/doras-server/pkg/compression"
 	"io"
 	"net/http"
 	"strings"
@@ -191,55 +194,81 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 			want:       deltaWantBsdiff,
 		},
 	} {
-		imageFrom := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tt.from)
-		imageTo := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tt.to)
-		imageFromDigest := fmt.Sprintf("%s/%s@sha256:%s", regUri, "artifacts", tt.fromDesc.Digest.Encoded())
-		// read delta from sever
-		_, _, _, err := edgeClient.ReadDeltaAsStream(imageFrom, imageTo, nil)
-		if err == nil {
-			t.Fatal(err)
-		}
-		_, algo, rc, err := edgeClient.ReadDeltaAsStream(imageFromDigest, imageTo, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		deltaGot, err := io.ReadAll(rc)
-		if err != nil {
-			t.Error(err)
-		}
-		if !bytes.Equal(deltaGot, tt.want) {
-			t.Errorf("%s: got:\n%x\nwant:\n%x", tt.name, deltaGot, tt.want)
-		}
-		var patcher delta2.Patcher
-		switch algo {
-		case "tardiff":
-			patcher = &tardiff.Applier{}
-		case "bsdiff":
-			patcher = &bsdiff2.Applier{}
-		default:
-			t.Error("unknown algorithm")
-			continue
-		}
-		// apply the requested data
-		patchedReader, err := patcher.Patch(
-			tt.fromReader,
-			bytes.NewReader(deltaGot),
-		)
-		if err != nil {
-			t.Error(err)
-			continue
-		}
-		patchedData, err := io.ReadAll(patchedReader)
-		if err != nil {
-			t.Fatal(err)
-		}
-		toWant, err := io.ReadAll(tt.toReader)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !bytes.Equal(patchedData, toWant) {
-			t.Errorf("%s: got:\n%x\nwant:\n%x", tt.name, patchedData, toWant)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			imageFrom := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tt.from)
+			imageTo := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tt.to)
+			imageFromDigest := fmt.Sprintf("%s/%s@sha256:%s", regUri, "artifacts", tt.fromDesc.Digest.Encoded())
+			// read delta from sever
+			_, _, _, err := edgeClient.ReadDeltaAsStream(imageFrom, imageTo, nil)
+			if err == nil {
+				t.Fatal(err)
+			}
+			_, algo, rc, err := edgeClient.ReadDeltaAsStream(imageFromDigest, imageTo, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var decompressor compression.Decompressor
+			var patcher delta2.Patcher
+			switch algo {
+			case "tardiff+zstd":
+				patcher = &tardiff.Applier{}
+				decompressor = zstd.NewDecompressor()
+			case "bsdiff+zstd":
+				patcher = &bsdiff2.Applier{}
+				decompressor = zstd.NewDecompressor()
+			case "tardiff":
+				patcher = &tardiff.Applier{}
+				decompressor = compressionutils.NewNopDecompressor()
+			case "bsdiff":
+				patcher = &bsdiff2.Applier{}
+				decompressor = compressionutils.NewNopDecompressor()
+			default:
+				t.Error("unknown algorithm")
+				return
+			}
+			deltaGot, err := io.ReadAll(rc)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			decompressedDelta, err := decompressor.Decompress(bytes.NewReader(deltaGot))
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			deltaGot, err = io.ReadAll(decompressedDelta)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			if !bytes.Equal(deltaGot, tt.want) {
+				t.Errorf("%s: got:\n%x\nwant:\n%x", tt.name, deltaGot, tt.want)
+				return
+			}
+
+			// apply the requested data
+			patchedReader, err := patcher.Patch(
+				tt.fromReader,
+				bytes.NewReader(deltaGot),
+			)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			patchedData, err := io.ReadAll(patchedReader)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			toWant, err := io.ReadAll(tt.toReader)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(patchedData, toWant) {
+				t.Errorf("%s: got:\n%x\nwant:\n%x", tt.name, patchedData, toWant)
+			}
+		})
+
 	}
 
 }
