@@ -14,10 +14,9 @@ func TestWriterToReader(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		args    args
-		want    []byte
-		wantErr bool
+		name string
+		args args
+		want []byte
 	}{
 		{
 			name: "pass through writer",
@@ -33,8 +32,7 @@ func TestWriterToReader(t *testing.T) {
 					}
 				},
 			},
-			want:    []byte{1, 2, 3},
-			wantErr: false,
+			want: []byte{1, 2, 3},
 		},
 		{
 			name: "intermediate writer",
@@ -55,16 +53,11 @@ func TestWriterToReader(t *testing.T) {
 				_ = w.Close()
 				return buf.Bytes()
 			}(),
-			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := WriterToReader(tt.args.content, tt.args.writerSource)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("WriterToReader() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := WriterToReader(tt.args.content, tt.args.writerSource)
 			gotBytes, err := io.ReadAll(got)
 			if err != nil {
 				t.Errorf("ReadAll() error = %v", err)

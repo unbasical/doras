@@ -71,7 +71,7 @@ func (fn closerFunc) Close() error {
 	return fn()
 }
 
-func WriterToReader(reader io.Reader, writerSource func(writer io.Writer) io.WriteCloser) (io.Reader, error) {
+func WriterToReader(reader io.Reader, writerSource func(writer io.Writer) io.WriteCloser) io.Reader {
 	pr, pw := io.Pipe()
 	go func() {
 		gzr := writerSource(pw)
@@ -84,5 +84,5 @@ func WriterToReader(reader io.Reader, writerSource func(writer io.Writer) io.Wri
 		log.Debugf("wrote %d bytes", n)
 		_ = pw.Close()
 	}()
-	return pr, nil
+	return pr
 }

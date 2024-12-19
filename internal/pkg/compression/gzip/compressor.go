@@ -26,14 +26,11 @@ func NewCompressor() compression.Compressor {
 		Compressor: &compressionutils.Compressor{
 			Func: func(reader io.ReadCloser) (io.ReadCloser, error) {
 				var closer CloserFunc
-				r, err := readerutils.WriterToReader(reader, func(writer io.Writer) io.WriteCloser {
+				r := readerutils.WriterToReader(reader, func(writer io.Writer) io.WriteCloser {
 					gzw := gzip.NewWriter(writer)
 					closer = gzw.Close
 					return gzw
 				})
-				if err != nil {
-					return nil, err
-				}
 				retval := struct {
 					io.Reader
 					io.Closer
