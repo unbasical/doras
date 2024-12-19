@@ -30,29 +30,25 @@ type BackoffStrategy interface {
 	Wait() error
 }
 
-type FixedBackoff struct {
+type fixedBackoff struct {
 	interval    time.Duration
 	attemptsLef uint
 }
 
 func DefaultBackoff() BackoffStrategy {
-	return &FixedBackoff{
+	return &fixedBackoff{
 		interval:    100 * time.Millisecond,
 		attemptsLef: 5,
 	}
 }
 
-func (f *FixedBackoff) Wait() error {
+func (f *fixedBackoff) Wait() error {
 	if f.attemptsLef == 0 {
 		return errors.New("backoff exceeded attempts limit")
 	}
 	f.attemptsLef--
 	time.Sleep(f.interval)
 	return nil
-}
-
-func NewFixedBackoff(interval time.Duration, attempts uint) BackoffStrategy {
-	return &FixedBackoff{interval: interval, attemptsLef: attempts}
 }
 
 func NewEdgeClient(serverURL, registry string, allowHttp bool) (*Client, error) {
