@@ -65,20 +65,30 @@ func extractDigest(image string) (*digest.Digest, error) {
 	return &val, nil
 }
 
-func (d *Delegate) CreateDelta(from, to io.ReadCloser, manifOpts registrydelegate.DeltaManifestOptions) (io.ReadCloser, error) {
+func (d *Delegate) CreateDelta(from, to io.ReadCloser, manifOpts registrydelegate.DeltaManifestOptions, dst registrydelegate.RegistryDelegate) error {
+	// TODO: avoid leaking readers
 	deltaReader, err := manifOpts.Differ.Diff(from, to)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	compressedDelta, err := manifOpts.Compressor.Compress(deltaReader)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return compressedDelta, nil
+	deltaLocation, err := d.GetDeltaLocation(manifOpts)
+	if err != nil {
+		return err
+	}
+	deltaLocationWithTag := fmt.Sprintf("%s:%s", deltaLocation, manifOpts.GetTag())
+	err = dst.PushDelta(deltaLocationWithTag, manifOpts, compressedDelta)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type DeltaDelegate interface {
 	IsDummy(mf v1.Manifest) (isDummy bool, expired bool)
 	GetDeltaLocation(deltaMf registrydelegate.DeltaManifestOptions) (string, error)
-	CreateDelta(from, to io.ReadCloser, manifOpts registrydelegate.DeltaManifestOptions) (io.ReadCloser, error)
+	CreateDelta(from, to io.ReadCloser, manifOpts registrydelegate.DeltaManifestOptions, dst registrydelegate.RegistryDelegate) error
 }

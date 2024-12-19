@@ -31,22 +31,22 @@ type BackoffStrategy interface {
 }
 
 type fixedBackoff struct {
-	interval    time.Duration
-	attemptsLef uint
+	interval     time.Duration
+	attemptsLeft uint
 }
 
 func DefaultBackoff() BackoffStrategy {
 	return &fixedBackoff{
-		interval:    100 * time.Millisecond,
-		attemptsLef: 5,
+		interval:     100 * time.Millisecond,
+		attemptsLeft: 5,
 	}
 }
 
 func (f *fixedBackoff) Wait() error {
-	if f.attemptsLef == 0 {
+	if f.attemptsLeft == 0 {
 		return errors.New("backoff exceeded attempts limit")
 	}
-	f.attemptsLef--
+	f.attemptsLeft--
 	time.Sleep(f.interval)
 	return nil
 }

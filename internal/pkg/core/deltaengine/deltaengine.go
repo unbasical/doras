@@ -123,19 +123,14 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 		apiDelegate.HandleError(error2.ErrInternal, "")
 		return
 	}
-	rcDelta, err := delegate.CreateDelta(rcFrom, rcTo, manifOpts)
-	if err != nil {
-		apiDelegate.HandleError(error2.ErrInternal, "")
-		return
-	}
+
 	// asynchronously create delta
 	go func() {
 		defer funcutils.PanicOrLogOnErr(rcTo.Close, false, "failed to close reader")
 		defer funcutils.PanicOrLogOnErr(rcFrom.Close, false, "failed to close reader")
-		logrus.Debug(deltaImage)
-		err := registry.PushDelta(deltaImageWithTag, manifOpts, rcDelta)
+		err := delegate.CreateDelta(rcFrom, rcTo, manifOpts, registry)
 		if err != nil {
-			logrus.WithError(err).Error("failed to push delta")
+			apiDelegate.HandleError(error2.ErrInternal, "")
 			return
 		}
 	}()
