@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 
 	registrydelegate "github.com/unbasical/doras-server/internal/pkg/delegates/registry"
@@ -16,11 +17,17 @@ import (
 )
 
 type Delegate struct {
-	baseUrl string
+	baseUrl        string
+	activeRequests map[string]any
+	m              sync.Mutex
 }
 
 func NewDeltaDelegate(baseUrl string) DeltaDelegate {
-	return &Delegate{baseUrl: baseUrl}
+	return &Delegate{
+		baseUrl:        baseUrl,
+		activeRequests: make(map[string]any),
+		m:              sync.Mutex{},
+	}
 }
 
 func (d *Delegate) IsDummy(mf v1.Manifest) (isDummy bool, expired bool) {
@@ -80,7 +87,16 @@ func (d *Delegate) CreateDelta(from, to io.ReadCloser, manifOpts registrydelegat
 		return err
 	}
 	deltaLocationWithTag := fmt.Sprintf("%s:%s", deltaLocation, manifOpts.GetTag())
+	d.m.Lock()
+	if _, ok := d.activeRequests[deltaLocationWithTag]; ok {
+		return nil
+	}
+	d.activeRequests[deltaLocationWithTag] = nil
+	d.m.Unlock()
 	err = dst.PushDelta(deltaLocationWithTag, manifOpts, compressedDelta)
+	d.m.Lock()
+	delete(d.activeRequests, deltaLocationWithTag)
+	d.m.Unlock()
 	if err != nil {
 		return err
 	}
