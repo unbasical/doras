@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
 
@@ -31,11 +32,18 @@ type DeltaManifestOptions struct {
 type RegistryImpl struct {
 	// TODO: replace with map of configured registries
 	*remote.Registry
-	registryUrl string
+	registryUrl   string
+	m             sync.Mutex
+	activeDummies map[string]any
 }
 
 func NewRegistryDelegate(registryUrl string, registry *remote.Registry) RegistryDelegate {
-	return &RegistryImpl{registryUrl: registryUrl, Registry: registry}
+	return &RegistryImpl{
+		Registry:      registry,
+		registryUrl:   registryUrl,
+		m:             sync.Mutex{},
+		activeDummies: make(map[string]any),
+	}
 }
 
 func (r *RegistryImpl) Resolve(image string, expectDigest bool) (oras.ReadOnlyTarget, string, v1.Descriptor, error) {
@@ -154,6 +162,11 @@ func (r *RegistryImpl) PushDelta(image string, manifOpts DeltaManifestOptions, c
 }
 
 func (r *RegistryImpl) PushDummy(image string, manifOpts DeltaManifestOptions) error {
+	r.m.Lock()
+	defer r.m.Unlock()
+	if _, ok := r.activeDummies[image]; ok {
+		return nil
+	}
 	repoName, tag, _, err := apicommon.ParseOciImageString(image)
 	if err != nil {
 		return err
@@ -165,7 +178,7 @@ func (r *RegistryImpl) PushDummy(image string, manifOpts DeltaManifestOptions) e
 	ctx := context.Background()
 	repository, err := r.Registry.Repository(ctx, repoNameTrimmed)
 	if err != nil {
-		return err
+		return fmt.Errorf("get repository: %v", err)
 	}
 	// Dummy manifests use the empty descriptor and set a value in the annotations to indicate a dummy.
 	opts := oras.PackManifestOptions{
@@ -178,12 +191,13 @@ func (r *RegistryImpl) PushDummy(image string, manifOpts DeltaManifestOptions) e
 	}
 	mfDescriptor, err := oras.PackManifest(ctx, repository, oras.PackManifestVersion1_1, "application/vnd.example+type", opts)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to pack manifest: %v", err)
 	}
 	err = repository.Tag(ctx, mfDescriptor, tag)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to tag manifest: %v", err)
 	}
+	r.activeDummies[image] = nil
 	logrus.Infof("created dummy at %s", image)
 	return nil
 }

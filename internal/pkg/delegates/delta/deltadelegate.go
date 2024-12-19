@@ -3,6 +3,7 @@ package deltadelegate
 import (
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"strings"
 	"sync"
@@ -93,6 +94,7 @@ func (d *Delegate) CreateDelta(from, to io.ReadCloser, manifOpts registrydelegat
 	}
 	d.activeRequests[deltaLocationWithTag] = nil
 	d.m.Unlock()
+	log.Debugf("handling request for %q", deltaLocationWithTag)
 	err = dst.PushDelta(deltaLocationWithTag, manifOpts, compressedDelta)
 	d.m.Lock()
 	delete(d.activeRequests, deltaLocationWithTag)

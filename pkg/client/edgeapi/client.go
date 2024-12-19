@@ -6,12 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"strings"
 	"time"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
 	"github.com/unbasical/doras-server/internal/pkg/client"
 	"github.com/unbasical/doras-server/internal/pkg/utils/buildurl"
@@ -26,29 +26,60 @@ type Client struct {
 	backoff BackoffStrategy
 }
 
+// exponentialBackoffWithJitter implements the BackoffStrategy interface
+type exponentialBackoffWithJitter struct {
+	baseDelay      time.Duration // Base delay between retries (e.g., 100ms)
+	maxDelay       time.Duration // Maximum delay before giving up
+	currentAttempt uint          // Track the current attempt number
+	maxAttempt     uint          // Track the current attempt number
+	randSource     *rand.Rand    // Random source for jittering
+}
+
+// NewExponentialBackoffWithJitter creates a new instance of exponentialBackoffWithJitter
+func NewExponentialBackoffWithJitter(baseDelay, maxDelay time.Duration, maxAttempts uint) *exponentialBackoffWithJitter {
+	// Seed the random number generator for jitter
+	source := rand.NewSource(time.Now().UnixNano())
+	return &exponentialBackoffWithJitter{
+		baseDelay:      baseDelay,
+		maxDelay:       maxDelay,
+		currentAttempt: 0,
+		maxAttempt:     maxAttempts,
+		randSource:     rand.New(source),
+	}
+}
+
+// Wait calculates the next backoff time with exponential backoff and jitter
+func (e *exponentialBackoffWithJitter) Wait() error {
+	if e.currentAttempt >= e.maxAttempt {
+		return errors.New("maximum retries exceeded")
+	}
+	// Calculate the exponential backoff delay
+	delay := e.baseDelay * time.Duration(1<<e.currentAttempt) // 2^attempt * baseDelay
+
+	// Apply jitter by adding a random factor to the delay (between 0 and 1x the delay)
+	jitter := time.Duration(e.randSource.Int63n(int64(delay)))
+	delay = delay + jitter - (delay / 2) // Apply jitter in both directions
+
+	// Ensure that delay does not exceed the maximum delay
+	if delay > e.maxDelay {
+		delay = e.maxDelay
+	}
+
+	// Sleep for the calculated delay
+	fmt.Printf("Waiting for %v (attempt %d)\n", delay, e.currentAttempt)
+	time.Sleep(delay)
+
+	// Increment the attempt number for the next retry
+	e.currentAttempt++
+	return nil
+}
+
 type BackoffStrategy interface {
 	Wait() error
 }
 
-type fixedBackoff struct {
-	interval     time.Duration
-	attemptsLeft uint
-}
-
 func DefaultBackoff() BackoffStrategy {
-	return &fixedBackoff{
-		interval:     100 * time.Millisecond,
-		attemptsLeft: 5,
-	}
-}
-
-func (f *fixedBackoff) Wait() error {
-	if f.attemptsLeft == 0 {
-		return errors.New("backoff exceeded attempts limit")
-	}
-	f.attemptsLeft--
-	time.Sleep(f.interval)
-	return nil
+	return NewExponentialBackoffWithJitter(1000*time.Millisecond, 1*time.Minute, 5)
 }
 
 func NewEdgeClient(serverURL, registry string, allowHttp bool) (*Client, error) {
@@ -65,7 +96,6 @@ func NewEdgeClient(serverURL, registry string, allowHttp bool) (*Client, error) 
 }
 
 func (c *Client) ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (*apicommon.ReadDeltaResponse, bool, error) {
-	log.Warnf("acceptedAlgorithms are not used: %s", acceptedAlgorithms)
 	url := buildurl.New(
 		buildurl.WithBasePath(c.base.DorasURL),
 		buildurl.WithPathElement(apicommon.ApiBasePath),

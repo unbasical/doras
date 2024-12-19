@@ -20,8 +20,11 @@ func (c *creator) Diff(old io.Reader, new io.Reader) (io.ReadCloser, error) {
 	pr, pw := io.Pipe()
 	go func() {
 		err := bsdiff2.Reader(old, new, pw)
-		funcutils.PanicOrLogOnErr(funcutils.IdentityFunc(err), true, "failed bsdiff creation")
-		funcutils.PanicOrLogOnErr(pw.Close, true, "failed to close pipe writer")
+		if err != nil {
+			_ = pw.CloseWithError(err)
+			return
+		}
+		funcutils.PanicOrLogOnErr(pw.Close, false, "failed to close pipe writer")
 
 	}()
 	return pr, nil

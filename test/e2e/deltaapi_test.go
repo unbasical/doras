@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -268,7 +269,21 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 				t.Errorf("%s: got:\n%x\nwant:\n%x", tt.name, patchedData, toWant)
 			}
 		})
-
 	}
-
+	t.Run("test concurrent requests", func(t *testing.T) {
+		imageFrom := fmt.Sprintf("%s/%s@sha256:%s", regUri, "artifacts", descriptors["v1-bsdiff"].Digest.Encoded())
+		imageTo := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tag2Bsdiff)
+		wg := sync.WaitGroup{}
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+			go func() {
+				_, err := edgeClient.ReadDelta(imageFrom, imageTo, nil)
+				if err != nil {
+					t.Error(err)
+				}
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+	})
 }

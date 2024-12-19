@@ -3,7 +3,7 @@ package deltaengine
 import (
 	"errors"
 	"github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/algorithmchoice"
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
 	"github.com/unbasical/doras-server/internal/pkg/delegates/api"
@@ -34,6 +34,7 @@ func NewDeltaEngine(registry registrydelegate.RegistryDelegate, delegate deltade
 func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate, apiDelegate apidelegate.APIDelegate) {
 	fromDigest, toTarget, acceptedAlgorithms, err := apiDelegate.ExtractParams()
 	if err != nil {
+		log.WithError(err).Error("Error extracting parameters")
 		apiDelegate.HandleError(error2.ErrInternal, "")
 		return
 	}
@@ -41,11 +42,13 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 	// resolve images to ensure they exist
 	srcFrom, fromImage, fromDescriptor, err := registry.Resolve(fromDigest, true)
 	if err != nil {
+		log.WithError(err).Errorf("Error resolving target %q", fromDigest)
 		apiDelegate.HandleError(error2.ErrInvalidOciImage, fromDigest)
 		return
 	}
 	srcTo, toImage, toDescriptor, err := registry.Resolve(toTarget, false)
 	if err != nil {
+		log.WithError(err).Errorf("Error resolving target %q", toTarget)
 		apiDelegate.HandleError(error2.ErrInvalidOciImage, toTarget)
 		return
 	}
@@ -53,11 +56,13 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 	// load manifests to check for compatability and algorithm selection
 	mfFrom, err := registry.LoadManifest(fromDescriptor, srcFrom)
 	if err != nil {
+		log.WithError(err).Error("Error loading manifest")
 		apiDelegate.HandleError(error2.ErrInternal, "")
 		return
 	}
 	mfTo, err := registry.LoadManifest(toDescriptor, srcTo)
 	if err != nil {
+		log.WithError(err).Error("Error loading manifest")
 		apiDelegate.HandleError(error2.ErrInternal, "")
 		return
 	}
@@ -73,16 +78,18 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 
 	deltaImage, err := delegate.GetDeltaLocation(manifOpts)
 	if err != nil {
+		log.WithError(err).Error("failed to get delta location")
 		apiDelegate.HandleError(error2.ErrInternal, "")
 		return
 	}
 	// create dummy manifest
 	deltaImageWithTag := deltaImage + ":" + manifOpts.GetTag()
-	logrus.Debugf("looking for delta at %s", deltaImageWithTag)
+	log.Debugf("looking for delta at %s", deltaImageWithTag)
 	if deltaSrc, deltaImageDigest, deltaDescriptor, err := registry.Resolve(deltaImageWithTag, false); err == nil {
-		logrus.Debugf("found delta at %s", deltaImageDigest)
+		log.Debugf("found delta at %s", deltaImageDigest)
 		mfDelta, err := registry.LoadManifest(deltaDescriptor, deltaSrc)
 		if err != nil {
+			log.WithError(err).Error("failed to load manifest")
 			apiDelegate.HandleError(error2.ErrInternal, "")
 			return
 		}
@@ -102,12 +109,13 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 			return
 		}
 	} else {
-		logrus.Debugf("failed to resolve delta %v", err)
+		log.Debugf("failed to resolve delta %v", err)
 	}
 
 	// Push dummy to communicate that someone is working on the delta.
 	err = registry.PushDummy(deltaImageWithTag, manifOpts)
 	if err != nil {
+		log.WithError(err).Error("failed to push dummy")
 		apiDelegate.HandleError(error2.ErrInternal, "")
 		return
 	}
@@ -115,11 +123,13 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 	// load artifacts for delta calculation
 	rcFrom, err := registry.LoadArtifact(mfFrom, srcFrom)
 	if err != nil {
+		log.WithError(err).Error("failed to load 'from' artifact")
 		apiDelegate.HandleError(error2.ErrInternal, "")
 		return
 	}
 	rcTo, err := registry.LoadArtifact(mfTo, srcTo)
 	if err != nil {
+		log.WithError(err).Error("failed to load 'to' artifact")
 		apiDelegate.HandleError(error2.ErrInternal, "")
 		return
 	}
@@ -130,6 +140,7 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 		defer funcutils.PanicOrLogOnErr(rcFrom.Close, false, "failed to close reader")
 		err := delegate.CreateDelta(rcFrom, rcTo, manifOpts, registry)
 		if err != nil {
+			log.WithError(err).Error("failed to create delta")
 			apiDelegate.HandleError(error2.ErrInternal, "")
 			return
 		}
