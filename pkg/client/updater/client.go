@@ -32,7 +32,7 @@ func (c *Client) Pull(image string) error {
 // PullAsync Pull delta, but do not block if the delta has not been created yet.
 // The result of the pull is according to the client configuration.
 func (c *Client) PullAsync(target string) (exists bool, err error) {
-	_, exists, err = c.edgeClient.ReadDelta(c.state.currentImage, target, c.acceptedAlgorithms)
+	_, exists, err = c.edgeClient.ReadDeltaAsync(c.state.currentImage, target, c.acceptedAlgorithms)
 	if err != nil {
 		return false, err
 	}

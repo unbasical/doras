@@ -21,8 +21,38 @@ import (
 )
 
 type Client struct {
-	base *client.DorasBaseClient
-	reg  *remote.Registry
+	base    *client.DorasBaseClient
+	reg     *remote.Registry
+	backoff BackoffStrategy
+}
+
+type BackoffStrategy interface {
+	Wait() error
+}
+
+type FixedBackoff struct {
+	interval    time.Duration
+	attemptsLef uint
+}
+
+func DefaultBackoff() BackoffStrategy {
+	return &FixedBackoff{
+		interval:    100 * time.Millisecond,
+		attemptsLef: 5,
+	}
+}
+
+func (f *FixedBackoff) Wait() error {
+	if f.attemptsLef == 0 {
+		return errors.New("backoff exceeded attempts limit")
+	}
+	f.attemptsLef--
+	time.Sleep(f.interval)
+	return nil
+}
+
+func NewFixedBackoff(interval time.Duration, attempts uint) BackoffStrategy {
+	return &FixedBackoff{interval: interval, attemptsLef: attempts}
 }
 
 func NewEdgeClient(serverURL, registry string, allowHttp bool) (*Client, error) {
@@ -32,11 +62,13 @@ func NewEdgeClient(serverURL, registry string, allowHttp bool) (*Client, error) 
 	}
 	reg.PlainHTTP = allowHttp
 	return &Client{
-		base: client.NewBaseClient(serverURL),
-		reg:  reg,
+		base:    client.NewBaseClient(serverURL),
+		reg:     reg,
+		backoff: DefaultBackoff(),
 	}, nil
 }
-func (c *Client) ReadDelta(from, to string, acceptedAlgorithms []string) (*apicommon.ReadDeltaResponse, bool, error) {
+
+func (c *Client) ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (*apicommon.ReadDeltaResponse, bool, error) {
 	log.Warnf("acceptedAlgorithms are not used: %s", acceptedAlgorithms)
 	url := buildurl.New(
 		buildurl.WithBasePath(c.base.DorasURL),
@@ -66,44 +98,54 @@ func (c *Client) ReadDelta(from, to string, acceptedAlgorithms []string) (*apico
 	}
 }
 
-func (c *Client) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string) (*v1.Descriptor, string, io.ReadCloser, error) {
+func (c *Client) ReadDelta(from, to string, acceptedAlgorithms []string) (*apicommon.ReadDeltaResponse, error) {
 	for {
-		response, exists, err := c.ReadDelta(from, to, acceptedAlgorithms)
+		response, exists, err := c.ReadDeltaAsync(from, to, acceptedAlgorithms)
 		if err != nil {
-			return nil, "", nil, err
+			return nil, err
 		}
 		if exists {
-			repoName, tag, _, err := apicommon.ParseOciImageString(response.DeltaImage)
-			if err != nil {
-				return nil, "", nil, err
-			}
-			repo, err := remote.NewRepository(repoName)
-			if err != nil {
-				return nil, "", nil, err
-			}
-			repo.Client = c.base.Client
-			repo.PlainHTTP = c.reg.PlainHTTP
-			descriptor, rc, err := repo.FetchReference(context.Background(), tag)
-			if err != nil {
-				return nil, "", nil, err
-			}
-			defer funcutils.PanicOrLogOnErr(rc.Close, false, "failed to close fetch reader")
-			var mf v1.Manifest
-			err = json.NewDecoder(rc).Decode(&mf)
-			if err != nil {
-				return nil, "", nil, err
-			}
-			if len(mf.Layers) != 1 {
-				return nil, "", nil, fmt.Errorf("unsupported number of layers %d", len(mf.Layers))
-			}
-			algo := strings.TrimPrefix(mf.Layers[0].MediaType, "application/")
-			rc, err = repo.Blobs().Fetch(context.Background(), mf.Layers[0])
-			if err != nil {
-				return nil, "", nil, err
-			}
-			return &descriptor, algo, rc, nil
+			return response, nil
 		}
-		time.Sleep(time.Millisecond * 100)
+		err = c.backoff.Wait()
+		if err != nil {
+			return nil, err
+		}
 	}
+}
 
+func (c *Client) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string) (*v1.Descriptor, string, io.ReadCloser, error) {
+	response, err := c.ReadDelta(from, to, acceptedAlgorithms)
+	if err != nil {
+		return nil, "", nil, err
+	}
+	repoName, tag, _, err := apicommon.ParseOciImageString(response.DeltaImage)
+	if err != nil {
+		return nil, "", nil, err
+	}
+	repo, err := remote.NewRepository(repoName)
+	if err != nil {
+		return nil, "", nil, err
+	}
+	repo.Client = c.base.Client
+	repo.PlainHTTP = c.reg.PlainHTTP
+	descriptor, rc, err := repo.FetchReference(context.Background(), tag)
+	if err != nil {
+		return nil, "", nil, err
+	}
+	defer funcutils.PanicOrLogOnErr(rc.Close, false, "failed to close fetch reader")
+	var mf v1.Manifest
+	err = json.NewDecoder(rc).Decode(&mf)
+	if err != nil {
+		return nil, "", nil, err
+	}
+	if len(mf.Layers) != 1 {
+		return nil, "", nil, fmt.Errorf("unsupported number of layers %d", len(mf.Layers))
+	}
+	algo := strings.TrimPrefix(mf.Layers[0].MediaType, "application/")
+	rc, err = repo.Blobs().Fetch(context.Background(), mf.Layers[0])
+	if err != nil {
+		return nil, "", nil, err
+	}
+	return &descriptor, algo, rc, nil
 }
