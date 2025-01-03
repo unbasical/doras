@@ -80,14 +80,14 @@ func (c *Client) Pull(image string) error {
 
 // This should handle partial downloads etc.
 type RegistryDelegate interface {
-	Resolve(image string) (v1.Manifest, io.ReadCloser, error)
+	ResolveAndLoad(image string) (v1.Manifest, io.ReadCloser, error)
 }
 
 type registryImpl struct {
 	workingDir string
 }
 
-func (r *registryImpl) Resolve(image string) (v1.Manifest, io.ReadCloser, error) {
+func (r *registryImpl) ResolveAndLoad(image string) (v1.Manifest, io.ReadCloser, error) {
 	name, tag, isDigest, err := apicommon.ParseOciImageString(image)
 	if err != nil {
 		return v1.Manifest{}, nil, err
@@ -123,7 +123,7 @@ func (r *registryImpl) Resolve(image string) (v1.Manifest, io.ReadCloser, error)
 	return mf, fp, nil
 }
 
-func (r *registryImpl) ensureDir(p string) (string, error) {
+func (r *registryImpl) ensureSubDir(p string) (string, error) {
 	dir := path.Join(r.workingDir, p)
 	err := os.MkdirAll(dir, 0750)
 	if err != nil {
@@ -133,11 +133,11 @@ func (r *registryImpl) ensureDir(p string) (string, error) {
 }
 
 func (r *registryImpl) ingest(expected v1.Descriptor, content io.ReadCloser) (string, error) {
-	downloadDir, err := r.ensureDir("download")
+	downloadDir, err := r.ensureSubDir("download")
 	if err != nil {
 		return "", err
 	}
-	completedDir, err := r.ensureDir("completed")
+	completedDir, err := r.ensureSubDir("completed")
 	if err != nil {
 		return "", err
 	}
@@ -308,7 +308,7 @@ func (c *Client) PullAsync(target string) (exists bool, err error) {
 	if !exists {
 		return false, nil
 	}
-	mf, delta, err := c.reg.Resolve(res.TargetImage)
+	mf, delta, err := c.reg.ResolveAndLoad(res.TargetImage)
 	if err != nil {
 		return false, err
 	}

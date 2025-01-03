@@ -78,7 +78,7 @@ func Test_registryImpl_ingest(t *testing.T) {
 			Digest: digest.FromBytes(data),
 			Size:   int64(len(data)),
 		}
-		downloadDir, err := reg.ensureDir("download")
+		downloadDir, err := reg.ensureSubDir("download")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -126,7 +126,7 @@ func Test_registryImpl_ingest(t *testing.T) {
 			Digest: digest.FromBytes(data[:3]),
 			Size:   int64(len(data)),
 		}
-		downloadDir, err := reg.ensureDir("download")
+		downloadDir, err := reg.ensureSubDir("download")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -157,7 +157,7 @@ func Test_registryImpl_ingest(t *testing.T) {
 			Digest: digest.FromBytes(data),
 			Size:   int64(len(data)),
 		}
-		downloadDir, err := reg.ensureDir("download")
+		downloadDir, err := reg.ensureSubDir("download")
 		if err != nil {
 			t.Fatal(err)
 		}
