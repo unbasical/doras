@@ -11,8 +11,8 @@ import (
 )
 
 func GetDeltaManifest(fromImage v1.Descriptor, toImage v1.Descriptor, layers []v1.Descriptor, algo string) oras.PackManifestOptions {
-	fromDigest := "sha256:" + fromImage.Digest.Encoded()
-	toDigest := "sha256:" + toImage.Digest.Hex()
+	fromDigest := fromImage.Digest.String()
+	toDigest := toImage.Digest.String()
 	opts := oras.PackManifestOptions{
 		Layers: layers,
 		ManifestAnnotations: map[string]string{

@@ -198,7 +198,7 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			imageFrom := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tt.from)
 			imageTo := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tt.to)
-			imageFromDigest := fmt.Sprintf("%s/%s@sha256:%s", regUri, "artifacts", tt.fromDesc.Digest.Encoded())
+			imageFromDigest := fmt.Sprintf("%s/%s@%s", regUri, "artifacts", tt.fromDesc.Digest.String())
 			// read delta from sever
 			_, _, _, err := edgeClient.ReadDeltaAsStream(imageFrom, imageTo, nil)
 			if err == nil {

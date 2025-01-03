@@ -67,7 +67,7 @@ func (r *RegistryImpl) Resolve(image string, expectDigest bool) (oras.ReadOnlyTa
 	if err != nil {
 		return nil, "", v1.Descriptor{}, err
 	}
-	imageDigest := fmt.Sprintf("%s@sha256:%s", repoName, d.Digest.Encoded())
+	imageDigest := fmt.Sprintf("%s@%s", repoName, d.Digest.String())
 	return repository, imageDigest, d, nil
 }
 
