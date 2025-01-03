@@ -2,8 +2,9 @@ package algorithmchoice
 
 import (
 	"fmt"
-	"github.com/unbasical/doras-server/internal/pkg/compression/zstd"
 	"slices"
+
+	"github.com/unbasical/doras-server/internal/pkg/compression/zstd"
 
 	"github.com/unbasical/doras-server/pkg/constants"
 
@@ -17,36 +18,41 @@ import (
 	"github.com/unbasical/doras-server/pkg/delta"
 )
 
-type AlgorithmChoice struct {
+type PatcherChoice struct {
+	delta.Patcher
+	compression.Decompressor
+}
+
+type DifferChoice struct {
 	delta.Differ
 	compression.Compressor
 }
 
-func (c *AlgorithmChoice) GetTag() string {
+func (c *DifferChoice) GetTag() string {
 	if compressorName := c.Compressor.Name(); compressorName != "" {
 		return c.Differ.Name() + "_" + compressorName
 	}
 	return c.Differ.Name()
 }
 
-func (c *AlgorithmChoice) GetMediaType() string {
+func (c *DifferChoice) GetMediaType() string {
 	if compressorName := c.Compressor.Name(); compressorName != "" {
 		return "application/" + c.Differ.Name() + "+" + compressorName
 	}
 	return "application/" + c.Differ.Name()
 }
 
-func (c *AlgorithmChoice) GetFileExt() string {
+func (c *DifferChoice) GetFileExt() string {
 	if compressorName := c.Compressor.Name(); compressorName != "" {
 		return fmt.Sprintf(".%s.%s", c.Differ.Name(), compressorName)
 	}
 	return fmt.Sprintf(".%s", c.Differ.Name())
 }
 
-func ChooseAlgorithm(acceptedAlgorithms []string, mfFrom, mfTo *v1.Manifest) AlgorithmChoice {
+func ChooseAlgorithm(acceptedAlgorithms []string, mfFrom, mfTo *v1.Manifest) DifferChoice {
 	_ = mfTo
 
-	algorithm := AlgorithmChoice{
+	algorithm := DifferChoice{
 		Differ:     bsdiff.NewCreator(),
 		Compressor: compressionutils.NewNopCompressor(),
 	}

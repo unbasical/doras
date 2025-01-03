@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 
+	"github.com/unbasical/doras-server/internal/pkg/utils/writerutils"
+
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -44,6 +46,19 @@ func SafeReadFile(filePath string, perm os.FileMode) ([]byte, error) {
 		logrus.Errorf("Failed to close file: %s", filePath)
 	}
 	return bytes, readErr
+}
+func SafeWriteJson[T any](filePath string, targetPointer *T) error {
+	fp, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return err
+	}
+	w := writerutils.NewSafeFileWriter(fp)
+	defer w.Close()
+	err = json.NewEncoder(w).Encode(*targetPointer)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func ReadOrPanic(p string) []byte {

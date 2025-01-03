@@ -2,13 +2,14 @@ package deltaengine
 
 import (
 	"errors"
-	"github.com/opencontainers/image-spec/specs-go/v1"
+	apidelegate "github.com/unbasical/doras-server/internal/pkg/delegates/api"
+	deltadelegate "github.com/unbasical/doras-server/internal/pkg/delegates/delta"
+	registrydelegate "github.com/unbasical/doras-server/internal/pkg/delegates/registry"
+
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/algorithmchoice"
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
-	"github.com/unbasical/doras-server/internal/pkg/delegates/api"
-	"github.com/unbasical/doras-server/internal/pkg/delegates/delta"
-	"github.com/unbasical/doras-server/internal/pkg/delegates/registry"
 	error2 "github.com/unbasical/doras-server/internal/pkg/error"
 	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"github.com/unbasical/doras-server/pkg/constants"
@@ -71,9 +72,9 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 		return
 	}
 	manifOpts := registrydelegate.DeltaManifestOptions{
-		From:            fromImage,
-		To:              toImage,
-		AlgorithmChoice: algorithmchoice.ChooseAlgorithm(acceptedAlgorithms, &mfFrom, &mfTo),
+		From:         fromImage,
+		To:           toImage,
+		DifferChoice: algorithmchoice.ChooseAlgorithm(acceptedAlgorithms, &mfFrom, &mfTo),
 	}
 
 	deltaImage, err := delegate.GetDeltaLocation(manifOpts)

@@ -26,7 +26,7 @@ import (
 type DeltaManifestOptions struct {
 	From string
 	To   string
-	algorithmchoice.AlgorithmChoice
+	algorithmchoice.DifferChoice
 }
 
 type RegistryImpl struct {
