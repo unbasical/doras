@@ -196,7 +196,7 @@ func (r *RegistryImpl) PushDummy(image string, manifOpts DeltaManifestOptions) e
 	if err != nil {
 		return fmt.Errorf("failed to tag manifest: %v", err)
 	}
-	r.activeDummies[image] = nil
+	delete(r.activeDummies, image)
 	logrus.Infof("created dummy at %s", image)
 	return nil
 }
