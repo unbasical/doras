@@ -1,6 +1,9 @@
 package apicommon
 
-import "testing"
+import (
+	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
+	"testing"
+)
 
 func TestParseOciImageString(t *testing.T) {
 	tests := []struct {
@@ -30,7 +33,7 @@ func TestParseOciImageString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotRepoName, gotTag, gotIsDigest, err := ParseOciImageString(tt.image)
+			gotRepoName, gotTag, gotIsDigest, err := ociutils.ParseOciImageString(tt.image)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ParseOciImageString() error = %v, wantErr %v", err, tt.wantErr)
 				return

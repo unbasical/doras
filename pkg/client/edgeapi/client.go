@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
 	"io"
 	"math/rand"
 	"net/http"
@@ -145,7 +146,7 @@ func (c *Client) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string)
 	if err != nil {
 		return nil, "", nil, err
 	}
-	repoName, tag, _, err := apicommon.ParseOciImageString(response.DeltaImage)
+	repoName, tag, _, err := ociutils.ParseOciImageString(response.DeltaImage)
 	if err != nil {
 		return nil, "", nil, err
 	}

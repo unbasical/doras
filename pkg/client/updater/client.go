@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/opencontainers/go-digest"
-	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
 	"github.com/unbasical/doras-server/internal/pkg/compression/gzip"
 	"github.com/unbasical/doras-server/internal/pkg/compression/zstd"
 	"github.com/unbasical/doras-server/internal/pkg/delta/bsdiff"
@@ -88,7 +87,7 @@ type registryImpl struct {
 }
 
 func (r *registryImpl) ResolveAndLoad(image string) (v1.Manifest, io.ReadCloser, error) {
-	name, tag, isDigest, err := apicommon.ParseOciImageString(image)
+	name, tag, isDigest, err := ociutils.ParseOciImageString(image)
 	if err != nil {
 		return v1.Manifest{}, nil, err
 	}
