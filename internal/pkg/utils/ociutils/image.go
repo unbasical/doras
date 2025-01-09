@@ -191,6 +191,29 @@ func ParseOciImageString(r string) (repoName string, tag string, isDigest bool, 
 	return
 }
 
+func CheckRegistryMatch(a, b string) error {
+	u1, err := url.Parse(a)
+	if err != nil {
+		return err
+	}
+	u2, err := url.Parse(b)
+	if err != nil {
+		return err
+	}
+	hostName1, err := canonicalizeHostname(u1.Host)
+	if err != nil {
+		return err
+	}
+	hostName2, err := canonicalizeHostname(u2.Host)
+	if err != nil {
+		return err
+	}
+	if hostName1 != hostName2 {
+		return errors.New("registry hosts do not match")
+	}
+	return nil
+}
+
 // canonicalizeHostname standardizes a hostname to ensure consistent representation.
 // It performs the following steps:
 // 1. Converts the hostname to lowercase (DNS is case-insensitive).

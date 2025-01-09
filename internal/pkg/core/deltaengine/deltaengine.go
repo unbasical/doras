@@ -107,6 +107,17 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 		apiDelegate.HandleError(error2.ErrInternal, "")
 		return
 	}
+
+	// Ensure we do not push the delta to a different registry than the original source images.
+	// We only have to check on of the images because we already previously ensured the sources images are in the same repo.
+	// This should be refactored in the future because it is a bit hacky.
+	err = ociutils.CheckRegistryMatch(fromDigest, deltaImage)
+	if err != nil {
+		log.WithError(err).Error("source images not in the same registry as the delta image")
+		apiDelegate.HandleError(error2.ErrBadRequest, "source images not in the same registry as the delta image")
+		return
+	}
+
 	// create dummy manifest
 	deltaImageWithTag := deltaImage + ":" + manifOpts.GetTag()
 	log.Debugf("looking for delta at %s", deltaImageWithTag)
