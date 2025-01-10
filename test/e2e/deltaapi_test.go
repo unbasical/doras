@@ -74,7 +74,7 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 	}
 	serverConfig := configs.ServerConfig{
 		ConfigFile: configFile,
-		CliOpts:    configs.CLI{HTTPPort: 8081, Host: "localhost"},
+		CliOpts:    configs.CLI{HTTPPort: 8081, Host: "localhost", LogLevel: "debug"},
 	}
 	dorasApp := core.Doras{}
 	go dorasApp.Init(serverConfig).Start()

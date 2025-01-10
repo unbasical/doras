@@ -14,8 +14,9 @@ type CLI struct {
 }
 
 type ServerConfigFile struct {
-	Sources map[string]OrasSourceConfiguration `yaml:"sources"`
-	Storage StorageConfiguration               `yaml:"storage"`
+	Sources        map[string]OrasSourceConfiguration `yaml:"sources"`
+	Storage        StorageConfiguration               `yaml:"storage"`
+	TrustedProxies []string                           `yaml:"trusted-proxies"`
 }
 
 type StorageConfiguration struct {

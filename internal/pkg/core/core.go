@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/configs"
@@ -43,14 +42,21 @@ func (d *Doras) Init(config configs.ServerConfig) *Doras {
 		ArtifactStorage: apicommon.NewRegistryStorage(reg, ""),
 		RepoClients:     clientConfigs,
 	}
+	if config.CliOpts.LogLevel != "debug" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	d.engine = api.BuildApp(appConfig)
+	err = d.engine.SetTrustedProxies(config.ConfigFile.TrustedProxies)
+	if err != nil {
+		log.WithError(err).Fatal("failed to set trusted proxies")
+	}
+
 	return d
 }
 
 func (d *Doras) Start() {
 	// TODO: use goroutine and channel to handle shutdown
 	log.Info("Starting doras")
-
 	d.stop = make(chan bool, 1)
 	serverURL := fmt.Sprintf("%s:%d", d.hostname, d.port)
 	err := d.engine.Run(serverURL)
