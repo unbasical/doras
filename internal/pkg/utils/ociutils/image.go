@@ -191,12 +191,23 @@ func ParseOciImageString(r string) (repoName string, tag string, isDigest bool, 
 	return
 }
 
+func parseOciUrl(rawURL string) (*url.URL, error) {
+	if !strings.Contains(rawURL, "://") {
+		rawURL = "oci://" + rawURL
+	}
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, err
+	}
+	return parsedURL, nil
+}
+
 func CheckRegistryMatch(a, b string) error {
-	u1, err := url.Parse(a)
+	u1, err := parseOciUrl(a)
 	if err != nil {
 		return err
 	}
-	u2, err := url.Parse(b)
+	u2, err := parseOciUrl(b)
 	if err != nil {
 		return err
 	}
