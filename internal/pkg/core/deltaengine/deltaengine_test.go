@@ -261,19 +261,6 @@ func Test_readDelta(t *testing.T) {
 			},
 		},
 		{
-			name: "reject invalid registry",
-			args: args{
-				registry: registryMock,
-				delegate: delegate,
-				apiDelegate: testAPIDelegate{
-					fromImage:          strings.Replace(image1, "registry", "registry2", 1),
-					toImage:            strings.Replace(image2, "registry", "registry2", 1),
-					acceptedAlgorithms: []string{"bsdiff", "tardiff", "zstd", "gzip"},
-				},
-				expectErr: true,
-			},
-		},
-		{
 			name: "reject invalid repository",
 			args: args{
 				registry: registryMock,

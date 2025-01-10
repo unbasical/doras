@@ -57,8 +57,14 @@ func (d *Delegate) GetDeltaLocation(deltaMf registrydelegate.DeltaManifestOption
 	if err != nil {
 		return "", err
 	}
-	repoName := fmt.Sprintf("%s/%s/%s", d.baseUrl, digestFrom.Encoded(), digestTo.Encoded())
-	return repoName, nil
+	dgstIdentifier := digest.FromBytes([]byte(digestFrom.Encoded() + digestTo.Encoded() + deltaMf.GetTag()))
+	repoName, _, _, err := ociutils.ParseOciImageString(deltaMf.From)
+	if err != nil {
+		return "", err
+	}
+	tag := fmt.Sprintf("_delta-%s", dgstIdentifier.Encoded())
+	image := fmt.Sprintf("%s:%s", repoName, tag)
+	return image, nil
 }
 
 func extractDigest(image string) (*digest.Digest, error) {
@@ -84,11 +90,10 @@ func (d *Delegate) CreateDelta(from, to io.ReadCloser, manifOpts registrydelegat
 	if err != nil {
 		return err
 	}
-	deltaLocation, err := d.GetDeltaLocation(manifOpts)
+	deltaLocationWithTag, err := d.GetDeltaLocation(manifOpts)
 	if err != nil {
 		return err
 	}
-	deltaLocationWithTag := fmt.Sprintf("%s:%s", deltaLocation, manifOpts.GetTag())
 	d.m.Lock()
 	if _, ok := d.activeRequests[deltaLocationWithTag]; ok {
 		return nil
