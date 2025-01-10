@@ -13,27 +13,21 @@ import (
 	"github.com/unbasical/doras-server/internal/pkg/core"
 )
 
-var CLI struct {
-	HTTPPort             uint16 `help:"HTTP port to listen on." default:"8080" env:"DORAS_HTTP_PORT"`
-	Host                 string `help:"Hostname to listen on." default:"127.0.0.1" env:"DORAS_HOST"`
-	ConfigFilePath       string `help:"Path to the Doras server config file." env:"DORAS_CONFIG_FILE_PATH"`
-	DockerConfigFilePath string `help:"Path to the docker config file which is used to access registry credentials." default:"~/.docker/config.json" env:"DOCKER_CONFIG_FILE_PATH"`
-	LogLevel             string `help:"Server log level." default:"info" enum:"debug,info,warn,error" env:"DORAS_LOG_LEVEL"`
-}
-
 func main() {
+	serverConfig := configs.ServerConfig{}
 	// Parse CLI options
-	_ = kong.Parse(&CLI)
-	logLevel := StringToLogLevel(CLI.LogLevel)
+	_ = kong.Parse(&serverConfig.CliOpts)
+	logLevel := StringToLogLevel(serverConfig.CliOpts.LogLevel)
 	log.SetLevel(logLevel)
 
-	var config configs.DorasServerConfig
-	exists, err := fileutils.SafeReadYAML(CLI.ConfigFilePath, &config, os.FileMode(0644))
+	var configFile configs.ServerConfigFile
+	exists, err := fileutils.SafeReadYAML(serverConfig.CliOpts.ConfigFilePath, &serverConfig.ConfigFile, os.FileMode(0644))
 	if !exists || err != nil {
-		log.Fatalf("Error reading config file %s: %s", CLI.ConfigFilePath, err)
+		log.Fatalf("Error reading configFile file %s: %s", serverConfig.CliOpts.ConfigFilePath, err)
 	}
-	log.Debugf("Config: %+v", config)
-	doras := core.New(config)
+	log.Debugf("Config: %+v", configFile)
+
+	doras := core.New(serverConfig)
 	doras.Start()
 }
 
