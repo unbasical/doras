@@ -16,7 +16,6 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/algorithmchoice"
-	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
 	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"github.com/unbasical/doras-server/pkg/constants"
 	"oras.land/oras-go/v2"
@@ -47,7 +46,7 @@ func NewRegistryDelegate(registryUrl string, registry *remote.Registry) Registry
 }
 
 func (r *RegistryImpl) Resolve(image string, expectDigest bool) (oras.ReadOnlyTarget, string, v1.Descriptor, error) {
-	repoName, tag, isDigest, err := apicommon.ParseOciImageString(image)
+	repoName, tag, isDigest, err := ociutils.ParseOciImageString(image)
 	if err != nil {
 		return nil, "", v1.Descriptor{}, err
 	}
@@ -92,7 +91,7 @@ func (r *RegistryImpl) LoadArtifact(mf v1.Manifest, source oras.ReadOnlyTarget) 
 }
 
 func (r *RegistryImpl) PushDelta(image string, manifOpts DeltaManifestOptions, content io.ReadCloser) error {
-	repoName, tag, _, err := apicommon.ParseOciImageString(image)
+	repoName, tag, _, err := ociutils.ParseOciImageString(image)
 	if err != nil {
 		return err
 	}
@@ -167,7 +166,7 @@ func (r *RegistryImpl) PushDummy(image string, manifOpts DeltaManifestOptions) e
 	if _, ok := r.activeDummies[image]; ok {
 		return nil
 	}
-	repoName, tag, _, err := apicommon.ParseOciImageString(image)
+	repoName, tag, _, err := ociutils.ParseOciImageString(image)
 	if err != nil {
 		return err
 	}
@@ -197,7 +196,7 @@ func (r *RegistryImpl) PushDummy(image string, manifOpts DeltaManifestOptions) e
 	if err != nil {
 		return fmt.Errorf("failed to tag manifest: %v", err)
 	}
-	r.activeDummies[image] = nil
+	delete(r.activeDummies, image)
 	logrus.Infof("created dummy at %s", image)
 	return nil
 }

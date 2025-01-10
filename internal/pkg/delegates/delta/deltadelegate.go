@@ -3,17 +3,18 @@ package deltadelegate
 import (
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"strings"
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
+
 	registrydelegate "github.com/unbasical/doras-server/internal/pkg/delegates/registry"
 
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
 	"github.com/unbasical/doras-server/pkg/constants"
 )
 
@@ -61,7 +62,7 @@ func (d *Delegate) GetDeltaLocation(deltaMf registrydelegate.DeltaManifestOption
 }
 
 func extractDigest(image string) (*digest.Digest, error) {
-	_, tag, isDigest, err := apicommon.ParseOciImageString(image)
+	_, tag, isDigest, err := ociutils.ParseOciImageString(image)
 	if err != nil {
 		return nil, err
 	}

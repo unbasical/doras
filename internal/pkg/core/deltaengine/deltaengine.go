@@ -2,9 +2,12 @@ package deltaengine
 
 import (
 	"errors"
+	"fmt"
+
 	apidelegate "github.com/unbasical/doras-server/internal/pkg/delegates/api"
 	deltadelegate "github.com/unbasical/doras-server/internal/pkg/delegates/delta"
 	registrydelegate "github.com/unbasical/doras-server/internal/pkg/delegates/registry"
+	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	log "github.com/sirupsen/logrus"
@@ -32,6 +35,22 @@ func NewDeltaEngine(registry registrydelegate.RegistryDelegate, delegate deltade
 	return &deltaEngine{registry: registry, delegate: delegate}
 }
 
+// checkRepoCompatability ensures that the two provided images are from the same repository.
+func checkRepoCompatability(a, b string) error {
+	nameA, _, _, err := ociutils.ParseOciImageString(a)
+	if err != nil {
+		return err
+	}
+	nameB, _, _, err := ociutils.ParseOciImageString(b)
+	if err != nil {
+		return err
+	}
+	if nameA != nameB {
+		return fmt.Errorf("requested images are not from the same repository")
+	}
+	return nil
+}
+
 func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate, apiDelegate apidelegate.APIDelegate) {
 	fromDigest, toTarget, acceptedAlgorithms, err := apiDelegate.ExtractParams()
 	if err != nil {
@@ -39,7 +58,12 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 		apiDelegate.HandleError(error2.ErrInternal, "")
 		return
 	}
-
+	err = checkRepoCompatability(fromDigest, toTarget)
+	if err != nil {
+		log.WithError(err).Error("Error checking repo compatibility")
+		apiDelegate.HandleError(error2.ErrInternal, err.Error())
+		return
+	}
 	// resolve images to ensure they exist
 	srcFrom, fromImage, fromDescriptor, err := registry.Resolve(fromDigest, true)
 	if err != nil {
@@ -83,6 +107,17 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 		apiDelegate.HandleError(error2.ErrInternal, "")
 		return
 	}
+
+	// Ensure we do not push the delta to a different registry than the original source images.
+	// We only have to check on of the images because we already previously ensured the sources images are in the same repo.
+	// This should be refactored in the future because it is a bit hacky.
+	err = ociutils.CheckRegistryMatch(fromDigest, deltaImage)
+	if err != nil {
+		log.WithError(err).Error("source images not in the same registry as the delta image")
+		apiDelegate.HandleError(error2.ErrBadRequest, "source images not in the same registry as the delta image")
+		return
+	}
+
 	// create dummy manifest
 	deltaImageWithTag := deltaImage + ":" + manifOpts.GetTag()
 	log.Debugf("looking for delta at %s", deltaImageWithTag)
