@@ -36,7 +36,8 @@ func logger() gin.HandlerFunc {
 
 func BuildApp(config *apicommon.Config) *gin.Engine {
 	log.Debug("Building app")
-	r := gin.Default()
+	gin.DisableConsoleColor()
+	r := gin.New()
 	r.Use(
 		logger(),
 	)
@@ -53,7 +54,7 @@ func ping(c *gin.Context) {
 }
 
 func BuildEdgeAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
-	log.Debug("Building edgeapi API")
+	log.Debug("Building edge API")
 
 	var reg registrydelegate.RegistryDelegate
 	var deltaDelegate deltadelegate.DeltaDelegate
