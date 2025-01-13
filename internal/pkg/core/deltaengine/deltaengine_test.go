@@ -27,7 +27,7 @@ type testRegistryDelegate struct {
 	ctx     context.Context
 }
 
-func (t *testRegistryDelegate) Resolve(image string, expectDigest bool) (oras.ReadOnlyTarget, string, v1.Descriptor, error) {
+func (t *testRegistryDelegate) Resolve(image string, expectDigest bool, authToken *string) (oras.ReadOnlyTarget, string, v1.Descriptor, error) {
 	repo, tag, isDigest, err := ociutils.ParseOciImageString(image)
 	if err != nil {
 		return nil, "", v1.Descriptor{}, err
@@ -204,13 +204,13 @@ func Test_readDelta(t *testing.T) {
 	registryMock := &testRegistryDelegate{
 		storage: storageTarget,
 	}
-	_, image1, d, err := registryMock.Resolve("registry.example.org/foobar:v1", false)
+	_, image1, d, err := registryMock.Resolve("registry.example.org/foobar:v1", false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	image1 = strings.ReplaceAll(image1, ":v1", "@"+d.Digest.String())
 
-	_, image2, _, err := registryMock.Resolve("registry.example.org/foobar:v2", false)
+	_, image2, _, err := registryMock.Resolve("registry.example.org/foobar:v2", false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

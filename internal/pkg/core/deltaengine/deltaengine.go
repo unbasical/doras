@@ -64,14 +64,22 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 		apiDelegate.HandleError(error2.ErrInternal, err.Error())
 		return
 	}
+
+	var clientToken *string
+	if token, err := apiDelegate.ExtractClientToken(); err != nil {
+		log.WithError(err).Debug("Error extracting client token")
+	} else {
+		clientToken = &token
+	}
+
 	// resolve images to ensure they exist
-	srcFrom, fromImage, fromDescriptor, err := registry.Resolve(fromDigest, true)
+	srcFrom, fromImage, fromDescriptor, err := registry.Resolve(fromDigest, true, clientToken)
 	if err != nil {
 		log.WithError(err).Errorf("Error resolving target %q", fromDigest)
 		apiDelegate.HandleError(error2.ErrInvalidOciImage, fromDigest)
 		return
 	}
-	srcTo, toImage, toDescriptor, err := registry.Resolve(toTarget, false)
+	srcTo, toImage, toDescriptor, err := registry.Resolve(toTarget, false, clientToken)
 	if err != nil {
 		log.WithError(err).Errorf("Error resolving target %q", toTarget)
 		apiDelegate.HandleError(error2.ErrInvalidOciImage, toTarget)
@@ -121,7 +129,7 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 	// create dummy manifest
 	deltaImageWithTag := deltaImage
 	log.Debugf("looking for delta at %s", deltaImageWithTag)
-	if deltaSrc, deltaImageDigest, deltaDescriptor, err := registry.Resolve(deltaImageWithTag, false); err == nil {
+	if deltaSrc, deltaImageDigest, deltaDescriptor, err := registry.Resolve(deltaImageWithTag, false, nil); err == nil {
 		log.Debugf("found delta at %s", deltaImageDigest)
 		mfDelta, err := registry.LoadManifest(deltaDescriptor, deltaSrc)
 		if err != nil {
