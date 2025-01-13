@@ -17,7 +17,7 @@ For now, it primarily targets IoT scenarios where the network bandwidth and stor
 ## Design
 
 - The design aims to be flexible to allow different diffing and compression algorithms.
-- We attempt to be compatible with OCI specs and allow a broader scope of support artifacts (e.g. container images).
+- We attempt to be compatible with OCI specs and allow for a broader scope of supported artifacts (e.g. container images) in the future.
 - The client library aims to address issues that might arise in IoT settings such as:
   - Unreliable network connections while files are downloaded.
   - Robustness against power loss during the update flow.
