@@ -2,8 +2,10 @@ package gindelegate
 
 import (
 	"errors"
+	"fmt"
 	apidelegate "github.com/unbasical/doras-server/internal/pkg/delegates/api"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
@@ -13,6 +15,15 @@ import (
 
 type ginDorasContext struct {
 	c *gin.Context
+}
+
+func (g *ginDorasContext) ExtractClientToken() (string, error) {
+	authHeader := g.c.GetHeader("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		return "", fmt.Errorf("missing or invalid Authorization header")
+	}
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	return token, nil
 }
 
 func NewDelegate(c *gin.Context) apidelegate.APIDelegate {

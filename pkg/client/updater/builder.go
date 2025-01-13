@@ -27,7 +27,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	for _, option := range options {
 		option(client)
 	}
-	c, err := edgeapi.NewEdgeClient(client.opts.RemoteURL, client.opts.RegistryURL, true)
+	c, err := edgeapi.NewEdgeClient(client.opts.RemoteURL, client.opts.RegistryURL, true, nil)
 	if err != nil {
 		return nil, err
 	}

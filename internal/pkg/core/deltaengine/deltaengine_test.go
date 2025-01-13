@@ -162,6 +162,11 @@ type testAPIDelegate struct {
 	hasHandledCallback bool
 }
 
+func (t *testAPIDelegate) ExtractClientToken() (string, error) {
+	//TODO implement me
+	return "", fmt.Errorf("no token provided")
+}
+
 func (t *testAPIDelegate) ExtractParams() (fromImage, toImage string, acceptedAlgorithms []string, err error) {
 	return t.fromImage, t.toImage, t.acceptedAlgorithms, nil
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
 	"io"
 	"math/rand"
@@ -83,14 +84,17 @@ func DefaultBackoff() BackoffStrategy {
 	return NewExponentialBackoffWithJitter(1000*time.Millisecond, 1*time.Minute, 5)
 }
 
-func NewEdgeClient(serverURL, registry string, allowHttp bool) (*Client, error) {
+func NewEdgeClient(serverURL, registry string, allowHttp bool, tokenProvider client.AuthTokenProvider) (*Client, error) {
+	if tokenProvider != nil && allowHttp {
+		return nil, errors.New("using a login token while allowing HTTP is not supported to avoid leaking credentials")
+	}
 	reg, err := remote.NewRegistry(registry)
 	if err != nil {
 		return nil, err
 	}
 	reg.PlainHTTP = allowHttp
 	return &Client{
-		base:    client.NewBaseClient(serverURL),
+		base:    client.NewBaseClient(serverURL, nil),
 		reg:     reg,
 		backoff: DefaultBackoff(),
 	}, nil
@@ -104,6 +108,21 @@ func (c *Client) ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (*
 		buildurl.WithQueryParam(constants.QueryKeyFromDigest, from),
 		buildurl.WithQueryParam(constants.QueryKeyToTag, to),
 	)
+
+	log.Debugf("sending delta request to %s", url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if c.base.TokenProvider != nil {
+		log.Debug("attempting to load token")
+		if token, err := c.base.TokenProvider.GetAuthToken(); err != nil {
+			return nil, false, err
+		} else {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+	}
 
 	resp, err := c.base.Client.Get(url)
 	if err != nil {
