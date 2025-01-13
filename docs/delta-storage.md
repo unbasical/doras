@@ -101,18 +101,10 @@ to a tagged OCI image at which we only ever store a delta between these two sour
 
 We use the following mechanism URI:
 ```
-<registry>/<delta repo base path>/<from digest>/<to digest>:<delta algo>_<compression algo>
+<repo-name>:_delta-<sha256(<digest-from>|<digest-to>|<delta-algo>_<compression-algo>)>
 ```
 
-For example:
+In practice this results in identifiers such as:
 ```
-registry.example.org/deltas/44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a/44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a:bsdiff_gzip
+registry.example.org/foobar:deltas_44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a
 ```
-
-This results in long repository names ([long paths could be problematic](https://github.com/opencontainers/distribution-spec/blob/main/spec.md#pull)), however this is the only way to truly avoid collisions and the created path should not be too long overall..
-
-Alternatives:
-- Truncate digests to reduce the path length.
-- Use truncated digests in the tag (tags are limited to 128 characters, using full digests would use the entire length).
-
-
