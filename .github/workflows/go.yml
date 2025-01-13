@@ -24,7 +24,7 @@ jobs:
       run: go build -v ./...
 
     - name: Test
-      run: go test -v ./...
+      run: TEST_OUTPUT=text make test
 #  lint:
 #    name: Lint
 #    runs-on: ubuntu-latest
