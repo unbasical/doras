@@ -23,11 +23,15 @@ import (
 )
 
 type testRegistryDelegate struct {
-	storage oras.Target
-	ctx     context.Context
+	storage      oras.Target
+	ctx          context.Context
+	expectedAuth string
 }
 
 func (t *testRegistryDelegate) Resolve(image string, expectDigest bool, authToken *string) (oras.ReadOnlyTarget, string, v1.Descriptor, error) {
+	if t.expectedAuth != "" && (authToken == nil || t.expectedAuth != *authToken) {
+		return nil, "", v1.Descriptor{}, fmt.Errorf("auth failure")
+	}
 	repo, tag, isDigest, err := ociutils.ParseOciImageString(image)
 	if err != nil {
 		return nil, "", v1.Descriptor{}, err
@@ -153,6 +157,7 @@ func (t *testRegistryDelegate) PushDummy(image string, manifOpts registrydelegat
 }
 
 type testAPIDelegate struct {
+	token              string
 	fromImage          string
 	toImage            string
 	acceptedAlgorithms []string
@@ -163,8 +168,10 @@ type testAPIDelegate struct {
 }
 
 func (t *testAPIDelegate) ExtractClientToken() (string, error) {
-	//TODO implement me
-	return "", fmt.Errorf("no token provided")
+	if t.token != "" {
+		return t.token, nil
+	}
+	return "", errors.New("no token provided")
 }
 
 func (t *testAPIDelegate) ExtractParams() (fromImage, toImage string, acceptedAlgorithms []string, err error) {
@@ -227,7 +234,7 @@ func Test_readDelta(t *testing.T) {
 		args args
 	}{
 		{
-			name: "success two digests",
+			name: "valid token",
 			args: args{
 				registry: registryMock,
 				delegate: delegate,
@@ -272,6 +279,111 @@ func Test_readDelta(t *testing.T) {
 				delegate: delegate,
 				apiDelegate: testAPIDelegate{
 					fromImage:          strings.Replace(image1, "foobar", "barfoo", 1),
+					toImage:            image2,
+					acceptedAlgorithms: []string{"bsdiff", "tardiff", "zstd", "gzip"},
+				},
+				expectErr: true,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// The purpose of this loop is to make sure the request has executed fully.
+			// This is necessary due to the asynchronous nature of the readDelta function,
+			// which spawns a go routine.
+			for {
+				readDelta(tt.args.registry, tt.args.delegate, &tt.args.apiDelegate)
+				if tt.args.apiDelegate.hasHandledCallback {
+					break
+				}
+			}
+			err = tt.args.apiDelegate.lastErr
+			if (err != nil) != tt.args.expectErr {
+				t.Fatalf("readDelta() error = %v, wantErr %v", err, tt.args.expectErr)
+				return
+			}
+			response := tt.args.apiDelegate.response
+			fmt.Printf("%v\n", response)
+		})
+	}
+}
+
+func Test_readDelta_Token(t *testing.T) {
+	ctx := context.Background()
+	files := []testutils.FileDescription{
+		{Name: "foobar", Data: []byte("foo"), Tag: "v1", NeedsUnpack: false},
+		{Name: "foobar", Data: []byte("bar"), Tag: "v2", NeedsUnpack: false},
+	}
+	storage, err := testutils.StorageFromFiles(ctx, t.TempDir(), files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	storageTarget, ok := (storage).(oras.Target)
+	if !ok {
+		t.Fatal("expected oras.Target")
+	}
+	dummyToken := "DUMMY_TOKEN"
+	registryMock := &testRegistryDelegate{
+		storage:      storageTarget,
+		expectedAuth: dummyToken,
+	}
+	_, image1, d, err := registryMock.Resolve("registry.example.org/foobar:v1", false, &dummyToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+	image1 = strings.ReplaceAll(image1, ":v1", "@"+d.Digest.String())
+
+	_, image2, _, err := registryMock.Resolve("registry.example.org/foobar:v2", false, &dummyToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+	delegate := deltadelegate.NewDeltaDelegate("registry.example.org")
+
+	type args struct {
+		registry    registrydelegate.RegistryDelegate
+		delegate    deltadelegate.DeltaDelegate
+		apiDelegate testAPIDelegate
+		expectErr   bool
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "valid token",
+			args: args{
+				registry: registryMock,
+				delegate: delegate,
+				apiDelegate: testAPIDelegate{
+					token:              dummyToken,
+					fromImage:          image1,
+					toImage:            image2,
+					acceptedAlgorithms: []string{"bsdiff", "tardiff", "zstd", "gzip"},
+				},
+				expectErr: false,
+			},
+		},
+		{
+			name: "invalid token",
+			args: args{
+				registry: registryMock,
+				delegate: delegate,
+				apiDelegate: testAPIDelegate{
+					token:              "invalid token",
+					fromImage:          image1,
+					toImage:            image2,
+					acceptedAlgorithms: []string{"bsdiff", "tardiff", "zstd", "gzip"},
+				},
+				expectErr: true,
+			},
+		},
+		{
+			name: "no token",
+			args: args{
+				registry: registryMock,
+				delegate: delegate,
+				apiDelegate: testAPIDelegate{
+					fromImage:          image1,
 					toImage:            image2,
 					acceptedAlgorithms: []string{"bsdiff", "tardiff", "zstd", "gzip"},
 				},

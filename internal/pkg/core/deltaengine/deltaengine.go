@@ -129,7 +129,7 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 	// create dummy manifest
 	deltaImageWithTag := deltaImage
 	log.Debugf("looking for delta at %s", deltaImageWithTag)
-	if deltaSrc, deltaImageDigest, deltaDescriptor, err := registry.Resolve(deltaImageWithTag, false, nil); err == nil {
+	if deltaSrc, deltaImageDigest, deltaDescriptor, err := registry.Resolve(deltaImageWithTag, false, clientToken); err == nil {
 		log.Debugf("found delta at %s", deltaImageDigest)
 		mfDelta, err := registry.LoadManifest(deltaDescriptor, deltaSrc)
 		if err != nil {
