@@ -6,12 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"oras.land/oras-go/v2/registry/remote/auth"
+	"oras.land/oras-go/v2/registry/remote/retry"
 	"os"
 	"strings"
 	"sync"
-
-	"oras.land/oras-go/v2/registry/remote/auth"
-	"oras.land/oras-go/v2/registry/remote/retry"
 
 	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
 
@@ -49,39 +48,42 @@ func NewRegistryDelegate(registryUrl string, registry *remote.Registry) Registry
 }
 
 func (r *RegistryImpl) Resolve(image string, expectDigest bool, authToken *string) (oras.ReadOnlyTarget, string, v1.Descriptor, error) {
+	ctx := context.Background()
+
 	repoName, tag, isDigest, err := ociutils.ParseOciImageString(image)
 	if err != nil {
 		return nil, "", v1.Descriptor{}, err
 	}
+	// Enforce that image is "tagged" with the digest.
 	if expectDigest && !isDigest {
 		return nil, "", v1.Descriptor{}, errors.New("expected digest")
 	}
-	repoNameTrimmed := strings.TrimPrefix(repoName, r.registryUrl+"/")
 
-	ctx := context.Background()
-
-	// Only use the token in case it was provided to authenticate to the registry.
-	if authToken != nil {
-		repository, err := remote.NewRepository(repoName)
-		if err != nil {
-			return nil, "", v1.Descriptor{}, err
-		}
-		url, err := ociutils.ParseOciUrl(image)
-		if err != nil {
-			return nil, "", v1.Descriptor{}, err
-		}
-		repository.Client = &auth.Client{
-			Client: retry.DefaultClient,
-			Cache:  auth.NewCache(),
-			Credential: auth.StaticCredential(url.Host, auth.Credential{
-				AccessToken: *authToken,
-			}),
-		}
-	}
-	repository, err := r.Registry.Repository(ctx, repoNameTrimmed)
+	repository, err := remote.NewRepository(repoName)
 	if err != nil {
 		return nil, "", v1.Descriptor{}, err
 	}
+	url, err := ociutils.ParseOciUrl(image)
+	if err != nil {
+		return nil, "", v1.Descriptor{}, err
+	}
+
+	// If a token was provided use it to authenticate, otherwise use no authentication.
+	var credentialFunc auth.CredentialFunc
+	if authToken != nil {
+		credentialFunc = auth.StaticCredential(url.Host, auth.Credential{
+			AccessToken: *authToken,
+		})
+	}
+	repository.Client = &auth.Client{
+		Client:     retry.DefaultClient,
+		Cache:      auth.NewCache(),
+		Credential: credentialFunc,
+	}
+	// This is kinda hacky.
+	repository.PlainHTTP = r.Registry.PlainHTTP
+
+	// Resolve and return relevant data.
 	d, err := repository.Resolve(ctx, tag)
 	if err != nil {
 		return nil, "", v1.Descriptor{}, err
