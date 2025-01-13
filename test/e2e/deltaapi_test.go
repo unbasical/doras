@@ -5,15 +5,16 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"github.com/unbasical/doras-server/internal/pkg/compression/zstd"
-	"github.com/unbasical/doras-server/internal/pkg/utils/compressionutils"
-	"github.com/unbasical/doras-server/pkg/compression"
 	"io"
 	"net/http"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/unbasical/doras-server/internal/pkg/compression/zstd"
+	"github.com/unbasical/doras-server/internal/pkg/utils/compressionutils"
+	"github.com/unbasical/doras-server/pkg/compression"
 
 	bsdiff2 "github.com/unbasical/doras-server/internal/pkg/delta/bsdiff"
 	"github.com/unbasical/doras-server/internal/pkg/delta/tardiff"
@@ -60,20 +61,18 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 	regUri := testutils2.LaunchRegistry(ctx)
 
 	host := "localhost:8081"
-	config := configs.DorasServerConfig{
-		Sources: map[string]configs.OrasSourceConfiguration{
-			regUri: {
-				EnableHTTP: false,
-			},
-		},
+	configFile := configs.ServerConfigFile{
 		Storage: configs.StorageConfiguration{
 			URL:        regUri,
 			EnableHTTP: true,
 		},
-		Host: host,
+	}
+	serverConfig := configs.ServerConfig{
+		ConfigFile: configFile,
+		CliOpts:    configs.CLI{HTTPPort: 8081, Host: "localhost", LogLevel: "debug"},
 	}
 	dorasApp := core.Doras{}
-	go dorasApp.Init(config).Start()
+	go dorasApp.Init(serverConfig).Start()
 
 	reg, err := remote.NewRegistry(regUri)
 	if err != nil {

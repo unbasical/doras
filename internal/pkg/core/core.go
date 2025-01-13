@@ -1,6 +1,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/configs"
@@ -11,48 +13,53 @@ import (
 )
 
 type Doras struct {
-	engine    *gin.Engine
-	stop      chan bool
-	serverUrl string
+	engine   *gin.Engine
+	stop     chan bool
+	hostname string
+	port     uint16
 }
 
-func New(config configs.DorasServerConfig) *Doras {
+func New(config configs.ServerConfig) *Doras {
 	doras := Doras{}
 	return doras.Init(config)
 }
 
-func (d *Doras) Init(config configs.DorasServerConfig) *Doras {
+func (d *Doras) Init(config configs.ServerConfig) *Doras {
 	// TODO: replace repository with a mechanism that resolves a string to a target, e.g. a remote repository
-	reg, err := remote.NewRegistry(config.Storage.URL)
+	reg, err := remote.NewRegistry(config.ConfigFile.Storage.URL)
 	if err != nil {
-		log.Fatalf("failed to create reg for URL: %s, %s", config.Storage.URL, err)
+		log.Fatalf("failed to create reg for URL: %s, %s", config.ConfigFile.Storage.URL, err)
 	}
 
-	clientConfigs := make(map[string]remote.Client, len(config.Sources))
-	for k := range config.Sources {
-		clientConfigs[k] = &auth.Client{}
+	clientConfigs := map[string]remote.Client{
+		config.ConfigFile.Storage.URL: &auth.Client{},
 	}
-	reg.PlainHTTP = config.Storage.EnableHTTP
-	if config.Host == "" {
-		d.serverUrl = "localhost:8080"
-	} else {
-		d.serverUrl = config.Host
-	}
+	reg.PlainHTTP = config.ConfigFile.Storage.EnableHTTP
+	d.hostname = config.CliOpts.Host
+	d.port = config.CliOpts.HTTPPort
 
 	appConfig := &apicommon.Config{
 		ArtifactStorage: apicommon.NewRegistryStorage(reg, ""),
 		RepoClients:     clientConfigs,
 	}
+	if config.CliOpts.LogLevel != "debug" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	d.engine = api.BuildApp(appConfig)
+	err = d.engine.SetTrustedProxies(config.ConfigFile.TrustedProxies)
+	if err != nil {
+		log.WithError(err).Fatal("failed to set trusted proxies")
+	}
+
 	return d
 }
 
 func (d *Doras) Start() {
 	// TODO: use goroutine and channel to handle shutdown
 	log.Info("Starting doras")
-
 	d.stop = make(chan bool, 1)
-	err := d.engine.Run(d.serverUrl)
+	serverURL := fmt.Sprintf("%s:%d", d.hostname, d.port)
+	err := d.engine.Run(serverURL)
 	if err != nil {
 		log.Fatal(err)
 	}

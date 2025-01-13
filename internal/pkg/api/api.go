@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"net/url"
+	"time"
 
 	deltadelegate "github.com/unbasical/doras-server/internal/pkg/delegates/delta"
 	registrydelegate "github.com/unbasical/doras-server/internal/pkg/delegates/registry"
@@ -16,9 +17,30 @@ import (
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
 )
 
+func logger() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		startTime := time.Now()
+		c.Next()
+		latency := time.Since(startTime)
+		log.WithFields(log.Fields{
+			"status":    c.Writer.Status(),
+			"method":    c.Request.Method,
+			"path":      c.Request.URL.Path,
+			"ip":        c.ClientIP(),
+			"latency":   latency,
+			"error":     c.Errors.ByType(gin.ErrorTypePrivate).String(),
+			"userAgent": c.Request.UserAgent(),
+		}).Info("Request completed")
+	}
+}
+
 func BuildApp(config *apicommon.Config) *gin.Engine {
 	log.Debug("Building app")
-	r := gin.Default()
+	gin.DisableConsoleColor()
+	r := gin.New()
+	r.Use(
+		logger(),
+	)
 	r = BuildEdgeAPI(r, config)
 	r.GET("/api/v1/ping", ping)
 
@@ -32,7 +54,7 @@ func ping(c *gin.Context) {
 }
 
 func BuildEdgeAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
-	log.Debug("Building edgeapi API")
+	log.Debug("Building edge API")
 
 	var reg registrydelegate.RegistryDelegate
 	var deltaDelegate deltadelegate.DeltaDelegate
