@@ -62,11 +62,6 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 
 	host := "localhost:8081"
 	configFile := configs.ServerConfigFile{
-		Sources: map[string]configs.OrasSourceConfiguration{
-			regUri: {
-				EnableHTTP: false,
-			},
-		},
 		Storage: configs.StorageConfiguration{
 			URL:        regUri,
 			EnableHTTP: true,

@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/configs"
@@ -30,9 +31,8 @@ func (d *Doras) Init(config configs.ServerConfig) *Doras {
 		log.Fatalf("failed to create reg for URL: %s, %s", config.ConfigFile.Storage.URL, err)
 	}
 
-	clientConfigs := make(map[string]remote.Client, len(config.ConfigFile.Sources))
-	for k := range config.ConfigFile.Sources {
-		clientConfigs[k] = &auth.Client{}
+	clientConfigs := map[string]remote.Client{
+		config.ConfigFile.Storage.URL: &auth.Client{},
 	}
 	reg.PlainHTTP = config.ConfigFile.Storage.EnableHTTP
 	d.hostname = config.CliOpts.Host
