@@ -1,7 +1,7 @@
 package constants
 
-const DorasAnnotationFrom = "from"
-const DorasAnnotationTo = "to"
+const DorasAnnotationFrom = "com.unbasical.doras.delta.from"
+const DorasAnnotationTo = "com.unbasical.doras.delta.to"
 const DorasAnnotationAlgorithm = "algorithm"
 const DorasAnnotationIsDummy = "dummy"
 
