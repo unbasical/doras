@@ -104,7 +104,7 @@ func NewEdgeClient(serverURL, registry string, allowHttp bool, tokenProvider cli
 func (c *Client) ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (*apicommon.ReadDeltaResponse, bool, error) {
 	url := buildurl.New(
 		buildurl.WithBasePath(c.base.DorasURL),
-		buildurl.WithPathElement(apicommon.ApiBasePath),
+		buildurl.WithPathElement(apicommon.ApiBasePathV1),
 		buildurl.WithPathElement(apicommon.DeltaApiPath),
 		buildurl.WithQueryParam(constants.QueryKeyFromDigest, from),
 		buildurl.WithQueryParam(constants.QueryKeyToTag, to),

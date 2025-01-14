@@ -1,9 +1,8 @@
 package bsdiff
 
 import (
+	"github.com/unbasical/doras-server/pkg/algorithm/delta"
 	"io"
-
-	"github.com/unbasical/doras-server/pkg/delta"
 
 	bsdiff2 "github.com/gabstv/go-bsdiff/pkg/bsdiff"
 	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"

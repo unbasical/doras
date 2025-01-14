@@ -19,7 +19,7 @@ func ParseManifest(content io.Reader) (v1.Manifest, error) {
 }
 
 func ExtractPathFromManifest(mf *v1.Manifest) (path string, isArchive bool, err error) {
-	if unpack, ok := mf.Annotations[constants.ContentUnpack]; ok && unpack == "true" {
+	if unpack, ok := mf.Annotations[constants.OrasContentUnpack]; ok && unpack == "true" {
 		isArchive = true
 	}
 	path, ok := mf.Annotations["org.opencontainers.image.title"]

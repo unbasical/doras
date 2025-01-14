@@ -47,6 +47,7 @@ func NewRegistryStorage(reg *remote.Registry, baseRepo string) *RegistryStorage 
 	return &RegistryStorage{reg: reg, baseRepo: baseRepo}
 }
 
+// RespondWithError sends an error reply to the client.
 func RespondWithError(c *gin.Context, statusCode int, err error, errorContext string) {
 	c.JSON(statusCode, APIError{
 		Error: APIErrorInner{

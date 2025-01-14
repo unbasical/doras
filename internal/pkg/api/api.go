@@ -71,7 +71,7 @@ func BuildEdgeAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
 	}
 	dorasEngine := dorasengine.NewEngine(reg, deltaDelegate)
 
-	edgeApiPath, err := url.JoinPath("/", apicommon.ApiBasePath, apicommon.DeltaApiPath)
+	edgeApiPath, err := url.JoinPath("/", apicommon.ApiBasePathV1, apicommon.DeltaApiPath)
 	if err != nil {
 		log.Fatal(err)
 	}

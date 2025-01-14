@@ -6,9 +6,10 @@ import (
 	"github.com/klauspost/compress/gzip"
 
 	"github.com/unbasical/doras-server/internal/pkg/utils/compressionutils"
-	"github.com/unbasical/doras-server/pkg/compression"
+	"github.com/unbasical/doras-server/pkg/algorithm/compression"
 )
 
+// NewDecompressor returns a gzip compression.Decompressor.
 func NewDecompressor() compression.Decompressor {
 	return struct {
 		compression.Decompressor

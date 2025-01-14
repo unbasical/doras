@@ -1,9 +1,8 @@
 package tardiff
 
 import (
+	"github.com/unbasical/doras-server/pkg/algorithm/delta"
 	"testing"
-
-	"github.com/unbasical/doras-server/pkg/delta"
 )
 
 func TestDiffer_Interface(t *testing.T) {

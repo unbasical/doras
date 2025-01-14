@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	delta2 "github.com/unbasical/doras-server/pkg/algorithm/delta"
 	"io"
 	"net/http"
 	"strings"
@@ -14,12 +15,10 @@ import (
 
 	"github.com/unbasical/doras-server/internal/pkg/compression/zstd"
 	"github.com/unbasical/doras-server/internal/pkg/utils/compressionutils"
-	"github.com/unbasical/doras-server/pkg/compression"
+	"github.com/unbasical/doras-server/pkg/algorithm/compression"
 
 	bsdiff2 "github.com/unbasical/doras-server/internal/pkg/delta/bsdiff"
 	"github.com/unbasical/doras-server/internal/pkg/delta/tardiff"
-	delta2 "github.com/unbasical/doras-server/pkg/delta"
-
 	"github.com/unbasical/doras-server/internal/pkg/utils/fileutils"
 	"github.com/unbasical/doras-server/internal/pkg/utils/logutils"
 	testutils2 "github.com/unbasical/doras-server/internal/pkg/utils/testutils"

@@ -7,7 +7,7 @@ import (
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/unbasical/doras-server/internal/pkg/utils/compressionutils"
-	"github.com/unbasical/doras-server/pkg/compression"
+	"github.com/unbasical/doras-server/pkg/algorithm/compression"
 )
 
 func NewCompressor() compression.Compressor {

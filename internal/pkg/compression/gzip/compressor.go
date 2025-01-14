@@ -8,7 +8,7 @@ import (
 	"github.com/klauspost/compress/gzip"
 
 	"github.com/unbasical/doras-server/internal/pkg/utils/compressionutils"
-	"github.com/unbasical/doras-server/pkg/compression"
+	"github.com/unbasical/doras-server/pkg/algorithm/compression"
 )
 
 // CloserFunc is the basic Close method defined in io.Closer.
@@ -19,6 +19,7 @@ func (fn CloserFunc) Close() error {
 	return fn()
 }
 
+// NewCompressor returns a gzip compression.Compressor.
 func NewCompressor() compression.Compressor {
 	return struct {
 		compression.Compressor

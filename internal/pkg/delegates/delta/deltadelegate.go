@@ -57,7 +57,7 @@ func (d *Delegate) GetDeltaLocation(deltaMf registrydelegate.DeltaManifestOption
 	if err != nil {
 		return "", err
 	}
-	dgstIdentifier := digest.FromBytes([]byte(digestFrom.Encoded() + digestTo.Encoded() + deltaMf.GetTag()))
+	dgstIdentifier := digest.FromBytes([]byte(digestFrom.Encoded() + digestTo.Encoded() + deltaMf.GetTagSuffix()))
 	repoName, _, _, err := ociutils.ParseOciImageString(deltaMf.From)
 	if err != nil {
 		return "", err

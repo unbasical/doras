@@ -2,12 +2,11 @@ package bsdiff
 
 import (
 	"bytes"
+	"github.com/unbasical/doras-server/pkg/algorithm/delta"
 	"io"
 	"testing"
 
 	bsdiff2 "github.com/gabstv/go-bsdiff/pkg/bsdiff"
-
-	"github.com/unbasical/doras-server/pkg/delta"
 )
 
 func TestApplier_Apply(t *testing.T) {

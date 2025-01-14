@@ -16,6 +16,7 @@ import (
 	"github.com/unbasical/doras-server/pkg/constants"
 )
 
+// ginDorasContext implements the apidelegate.APIDelegate interface for gin HTTP servers.
 type ginDorasContext struct {
 	c *gin.Context
 }
@@ -29,6 +30,7 @@ func (g *ginDorasContext) ExtractClientAuth() (auth.RegistryAuth, error) {
 	return auth.NewClientAuthFromToken(token), nil
 }
 
+// NewDelegate constructs an apidelegate.APIDelegate for a given gin.Context.
 func NewDelegate(c *gin.Context) apidelegate.APIDelegate {
 	return &ginDorasContext{c: c}
 }
@@ -75,15 +77,22 @@ func (g *ginDorasContext) HandleError(err error, msg string) {
 }
 
 func (g *ginDorasContext) ExtractParams() (fromImage, toImage string, acceptedAlgorithms []string, err error) {
+	// The from image is mandatory, if it does not exist we cannot continue.
 	fromImage = g.c.Query(constants.QueryKeyFromDigest)
 	if fromImage == "" {
 		return "", "", []string{}, error2.ErrMissingQueryParam
 	}
+
+	// The to image can either be provided via a tagged image or identified by a digest.
 	toTag := g.c.Query(constants.QueryKeyToTag)
 	toDigest := g.c.Query(constants.QueryKeyToDigest)
+
+	// Make sure one and only one is provided.
 	if (toTag == "" && toDigest == "") || (toTag != "" && toDigest != "") {
 		return "", "", []string{}, error2.ErrMissingQueryParam
 	}
+
+	// Pick the one that is provided, we already made sure only one of them is set.
 	if toTag != "" {
 		toImage = toTag
 	}
