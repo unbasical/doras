@@ -2,7 +2,6 @@ package apicommon
 
 import (
 	"context"
-	"errors"
 	"path"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -48,19 +47,6 @@ func NewRegistryStorage(reg *remote.Registry, baseRepo string) *RegistryStorage 
 	return &RegistryStorage{reg: reg, baseRepo: baseRepo}
 }
 
-func ExtractStateFromContext[T any](c *gin.Context, target *T) error {
-	state, exists := c.Get("sharedState")
-	if !exists {
-		return errors.New("shared state not found")
-	}
-	castedState, ok := state.(T)
-	if !ok {
-		return errors.New("shared state is not a *T")
-	}
-	*target = castedState
-	return nil
-}
-
 func RespondWithError(c *gin.Context, statusCode int, err error, errorContext string) {
 	c.JSON(statusCode, APIError{
 		Error: APIErrorInner{
@@ -69,11 +55,4 @@ func RespondWithError(c *gin.Context, statusCode int, err error, errorContext st
 			ErrorContext: errorContext,
 		},
 	})
-}
-
-func SharedStateMiddleware[T any](state *T) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Set("sharedState", state)
-		c.Next()
-	}
 }

@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
 	"io"
 	"math/rand"
 	"net/http"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
@@ -38,7 +39,7 @@ type exponentialBackoffWithJitter struct {
 }
 
 // NewExponentialBackoffWithJitter creates a new instance of exponentialBackoffWithJitter
-func NewExponentialBackoffWithJitter(baseDelay, maxDelay time.Duration, maxAttempts uint) *exponentialBackoffWithJitter {
+func NewExponentialBackoffWithJitter(baseDelay, maxDelay time.Duration, maxAttempts uint) BackoffStrategy {
 	// Seed the random number generator for jitter
 	source := rand.NewSource(time.Now().UnixNano())
 	return &exponentialBackoffWithJitter{

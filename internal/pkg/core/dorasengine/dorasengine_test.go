@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"io"
 	"os"
 	"strings"
@@ -70,11 +71,11 @@ func (t *testRegistryDelegate) Resolve(image string, expectDigest bool, creds au
 }
 
 func (t *testRegistryDelegate) LoadManifest(target v1.Descriptor, source oras.ReadOnlyTarget) (v1.Manifest, error) {
-	rc, err := t.storage.Fetch(t.ctx, target)
+	rc, err := source.Fetch(t.ctx, target)
 	if err != nil {
 		return v1.Manifest{}, err
 	}
-	defer rc.Close()
+	defer funcutils.PanicOrLogOnErr(rc.Close, false, "failed to close reader")
 	mf, err := ociutils.ParseManifestJSON(rc)
 	if err != nil {
 		return v1.Manifest{}, err
@@ -83,7 +84,7 @@ func (t *testRegistryDelegate) LoadManifest(target v1.Descriptor, source oras.Re
 }
 
 func (t *testRegistryDelegate) LoadArtifact(mf v1.Manifest, source oras.ReadOnlyTarget) (io.ReadCloser, error) {
-	return t.storage.Fetch(t.ctx, mf.Layers[0])
+	return source.Fetch(t.ctx, mf.Layers[0])
 }
 
 func (t *testRegistryDelegate) PushDelta(image string, manifOpts registrydelegate.DeltaManifestOptions, content io.ReadCloser) error {

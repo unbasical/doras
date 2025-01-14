@@ -1,8 +1,9 @@
 package apicommon
 
 import (
-	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
 	"testing"
+
+	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
 )
 
 func TestParseOciImageString(t *testing.T) {

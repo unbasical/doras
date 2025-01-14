@@ -30,6 +30,6 @@ func (c *creator) Diff(old io.Reader, new io.Reader) (io.ReadCloser, error) {
 	return pr, nil
 }
 
-func (a *creator) Name() string {
+func (c *creator) Name() string {
 	return "bsdiff"
 }

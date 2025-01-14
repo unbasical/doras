@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"io"
 	"os"
 	"path"
@@ -77,7 +78,8 @@ func (c *Client) Pull(image string) error {
 	}
 }
 
-// This should handle partial downloads etc.
+// RegistryDelegate is used to load artifacts from a registry.
+// This should handle partial downloads if possible.
 type RegistryDelegate interface {
 	ResolveAndLoad(image string) (v1.Manifest, io.ReadCloser, error)
 }
@@ -102,7 +104,7 @@ func (r *registryImpl) ResolveAndLoad(image string) (v1.Manifest, io.ReadCloser,
 	if err != nil {
 		return v1.Manifest{}, nil, err
 	}
-	defer mfReader.Close()
+	defer funcutils.PanicOrLogOnErr(mfReader.Close, false, "failed to close reader")
 	mf, err := ociutils.ParseManifest(mfReader)
 	if err != nil {
 		return v1.Manifest{}, nil, err
@@ -223,7 +225,7 @@ func (p *patcherImpl) PatchFile(fPath string, delta io.Reader) error {
 	if err != nil {
 		return err
 	}
-	defer fpOld.Close()
+	defer funcutils.PanicOrLogOnErr(fpOld.Close, false, "failed to close reader")
 	patchedFile, err := p.algos.Patch(fpOld, deltaDecompressed)
 	if err != nil {
 		return err
@@ -231,7 +233,7 @@ func (p *patcherImpl) PatchFile(fPath string, delta io.Reader) error {
 	h := sha256.New()
 	patchedFile = io.TeeReader(patchedFile, h)
 	w := writerutils.NewSafeFileWriter(tempFile)
-	defer w.Close()
+	defer funcutils.PanicOrLogOnErr(w.Close, false, "failed to close writer")
 	n, err := io.Copy(w, patchedFile)
 	if err != nil {
 		return err
@@ -311,7 +313,7 @@ func (c *Client) PullAsync(target string) (exists bool, err error) {
 	if err != nil {
 		return false, err
 	}
-	path, _, err := ociutils.ExtractPathFromManifest(&mf)
+	fPath, _, err := ociutils.ExtractPathFromManifest(&mf)
 	if err != nil {
 		return false, err
 	}
@@ -320,7 +322,7 @@ func (c *Client) PullAsync(target string) (exists bool, err error) {
 		return false, err
 	}
 	patcher := newPatcher(c.opts.OutputDirectory, patcherChoice, &mf)
-	err = patcher.PatchFile(path, delta)
+	err = patcher.PatchFile(fPath, delta)
 	if err != nil {
 		return false, err
 	}

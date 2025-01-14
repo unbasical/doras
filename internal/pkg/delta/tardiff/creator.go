@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	tar_diff "github.com/containers/tar-diff/pkg/tar-diff"
+	tardiff "github.com/containers/tar-diff/pkg/tar-diff"
 	"github.com/unbasical/doras-server/pkg/delta"
 
 	log "github.com/sirupsen/logrus"
@@ -64,10 +64,10 @@ func (c *Creator) Diff(old io.Reader, new io.Reader) (io.ReadCloser, error) {
 		return nil, err
 	}
 	// finally create a delta
-	optsTarDiff := tar_diff.NewOptions()
+	optsTarDiff := tardiff.NewOptions()
 	pr, pw := io.Pipe()
 	go func() {
-		errDiff := tar_diff.Diff(fpFrom, fpTo, pw, optsTarDiff)
+		errDiff := tardiff.Diff(fpFrom, fpTo, pw, optsTarDiff)
 		if errDiff != nil {
 			errPwClose := pw.CloseWithError(errDiff)
 			if errDiff != nil {
@@ -87,6 +87,6 @@ func (c *Creator) Diff(old io.Reader, new io.Reader) (io.ReadCloser, error) {
 	return pr, nil
 }
 
-func (a *Creator) Name() string {
+func (c *Creator) Name() string {
 	return "tardiff"
 }

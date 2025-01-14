@@ -3,6 +3,7 @@ package fileutils
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"io"
 	"os"
 
@@ -53,7 +54,7 @@ func SafeWriteJson[T any](filePath string, targetPointer *T) error {
 		return err
 	}
 	w := writerutils.NewSafeFileWriter(fp)
-	defer w.Close()
+	defer funcutils.PanicOrLogOnErr(w.Close, false, "failed to close writer")
 	err = json.NewEncoder(w).Encode(*targetPointer)
 	if err != nil {
 		return err
