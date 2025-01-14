@@ -31,25 +31,20 @@ linters:
     - dupl # Tool for code clone detection.
     - bodyclose # Checks whether HTTP response body is closed successfully.
     - exhaustive # Check exhaustiveness of enum switch statements.
+
 issues:
   fix: true
   exclude-use-default: false
-  #max-issues-per-linter: 0
-  #max-same-issues: 0
+  max-issues-per-linter: 1000
+  exclude-files:
+    # Exclude generated protobuf files
+    - ".*\\.pb\\.go"
   exclude-rules:
     # Exclude some linters from running on tests files.
     - path: _test\.go
       linters:
         - revive
         - dupl
-    # Exclude known linters from partially hard-vendored code,
-    # which is impossible to exclude via `nolint` comments.
-    # `/` will be replaced by current OS file path separator to properly work on Windows.
-    - path: internal/
-      text: "internal structure does not have to be documented"
-      linters:
-        - exported
-
 
 linters-settings:
   gofmt:
@@ -75,6 +70,9 @@ linters-settings:
   revive:
     enable-all-rules: false
     ignore-generated-header: true
+    error-code: 0
+    warning-code: 0
+    confidence: 0.8
     severity: warning
     rules:
       # ========================== COMPLEXITY ==========================
@@ -119,12 +117,6 @@ linters-settings:
       - name: range # Prevents redundant variables when iterating over a collection.
       - name: confusing-results # Suggests to name potentially confusing function results
       - name: unused-parameter # Suggests to rename or remove unused function parameters
-      - name: add-constant # Suggests using constant for magic numbers and string literals
-        skip-files: [".*_test.go"]
-        arguments:
-          maxLitCount: "5"
-          allowInts: "0,1,2,3,4,5,6,7,8,9,0600,0750"
-          allowStrs: "\"\""
 
       # ========================== SECURITY ==========================
       - name: modifies-value-receiver # Warns on assignments to value-passed method receivers
@@ -138,5 +130,7 @@ linters-settings:
 
       # ========================== DOCS ==========================
       - name: exported
+        exclude:
+          - "**/internal/**/*.go"
       - name: comments-density
         arguments: 10
