@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unbasical/doras-server/internal/pkg/utils/logutils"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -8,6 +9,7 @@ import (
 )
 
 func main() {
+	// Parse CLI args.
 	var (
 		app = kingpin.New("doras-cli", "A command-line tool to work with doras delta patches")
 
@@ -17,25 +19,18 @@ func main() {
 	)
 	app.HelpFlag.Short('h')
 
+	// Setup logging.
 	setLogLevel(*logLevel)
 	setLogFormat(*logFormat)
 
 }
 
-type utcFormatter struct {
-	log.Formatter
-}
-
-func (u utcFormatter) Format(e *log.Entry) ([]byte, error) {
-	e.Time = e.Time.UTC()
-	return u.Formatter.Format(e)
-}
 func setLogFormat(logFormat string) {
 	switch logFormat {
 	case "JSON":
-		log.SetFormatter(utcFormatter{Formatter: &log.JSONFormatter{}})
+		log.SetFormatter(&logutils.UTCFormatter{Formatter: &log.JSONFormatter{}})
 	default:
-		log.SetFormatter(utcFormatter{Formatter: &log.TextFormatter{FullTimestamp: true}})
+		log.SetFormatter(&logutils.UTCFormatter{Formatter: &log.TextFormatter{FullTimestamp: true}})
 	}
 }
 

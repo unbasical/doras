@@ -134,14 +134,17 @@ func (c *Client) ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (r
 			return nil, false, err
 		}
 		req.Header.Set("Authorization", "Bearer "+token)
-
 	}
 
 	resp, err := c.base.Client.Get(url)
 	if err != nil {
 		return nil, false, err
 	}
-	defer funcutils.PanicOrLogOnErr(resp.Body.Close, false, "failed to close response body")
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Error(err)
+		}
+	}()
 	switch resp.StatusCode {
 	case http.StatusOK:
 		var resBody apicommon.ReadDeltaResponse

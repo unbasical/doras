@@ -15,6 +15,7 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+// ParseManifestJSON return the v1.manifest that is yielded by the reader.
 func ParseManifestJSON(data io.Reader) (*v1.Manifest, error) {
 	var manifest *v1.Manifest
 	err := json.NewDecoder(data).Decode(&manifest)
@@ -26,6 +27,7 @@ func ParseManifestJSON(data io.Reader) (*v1.Manifest, error) {
 
 var reDigest = regexp.MustCompile(`\S*@sha256:[a-f0-9]{64}$`)
 
+// IsDigest returns if the image is identified by a digest.
 func IsDigest(imageOrTag string) bool {
 	return reDigest.MatchString(imageOrTag)
 }
@@ -34,6 +36,8 @@ const patternOCIImage = `^/([a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*(\/[a-z0-9]+((\.|_|
 
 var regexOCIImage = regexp.MustCompile(patternOCIImage)
 
+// ParseOciImageString splits the image string into the repo, tag
+// and indicates if it is an image that is identified by a digest.
 func ParseOciImageString(r string) (repoName string, tag string, isDigest bool, err error) {
 	if !strings.HasPrefix(r, "oci://") {
 		r = "oci://" + r
