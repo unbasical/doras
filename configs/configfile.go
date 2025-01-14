@@ -1,10 +1,12 @@
 package configs
 
+// ServerConfig is the data structure to configure a Doras s
 type ServerConfig struct {
 	ConfigFile ServerConfigFile
 	CliOpts    CLI
 }
 
+// CLI is the struct to parse the command line parameters or environment variables.
 type CLI struct {
 	HTTPPort             uint16 `help:"HTTP port to listen on." default:"8080" env:"DORAS_HTTP_PORT"`
 	Host                 string `help:"Hostname to listen on." default:"127.0.0.1" env:"DORAS_HOST"`
@@ -13,11 +15,13 @@ type CLI struct {
 	LogLevel             string `help:"Server log level." default:"info" enum:"debug,info,warn,error" env:"DORAS_LOG_LEVEL"`
 }
 
+// ServerConfigFile is used to parse the config files that can be used for more extensive configuration.
 type ServerConfigFile struct {
 	Storage        StorageConfiguration `yaml:"storage"`
 	TrustedProxies []string             `yaml:"trusted-proxies"`
 }
 
+// StorageConfiguration is used to configure a registry that is used to store artifacts and deltas.
 type StorageConfiguration struct {
 	Kind       string `yaml:"kind"`
 	URL        string `yaml:"url"`
