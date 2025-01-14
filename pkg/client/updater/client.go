@@ -58,6 +58,7 @@ type DorasState interface {
 	SetCurrentImage(image string) error
 }
 
+// Client is used to run delta updates in Doras.
 type Client struct {
 	opts               clientOpts
 	edgeClient         *edgeapi.Client
@@ -66,6 +67,7 @@ type Client struct {
 	reg                RegistryDelegate
 }
 
+// Pull an image from the registry.
 func (c *Client) Pull(image string) error {
 	for {
 		exists, err := c.PullAsync(image)
