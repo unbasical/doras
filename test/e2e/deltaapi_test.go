@@ -153,7 +153,7 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 		}
 	}
 
-	edgeClient, err := edgeapi.NewEdgeClient(fmt.Sprintf("http://%s", host), regUri, true)
+	edgeClient, err := edgeapi.NewEdgeClient(fmt.Sprintf("http://%s", host), regUri, true, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

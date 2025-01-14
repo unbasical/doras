@@ -10,6 +10,9 @@ import (
 	"strings"
 	"sync"
 
+	"oras.land/oras-go/v2/registry/remote/auth"
+	"oras.land/oras-go/v2/registry/remote/retry"
+
 	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
 
 	"github.com/opencontainers/go-digest"
@@ -45,23 +48,32 @@ func NewRegistryDelegate(registryUrl string, registry *remote.Registry) Registry
 	}
 }
 
-func (r *RegistryImpl) Resolve(image string, expectDigest bool) (oras.ReadOnlyTarget, string, v1.Descriptor, error) {
+func (r *RegistryImpl) Resolve(image string, expectDigest bool, creds auth.CredentialFunc) (oras.ReadOnlyTarget, string, v1.Descriptor, error) {
+	ctx := context.Background()
+
 	repoName, tag, isDigest, err := ociutils.ParseOciImageString(image)
 	if err != nil {
 		return nil, "", v1.Descriptor{}, err
 	}
+	// Enforce that image is "tagged" with the digest.
 	if expectDigest && !isDigest {
 		return nil, "", v1.Descriptor{}, errors.New("expected digest")
 	}
-	repoNameTrimmed := strings.TrimPrefix(repoName, r.registryUrl+"/")
-	//if repoNameTrimmed == repoName {
-	//	return nil, "", v1.Descriptor{}, errors.New("invalid")
-	//}
-	ctx := context.Background()
-	repository, err := r.Registry.Repository(ctx, repoNameTrimmed)
+
+	repository, err := remote.NewRepository(repoName)
 	if err != nil {
 		return nil, "", v1.Descriptor{}, err
 	}
+
+	repository.Client = &auth.Client{
+		Client:     retry.DefaultClient,
+		Cache:      auth.NewCache(),
+		Credential: creds,
+	}
+	// This is kinda hacky.
+	repository.PlainHTTP = r.Registry.PlainHTTP
+
+	// Resolve and return relevant data.
 	d, err := repository.Resolve(ctx, tag)
 	if err != nil {
 		return nil, "", v1.Descriptor{}, err
@@ -202,7 +214,10 @@ func (r *RegistryImpl) PushDummy(image string, manifOpts DeltaManifestOptions) e
 }
 
 type RegistryDelegate interface {
-	Resolve(image string, expectDigest bool) (oras.ReadOnlyTarget, string, v1.Descriptor, error)
+	// Resolve the provided image.
+	// Enforces whether the image is tagged or uses a digest.
+	// If an authToken is provided it, and ONLY it has to be used to authenticate to the registry.
+	Resolve(image string, expectDigest bool, creds auth.CredentialFunc) (oras.ReadOnlyTarget, string, v1.Descriptor, error)
 	LoadManifest(target v1.Descriptor, source oras.ReadOnlyTarget) (v1.Manifest, error)
 	LoadArtifact(mf v1.Manifest, source oras.ReadOnlyTarget) (io.ReadCloser, error)
 	PushDelta(image string, manifOpts DeltaManifestOptions, content io.ReadCloser) error

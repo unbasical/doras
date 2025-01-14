@@ -191,7 +191,7 @@ func ParseOciImageString(r string) (repoName string, tag string, isDigest bool, 
 	return
 }
 
-func parseOciUrl(rawURL string) (*url.URL, error) {
+func ParseOciUrl(rawURL string) (*url.URL, error) {
 	if !strings.Contains(rawURL, "://") {
 		rawURL = "oci://" + rawURL
 	}
@@ -203,11 +203,11 @@ func parseOciUrl(rawURL string) (*url.URL, error) {
 }
 
 func CheckRegistryMatch(a, b string) error {
-	u1, err := parseOciUrl(a)
+	u1, err := ParseOciUrl(a)
 	if err != nil {
 		return err
 	}
-	u2, err := parseOciUrl(b)
+	u2, err := ParseOciUrl(b)
 	if err != nil {
 		return err
 	}

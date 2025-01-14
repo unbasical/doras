@@ -1,8 +1,10 @@
-package deltaengine
+package dorasengine
 
 import (
 	"errors"
 	"fmt"
+
+	"oras.land/oras-go/v2/registry/remote/auth"
 
 	apidelegate "github.com/unbasical/doras-server/internal/pkg/delegates/api"
 	deltadelegate "github.com/unbasical/doras-server/internal/pkg/delegates/delta"
@@ -18,21 +20,21 @@ import (
 	"github.com/unbasical/doras-server/pkg/constants"
 )
 
-type DeltaEngine interface {
+type Engine interface {
 	HandleReadDelta(apiDeletgate apidelegate.APIDelegate)
 }
 
-type deltaEngine struct {
+type engine struct {
 	registry registrydelegate.RegistryDelegate
 	delegate deltadelegate.DeltaDelegate
 }
 
-func (d *deltaEngine) HandleReadDelta(apiDeletgate apidelegate.APIDelegate) {
+func (d *engine) HandleReadDelta(apiDeletgate apidelegate.APIDelegate) {
 	readDelta(d.registry, d.delegate, apiDeletgate)
 }
 
-func NewDeltaEngine(registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate) DeltaEngine {
-	return &deltaEngine{registry: registry, delegate: delegate}
+func NewEngine(registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate) Engine {
+	return &engine{registry: registry, delegate: delegate}
 }
 
 // checkRepoCompatability ensures that the two provided images are from the same repository.
@@ -64,14 +66,33 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 		apiDelegate.HandleError(error2.ErrInternal, err.Error())
 		return
 	}
+
+	var creds auth.CredentialFunc
+	if clientAuth, err := apiDelegate.ExtractClientAuth(); err != nil {
+		log.WithError(err).Debug("Error extracting client token")
+	} else {
+		repoUrl, err := ociutils.ParseOciUrl(fromDigest)
+		if err != nil {
+			log.WithError(err).Error("Error extracting repo url")
+			apiDelegate.HandleError(error2.ErrInternal, "")
+			return
+		}
+		creds, err = clientAuth.CredentialFunc(repoUrl.Host)
+		if err != nil {
+			log.WithError(err).Error("Error extracting credentials")
+			apiDelegate.HandleError(error2.ErrInternal, "")
+			return
+		}
+	}
+
 	// resolve images to ensure they exist
-	srcFrom, fromImage, fromDescriptor, err := registry.Resolve(fromDigest, true)
+	srcFrom, fromImage, fromDescriptor, err := registry.Resolve(fromDigest, true, creds)
 	if err != nil {
 		log.WithError(err).Errorf("Error resolving target %q", fromDigest)
 		apiDelegate.HandleError(error2.ErrInvalidOciImage, fromDigest)
 		return
 	}
-	srcTo, toImage, toDescriptor, err := registry.Resolve(toTarget, false)
+	srcTo, toImage, toDescriptor, err := registry.Resolve(toTarget, false, creds)
 	if err != nil {
 		log.WithError(err).Errorf("Error resolving target %q", toTarget)
 		apiDelegate.HandleError(error2.ErrInvalidOciImage, toTarget)
@@ -121,7 +142,7 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 	// create dummy manifest
 	deltaImageWithTag := deltaImage
 	log.Debugf("looking for delta at %s", deltaImageWithTag)
-	if deltaSrc, deltaImageDigest, deltaDescriptor, err := registry.Resolve(deltaImageWithTag, false); err == nil {
+	if deltaSrc, deltaImageDigest, deltaDescriptor, err := registry.Resolve(deltaImageWithTag, false, creds); err == nil {
 		log.Debugf("found delta at %s", deltaImageDigest)
 		mfDelta, err := registry.LoadManifest(deltaDescriptor, deltaSrc)
 		if err != nil {

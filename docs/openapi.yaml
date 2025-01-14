@@ -55,6 +55,8 @@ paths:
                 - gzip
                 - zstd
           description: List of accepted algorithms (both compression and delta), has to include at least one delta algorithm. Compression algorithms can be omitted, resulting in an uncompressed delta.
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: successful operation
@@ -158,3 +160,8 @@ components:
             e.g. by adding a fragment identifier or sub-path to the problem type.
             May be used to locate the root of this problem in the source code.
           example: '/some/uri-reference#specific-occurrence-context'
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: The bearer token is used to authorize the client's ability to access the source images. If no token is provided the server expects the image to be publicly available without authentication.
