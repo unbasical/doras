@@ -1,15 +1,16 @@
 package api
 
 import (
-	"github.com/unbasical/doras-server/internal/pkg/api/gindelegate"
 	"net/http"
 	"net/url"
 	"time"
 
+	"github.com/unbasical/doras-server/internal/pkg/api/gindelegate"
+
 	deltadelegate "github.com/unbasical/doras-server/internal/pkg/delegates/delta"
 	registrydelegate "github.com/unbasical/doras-server/internal/pkg/delegates/registry"
 
-	"github.com/unbasical/doras-server/internal/pkg/core/deltaengine"
+	"github.com/unbasical/doras-server/internal/pkg/core/dorasengine"
 	"oras.land/oras-go/v2/registry/remote"
 
 	"github.com/gin-gonic/gin"
@@ -68,7 +69,7 @@ func BuildEdgeAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
 		reg = registrydelegate.NewRegistryDelegate(repoUrl, regTarget)
 		deltaDelegate = deltadelegate.NewDeltaDelegate(repoUrl)
 	}
-	deltaEngine := deltaengine.NewDeltaEngine(reg, deltaDelegate)
+	dorasEngine := dorasengine.NewEngine(reg, deltaDelegate)
 
 	edgeApiPath, err := url.JoinPath("/", apicommon.ApiBasePath, apicommon.DeltaApiPath)
 	if err != nil {
@@ -77,7 +78,7 @@ func BuildEdgeAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
 	edgeAPI := r.Group(edgeApiPath)
 	edgeAPI.GET("/", func(c *gin.Context) {
 		apiDelegate := gindelegate.NewDelegate(c)
-		deltaEngine.HandleReadDelta(apiDelegate)
+		dorasEngine.HandleReadDelta(apiDelegate)
 	})
 	return r
 }

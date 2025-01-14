@@ -1,4 +1,4 @@
-package deltaengine
+package dorasengine
 
 import (
 	"errors"
@@ -20,21 +20,21 @@ import (
 	"github.com/unbasical/doras-server/pkg/constants"
 )
 
-type DeltaEngine interface {
+type Engine interface {
 	HandleReadDelta(apiDeletgate apidelegate.APIDelegate)
 }
 
-type deltaEngine struct {
+type engine struct {
 	registry registrydelegate.RegistryDelegate
 	delegate deltadelegate.DeltaDelegate
 }
 
-func (d *deltaEngine) HandleReadDelta(apiDeletgate apidelegate.APIDelegate) {
+func (d *engine) HandleReadDelta(apiDeletgate apidelegate.APIDelegate) {
 	readDelta(d.registry, d.delegate, apiDeletgate)
 }
 
-func NewDeltaEngine(registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate) DeltaEngine {
-	return &deltaEngine{registry: registry, delegate: delegate}
+func NewEngine(registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate) Engine {
+	return &engine{registry: registry, delegate: delegate}
 }
 
 // checkRepoCompatability ensures that the two provided images are from the same repository.

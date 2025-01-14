@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/unbasical/doras-server/internal/pkg/auth"
+
 	apidelegate "github.com/unbasical/doras-server/internal/pkg/delegates/api"
 
 	"github.com/gin-gonic/gin"
@@ -18,13 +20,13 @@ type ginDorasContext struct {
 	c *gin.Context
 }
 
-func (g *ginDorasContext) ExtractClientAuth() (apidelegate.ClientAuth, error) {
+func (g *ginDorasContext) ExtractClientAuth() (auth.RegistryAuth, error) {
 	authHeader := g.c.GetHeader("Authorization")
 	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 		return nil, fmt.Errorf("missing or invalid Authorization header")
 	}
 	token := strings.TrimPrefix(authHeader, "Bearer ")
-	return apidelegate.NewClientAuthFromToken(token), nil
+	return auth.NewClientAuthFromToken(token), nil
 }
 
 func NewDelegate(c *gin.Context) apidelegate.APIDelegate {

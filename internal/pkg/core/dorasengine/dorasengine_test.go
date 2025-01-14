@@ -1,4 +1,4 @@
-package deltaengine
+package dorasengine
 
 import (
 	"context"
@@ -10,7 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	apidelegate "github.com/unbasical/doras-server/internal/pkg/delegates/api"
+	auth2 "github.com/unbasical/doras-server/internal/pkg/auth"
+
 	"oras.land/oras-go/v2/registry/remote/auth"
 
 	"github.com/opencontainers/go-digest"
@@ -185,9 +186,9 @@ type testAPIDelegate struct {
 	hasHandledCallback bool
 }
 
-func (t *testAPIDelegate) ExtractClientAuth() (apidelegate.ClientAuth, error) {
+func (t *testAPIDelegate) ExtractClientAuth() (auth2.RegistryAuth, error) {
 	if t.token != "" {
-		return apidelegate.NewClientAuthFromToken(t.token), nil
+		return auth2.NewClientAuthFromToken(t.token), nil
 	}
 	return nil, errors.New("no token provided")
 }
