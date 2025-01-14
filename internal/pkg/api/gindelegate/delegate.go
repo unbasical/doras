@@ -22,6 +22,7 @@ type ginDorasContext struct {
 }
 
 func (g *ginDorasContext) ExtractClientAuth() (auth.RegistryAuth, error) {
+	// Extract the Bearer token from the Auth Header.
 	authHeader := g.c.GetHeader("Authorization")
 	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 		return nil, fmt.Errorf("missing or invalid Authorization header")

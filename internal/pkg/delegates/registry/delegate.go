@@ -89,7 +89,11 @@ func (r *registryImpl) LoadManifest(target v1.Descriptor, source oras.ReadOnlyTa
 		return v1.Manifest{}, err
 	}
 	defer funcutils.PanicOrLogOnErr(mfReader.Close, false, "failed to close reader")
-	return ociutils.ParseManifest(mfReader)
+	mf, err := ociutils.ParseManifestJSON(mfReader)
+	if err != nil {
+		return v1.Manifest{}, err
+	}
+	return *mf, err
 }
 
 func (r *registryImpl) LoadArtifact(mf v1.Manifest, source oras.ReadOnlyTarget) (io.ReadCloser, error) {

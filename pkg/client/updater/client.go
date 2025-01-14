@@ -110,7 +110,7 @@ func (r *registryImpl) ResolveAndLoad(image string) (v1.Manifest, io.ReadCloser,
 		return v1.Manifest{}, nil, err
 	}
 	defer funcutils.PanicOrLogOnErr(mfReader.Close, false, "failed to close reader")
-	mf, err := ociutils.ParseManifest(mfReader)
+	mf, err := ociutils.ParseManifestJSON(mfReader)
 	if err != nil {
 		return v1.Manifest{}, nil, err
 	}
@@ -126,7 +126,7 @@ func (r *registryImpl) ResolveAndLoad(image string) (v1.Manifest, io.ReadCloser,
 	if err != nil {
 		return v1.Manifest{}, nil, err
 	}
-	return mf, fp, nil
+	return *mf, fp, nil
 }
 
 // ensureSubDir makes sure the directory at p exists, relative to the base directory.

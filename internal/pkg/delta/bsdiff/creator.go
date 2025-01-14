@@ -11,11 +11,13 @@ import (
 type creator struct {
 }
 
+// NewCreator returns a bsdiff delta.Differ.
 func NewCreator() delta.Differ {
 	return &creator{}
 }
 
 func (c *creator) Diff(old io.Reader, new io.Reader) (io.ReadCloser, error) {
+	// Use a pipe to turn the writer into a reader.
 	pr, pw := io.Pipe()
 	go func() {
 		err := bsdiff2.Reader(old, new, pw)

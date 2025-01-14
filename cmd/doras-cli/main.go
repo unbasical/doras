@@ -22,7 +22,6 @@ func main() {
 	// Setup logging.
 	setLogLevel(*logLevel)
 	setLogFormat(*logFormat)
-
 }
 
 func setLogFormat(logFormat string) {

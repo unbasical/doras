@@ -4,17 +4,17 @@ import (
 	"fmt"
 )
 
+// PanicOrLogOnErr does what its name suggests.
 func PanicOrLogOnErr(f func() error, panicOnErr bool, msg string) {
-	err := f()
-	if err != nil {
+	if err := f(); err != nil {
 		if panicOnErr {
 			panic(fmt.Sprintf("%s: %s", msg, err))
-		} else {
-			fmt.Printf("%s: %s\n", msg, err.Error())
 		}
+		fmt.Printf("%s: %s\n", msg, err.Error())
 	}
 }
 
+// IdentityFunc returns the input.
 func IdentityFunc[T any](t T) func() T {
 	return func() T {
 		return t

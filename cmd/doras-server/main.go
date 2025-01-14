@@ -27,10 +27,13 @@ func main() {
 	}
 	log.Debugf("Config: %+v", configFile)
 
+	// Start up server.
 	doras := core.New(serverConfig)
 	doras.Start()
 }
 
+// StringToLogLevel parse a logrus.Level from the string.
+// Converts input to a lowercase string.
 func StringToLogLevel(level string) log.Level {
 	switch strings.ToLower(level) {
 	case "panic":

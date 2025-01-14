@@ -35,6 +35,8 @@ func logger() gin.HandlerFunc {
 	}
 }
 
+// BuildApp return an engine that when ran servers the Doras API.
+// Uses the provided configuration to set up logging, storage and other things.
 func BuildApp(config *apicommon.Config) *gin.Engine {
 	log.Debug("Building app")
 	gin.DisableConsoleColor()
@@ -42,7 +44,7 @@ func BuildApp(config *apicommon.Config) *gin.Engine {
 	r.Use(
 		logger(),
 	)
-	r = BuildEdgeAPI(r, config)
+	r = buildEdgeAPI(r, config)
 	r.GET("/api/v1/ping", ping)
 
 	return r
@@ -54,7 +56,8 @@ func ping(c *gin.Context) {
 	})
 }
 
-func BuildEdgeAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
+// buildEdgeAPI sets up the API which handles delta requests.
+func buildEdgeAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
 	log.Debug("Building edge API")
 
 	var reg registrydelegate.RegistryDelegate
@@ -73,7 +76,8 @@ func BuildEdgeAPI(r *gin.Engine, config *apicommon.Config) *gin.Engine {
 
 	edgeApiPath, err := url.JoinPath("/", apicommon.ApiBasePathV1, apicommon.DeltaApiPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		panic(err)
 	}
 	edgeAPI := r.Group(edgeApiPath)
 	edgeAPI.GET("/", func(c *gin.Context) {

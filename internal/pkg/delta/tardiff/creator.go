@@ -13,6 +13,7 @@ import (
 type Creator struct {
 }
 
+// NewCreator returns a tardiff delta.Differ.
 func NewCreator() delta.Differ {
 	return &Creator{}
 }
