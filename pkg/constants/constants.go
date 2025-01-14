@@ -1,11 +1,21 @@
 package constants
 
+// DorasAnnotationFrom is the constant to extract the from-image from the delta image's manifest.
 const DorasAnnotationFrom = "com.unbasical.doras.delta.from"
+
+// DorasAnnotationTo is the constant to extract the to-image from the delta image's manifest.
 const DorasAnnotationTo = "com.unbasical.doras.delta.to"
+
+// DorasAnnotationIsDummy is the constant to extract the information of whether the artifact is a dummy from the image's manifest.
 const DorasAnnotationIsDummy = "com.unbasical.doras.delta.dummy"
 
+// QueryKeyFromDigest is used to extract the from_digest parameter from the request.
 const QueryKeyFromDigest = "from_digest"
+
+// QueryKeyToTag is used to extract the to_tag parameter from the request.
 const QueryKeyToTag = "to_tag"
+
+// QueryKeyToDigest is used to extract the to_digest parameter from the request.
 const QueryKeyToDigest = "to_digest"
 
 // DefaultAlgorithms returns the Doras default algorithms.
