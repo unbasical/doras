@@ -22,20 +22,20 @@ func main() {
 
 }
 
-type UTCFormatter struct {
+type utcFormatter struct {
 	log.Formatter
 }
 
-func (u UTCFormatter) Format(e *log.Entry) ([]byte, error) {
+func (u utcFormatter) Format(e *log.Entry) ([]byte, error) {
 	e.Time = e.Time.UTC()
 	return u.Formatter.Format(e)
 }
 func setLogFormat(logFormat string) {
 	switch logFormat {
 	case "JSON":
-		log.SetFormatter(UTCFormatter{Formatter: &log.JSONFormatter{}})
+		log.SetFormatter(utcFormatter{Formatter: &log.JSONFormatter{}})
 	default:
-		log.SetFormatter(UTCFormatter{Formatter: &log.TextFormatter{FullTimestamp: true}})
+		log.SetFormatter(utcFormatter{Formatter: &log.TextFormatter{FullTimestamp: true}})
 	}
 }
 

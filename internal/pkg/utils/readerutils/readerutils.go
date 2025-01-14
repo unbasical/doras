@@ -7,10 +7,6 @@ import (
 	"io"
 )
 
-type ReaderChain struct {
-	r io.Reader
-}
-
 func ChainedCloser(this io.ReadCloser, other io.Closer) io.ReadCloser {
 	return struct {
 		io.Reader

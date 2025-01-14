@@ -70,8 +70,7 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 		ConfigFile: configFile,
 		CliOpts:    configs.CLI{HTTPPort: 8081, Host: "localhost", LogLevel: "debug"},
 	}
-	dorasApp := core.Doras{}
-	go dorasApp.Init(serverConfig).Start()
+	go core.New(serverConfig).Start()
 
 	reg, err := remote.NewRegistry(regUri)
 	if err != nil {

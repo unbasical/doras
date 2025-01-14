@@ -82,7 +82,9 @@ type BackoffStrategy interface {
 }
 
 func DefaultBackoff() BackoffStrategy {
-	return NewExponentialBackoffWithJitter(1000*time.Millisecond, 1*time.Minute, 5)
+	const defaultBaseDelay = 1000 * time.Millisecond
+	const defaultMaxDelay = 1 * time.Minute
+	return NewExponentialBackoffWithJitter(defaultBaseDelay, defaultMaxDelay, 5)
 }
 
 func NewEdgeClient(serverURL, registry string, allowHttp bool, tokenProvider client.AuthTokenProvider) (*Client, error) {
