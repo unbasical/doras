@@ -6,11 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"oras.land/oras-go/v2/registry/remote/auth"
-	"oras.land/oras-go/v2/registry/remote/retry"
 	"os"
 	"strings"
 	"sync"
+
+	"oras.land/oras-go/v2/registry/remote/auth"
+	"oras.land/oras-go/v2/registry/remote/retry"
 
 	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
 
@@ -47,7 +48,7 @@ func NewRegistryDelegate(registryUrl string, registry *remote.Registry) Registry
 	}
 }
 
-func (r *RegistryImpl) Resolve(image string, expectDigest bool, authToken *string) (oras.ReadOnlyTarget, string, v1.Descriptor, error) {
+func (r *RegistryImpl) Resolve(image string, expectDigest bool, creds auth.CredentialFunc) (oras.ReadOnlyTarget, string, v1.Descriptor, error) {
 	ctx := context.Background()
 
 	repoName, tag, isDigest, err := ociutils.ParseOciImageString(image)
@@ -63,22 +64,11 @@ func (r *RegistryImpl) Resolve(image string, expectDigest bool, authToken *strin
 	if err != nil {
 		return nil, "", v1.Descriptor{}, err
 	}
-	url, err := ociutils.ParseOciUrl(image)
-	if err != nil {
-		return nil, "", v1.Descriptor{}, err
-	}
 
-	// If a token was provided use it to authenticate, otherwise use no authentication.
-	var credentialFunc auth.CredentialFunc
-	if authToken != nil {
-		credentialFunc = auth.StaticCredential(url.Host, auth.Credential{
-			AccessToken: *authToken,
-		})
-	}
 	repository.Client = &auth.Client{
 		Client:     retry.DefaultClient,
 		Cache:      auth.NewCache(),
-		Credential: credentialFunc,
+		Credential: creds,
 	}
 	// This is kinda hacky.
 	repository.PlainHTTP = r.Registry.PlainHTTP
@@ -227,7 +217,7 @@ type RegistryDelegate interface {
 	// Resolve the provided image.
 	// Enforces whether the image is tagged or uses a digest.
 	// If an authToken is provided it, and ONLY it has to be used to authenticate to the registry.
-	Resolve(image string, expectDigest bool, authToken *string) (oras.ReadOnlyTarget, string, v1.Descriptor, error)
+	Resolve(image string, expectDigest bool, creds auth.CredentialFunc) (oras.ReadOnlyTarget, string, v1.Descriptor, error)
 	LoadManifest(target v1.Descriptor, source oras.ReadOnlyTarget) (v1.Manifest, error)
 	LoadArtifact(mf v1.Manifest, source oras.ReadOnlyTarget) (io.ReadCloser, error)
 	PushDelta(image string, manifOpts DeltaManifestOptions, content io.ReadCloser) error

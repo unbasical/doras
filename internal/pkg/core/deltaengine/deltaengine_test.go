@@ -10,6 +10,9 @@ import (
 	"strings"
 	"testing"
 
+	apidelegate "github.com/unbasical/doras-server/internal/pkg/delegates/api"
+	"oras.land/oras-go/v2/registry/remote/auth"
+
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
@@ -28,10 +31,25 @@ type testRegistryDelegate struct {
 	expectedAuth string
 }
 
-func (t *testRegistryDelegate) Resolve(image string, expectDigest bool, authToken *string) (oras.ReadOnlyTarget, string, v1.Descriptor, error) {
-	if t.expectedAuth != "" && (authToken == nil || t.expectedAuth != *authToken) {
-		return nil, "", v1.Descriptor{}, fmt.Errorf("auth failure")
+func (t *testRegistryDelegate) Resolve(image string, expectDigest bool, creds auth.CredentialFunc) (oras.ReadOnlyTarget, string, v1.Descriptor, error) {
+	url, err := ociutils.ParseOciUrl(image)
+	if err != nil {
+		return nil, "", v1.Descriptor{}, err
 	}
+	if t.expectedAuth != "" {
+		if creds == nil {
+			return nil, "", v1.Descriptor{}, fmt.Errorf("auth failure")
+		}
+		hostport := strings.TrimSuffix(fmt.Sprintf("%s:%s", url.Host, url.Port()), ":")
+		c, err := creds(context.Background(), hostport)
+		if err != nil {
+			return nil, "", v1.Descriptor{}, err
+		}
+		if t.expectedAuth != c.AccessToken {
+			return nil, "", v1.Descriptor{}, fmt.Errorf("auth failure")
+		}
+	}
+
 	repo, tag, isDigest, err := ociutils.ParseOciImageString(image)
 	if err != nil {
 		return nil, "", v1.Descriptor{}, err
@@ -167,11 +185,11 @@ type testAPIDelegate struct {
 	hasHandledCallback bool
 }
 
-func (t *testAPIDelegate) ExtractClientToken() (string, error) {
+func (t *testAPIDelegate) ExtractClientAuth() (apidelegate.ClientAuth, error) {
 	if t.token != "" {
-		return t.token, nil
+		return apidelegate.NewClientAuthFromToken(t.token), nil
 	}
-	return "", errors.New("no token provided")
+	return nil, errors.New("no token provided")
 }
 
 func (t *testAPIDelegate) ExtractParams() (fromImage, toImage string, acceptedAlgorithms []string, err error) {
@@ -327,13 +345,14 @@ func Test_readDelta_Token(t *testing.T) {
 		storage:      storageTarget,
 		expectedAuth: dummyToken,
 	}
-	_, image1, d, err := registryMock.Resolve("registry.example.org/foobar:v1", false, &dummyToken)
+	credFunc := auth.StaticCredential("registry.example.org", auth.Credential{AccessToken: dummyToken})
+	_, image1, d, err := registryMock.Resolve("registry.example.org/foobar:v1", false, credFunc)
 	if err != nil {
 		t.Fatal(err)
 	}
 	image1 = strings.ReplaceAll(image1, ":v1", "@"+d.Digest.String())
 
-	_, image2, _, err := registryMock.Resolve("registry.example.org/foobar:v2", false, &dummyToken)
+	_, image2, _, err := registryMock.Resolve("registry.example.org/foobar:v2", false, credFunc)
 	if err != nil {
 		t.Fatal(err)
 	}
