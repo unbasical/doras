@@ -3,7 +3,6 @@ package readerutils
 import (
 	"errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"io"
 )
 
@@ -14,7 +13,7 @@ func ChainedCloser(this io.ReadCloser, other io.Closer) io.ReadCloser {
 	}{
 		Reader: this,
 		Closer: closerFunc(func() error {
-			return funcutils.MultiError(
+			return errors.Join(
 				other.Close(),
 				this.Close(),
 			)
@@ -29,6 +28,7 @@ func (fn closerFunc) Close() error {
 	return fn()
 }
 
+// WriterToReader transforms an io.Writer that is provided by the given function into an io.Reader.
 func WriterToReader(reader io.Reader, writerSource func(writer io.Writer) io.WriteCloser) io.Reader {
 	pr, pw := io.Pipe()
 	go func() {
