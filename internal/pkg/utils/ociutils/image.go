@@ -1,7 +1,6 @@
 package ociutils
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,24 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/idna"
 
-	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
-	"oras.land/oras-go/v2"
-
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
-
-func GetLayers(ctx context.Context, src oras.ReadOnlyTarget, rootDescriptor v1.Descriptor) ([]v1.Descriptor, error) {
-	r, err := src.Fetch(ctx, rootDescriptor)
-	if err != nil {
-		return nil, err
-	}
-	defer funcutils.PanicOrLogOnErr(r.Close, false, "failed to close fetch reader")
-	mf, err := ParseManifestJSON(r)
-	if err != nil {
-		return nil, err
-	}
-	return mf.Layers, nil
-}
 
 func ParseManifestJSON(data io.Reader) (*v1.Manifest, error) {
 	var manifest *v1.Manifest
