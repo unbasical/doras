@@ -84,7 +84,6 @@ func extractDigest(image string) (*digest.Digest, error) {
 }
 
 func (d *delegate) CreateDelta(ctx context.Context, from, to io.ReadCloser, manifOpts registrydelegate.DeltaManifestOptions, dst registrydelegate.RegistryDelegate) error {
-	ctx = context.Background() // TODO: remove this line and improve shutdown handling.
 	deltaReader, err := manifOpts.Differ.Diff(from, to)
 	if err != nil {
 		return err

@@ -22,7 +22,10 @@ type ginDorasContext struct {
 }
 
 func (g *ginDorasContext) RequestContext() (context.Context, error) {
-	return g.c.Request.Context(), nil
+	_ = g.c.Request.Context()
+	// Overwrite the context because this seems to block requests.
+	ctx := context.Background()
+	return ctx, nil
 }
 
 func (g *ginDorasContext) ExtractClientAuth() (auth.RegistryAuth, error) {
