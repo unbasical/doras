@@ -47,6 +47,15 @@ func WithQueryParam(key, value string) Option {
 	}
 }
 
+// WithListQueryParam adds the query parameter multiple times to the URL. Once per element in the values slice.
+func WithListQueryParam(key string, values []string) Option {
+	return func(ub *URLBuilder) {
+		for _, element := range values {
+			ub.queryParams.Add(key, element)
+		}
+	}
+}
+
 // Build constructs the final URL string
 func (ub *URLBuilder) Build() string {
 	var sb strings.Builder
