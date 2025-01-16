@@ -9,6 +9,9 @@ import (
 	"github.com/unbasical/doras-server/configs"
 	"github.com/unbasical/doras-server/internal/pkg/api"
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
+	"github.com/unbasical/doras-server/internal/pkg/core/dorasengine"
+	deltadelegate "github.com/unbasical/doras-server/internal/pkg/delegates/delta"
+	registrydelegate "github.com/unbasical/doras-server/internal/pkg/delegates/registry"
 	"net/http"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
@@ -48,7 +51,20 @@ func (d *Doras) init(config configs.ServerConfig) *Doras {
 	if config.CliOpts.LogLevel != "debug" {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	d.engine = api.BuildApp(appConfig)
+	var registryDelegate registrydelegate.RegistryDelegate
+	var deltaDelegate deltadelegate.DeltaDelegate
+	for repoUrl, repoClient := range appConfig.RepoClients {
+		regTarget, err := remote.NewRegistry(repoUrl)
+		if err != nil {
+			panic(err)
+		}
+		regTarget.PlainHTTP = true
+		regTarget.Client = repoClient
+		registryDelegate = registrydelegate.NewRegistryDelegate(repoUrl, regTarget)
+		deltaDelegate = deltadelegate.NewDeltaDelegate(repoUrl)
+	}
+	dorasEngine := dorasengine.NewEngine(registryDelegate, deltaDelegate)
+	d.engine = api.BuildApp(dorasEngine)
 	err = d.engine.SetTrustedProxies(config.ConfigFile.TrustedProxies)
 	if err != nil {
 		log.WithError(err).Fatal("failed to set trusted proxies")
