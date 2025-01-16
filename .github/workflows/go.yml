@@ -25,20 +25,18 @@ jobs:
 
     - name: Test
       run: TEST_OUTPUT=text make test
-#  lint:
-#    name: Lint
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Set up Go
-#        uses: actions/setup-go@v4
-#        with:
-#          go-version: '1.21'
-#
-#      - name: Check out code
-#        uses: actions/checkout@v3
-#
-#      - name: golangci-lint
-#        uses: golangci/golangci-lint-action@v3
-#        with:
-#          version: v1.54
-#          args: --config=".golangci.yml" --timeout=5m
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Test
+        run: TEST_OUTPUT=text make lint
