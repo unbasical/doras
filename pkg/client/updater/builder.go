@@ -8,11 +8,12 @@ import (
 )
 
 type clientOpts struct {
-	RemoteURL         string
-	OutputDirectory   string
-	InternalDirectory string
-	DockerConfigPath  string
-	RegistryURL       string
+	RemoteURL          string
+	OutputDirectory    string
+	InternalDirectory  string
+	DockerConfigPath   string
+	RegistryURL        string
+	AcceptedAlgorithms []string
 }
 
 // NewClient creates a new Doras update client with the provided options.
@@ -33,6 +34,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 		return nil, err
 	}
 	client.edgeClient = c
+	client.state = &dorasState{fPath: client.opts.InternalDirectory}
 	return client, nil
 }
 
@@ -70,5 +72,12 @@ func WithInternalDirectory(internalDirectory string) func(*Client) {
 func WithDockerConfigPath(dockerConfigPath string) func(*Client) {
 	return func(c *Client) {
 		c.opts.DockerConfigPath = dockerConfigPath
+	}
+}
+
+// WithAcceptedAlgorithms allows to restrict the set of accepted algorithms which are used to build a delta.
+func WithAcceptedAlgorithms(acceptedAlgorithms []string) func(*Client) {
+	return func(c *Client) {
+		c.opts.AcceptedAlgorithms = acceptedAlgorithms
 	}
 }

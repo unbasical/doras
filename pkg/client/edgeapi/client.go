@@ -119,6 +119,7 @@ func (c *Client) ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (r
 		buildurl.WithPathElement(apicommon.DeltaApiPath),
 		buildurl.WithQueryParam(constants.QueryKeyFromDigest, from),
 		buildurl.WithQueryParam(constants.QueryKeyToTag, to),
+		buildurl.WithListQueryParam(constants.QueryKeyAcceptedAlgorithm, acceptedAlgorithms),
 	)
 
 	log.Debugf("sending delta request to %s", url)

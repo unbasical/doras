@@ -53,6 +53,7 @@ func checkRepoCompatability(a, b string) error {
 	return nil
 }
 
+//nolint:revive // This rule is disabled to get around complexity linter errors. Reducing the complexity of this function is difficult. Refer to the Doras specs in the file docs/delta-creation-spec.md for more information on the semantics of this god function.
 func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate, apiDelegate apidelegate.APIDelegate) {
 	fromDigest, toTarget, acceptedAlgorithms, err := apiDelegate.ExtractParams()
 	if err != nil {

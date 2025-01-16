@@ -18,6 +18,9 @@ const QueryKeyToTag = "to_tag"
 // QueryKeyToDigest is used to extract the to_digest parameter from the request.
 const QueryKeyToDigest = "to_digest"
 
+// QueryKeyAcceptedAlgorithm is used to extract the (repeatable) accepted algorithms parameter from the request.
+const QueryKeyAcceptedAlgorithm = "accepted_algorithm"
+
 // DefaultAlgorithms returns the Doras default algorithms.
 // Uses a function to ensure immutability of the default algorithms.
 func DefaultAlgorithms() []string {

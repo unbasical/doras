@@ -54,6 +54,7 @@ func (d *dorasState) SetCurrentImage(image string) error {
 	return nil
 }
 
+// DorasState is an interface that can be used to get/set the internal state of a Doras update client.
 type DorasState interface {
 	// GetCurrentImage returns the current OCI image that is in use/rolled out.
 	GetCurrentImage() (string, error)
@@ -63,11 +64,10 @@ type DorasState interface {
 
 // Client is used to run delta updates in Doras.
 type Client struct {
-	opts               clientOpts
-	edgeClient         *edgeapi.Client
-	acceptedAlgorithms []string
-	state              DorasState
-	reg                RegistryDelegate
+	opts       clientOpts
+	edgeClient *edgeapi.Client
+	state      DorasState
+	reg        RegistryDelegate
 }
 
 // Pull an image from the registry.
@@ -222,7 +222,7 @@ func openFileAndGetSize(fPath string) (*os.File, int64, error) {
 	return fp, n, nil
 }
 
-func (r *registryImpl) setupIngestDirAndReturnPaths(expected v1.Descriptor) (string, string, error) {
+func (r *registryImpl) setupIngestDirAndReturnPaths(expected v1.Descriptor) (fPathDownload string, fPathCompleted string, err error) {
 	downloadDir, err := r.ensureSubDir("download")
 	if err != nil {
 		return "", "", err
@@ -231,8 +231,8 @@ func (r *registryImpl) setupIngestDirAndReturnPaths(expected v1.Descriptor) (str
 	if err != nil {
 		return "", "", err
 	}
-	fPathDownload := path.Join(downloadDir, expected.Digest.Encoded())
-	fPathCompleted := path.Join(completedDir, expected.Digest.Encoded())
+	fPathDownload = path.Join(downloadDir, expected.Digest.Encoded())
+	fPathCompleted = path.Join(completedDir, expected.Digest.Encoded())
 	return fPathDownload, fPathCompleted, nil
 }
 
@@ -292,7 +292,7 @@ func (p *patcherImpl) PatchFile(fPath string, delta io.Reader) error {
 	return nil
 }
 
-func (p *patcherImpl) PatchDirectory(fPath string, delta io.Reader) {
+func (p *patcherImpl) PatchDirectory(_ string, _ io.Reader) {
 	panic("implement me")
 }
 
@@ -328,7 +328,7 @@ func getPatcherChoice(mf *v1.Manifest) (algorithmchoice.PatcherChoice, error) {
 	case "tardiff":
 		choice.Patcher = tardiff.NewPatcher()
 	default:
-		panic("not supported")
+		return algorithmchoice.PatcherChoice{}, fmt.Errorf("unsupported patcher: %s", split[0])
 	}
 	return choice, nil
 }
@@ -341,7 +341,7 @@ func (c *Client) PullAsync(target string) (exists bool, err error) {
 	if err != nil {
 		panic("handling uninitialized state is not yet implemented")
 	}
-	res, exists, err := c.edgeClient.ReadDeltaAsync(oldImage, target, c.acceptedAlgorithms)
+	res, exists, err := c.edgeClient.ReadDeltaAsync(oldImage, target, c.opts.AcceptedAlgorithms)
 	if err != nil {
 		return false, err
 	}
