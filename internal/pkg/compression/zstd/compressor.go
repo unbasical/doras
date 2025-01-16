@@ -1,13 +1,11 @@
 package zstd
 
 import (
-	"io"
-
-	"github.com/unbasical/doras-server/internal/pkg/utils/readerutils"
-
 	"github.com/klauspost/compress/zstd"
 	"github.com/unbasical/doras-server/internal/pkg/utils/compressionutils"
+	"github.com/unbasical/doras-server/internal/pkg/utils/readerutils"
 	"github.com/unbasical/doras-server/pkg/algorithm/compression"
+	"io"
 )
 
 // NewCompressor returns a zstd compression.Compressor.

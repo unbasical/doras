@@ -4,9 +4,16 @@ import (
 	"errors"
 	log "github.com/sirupsen/logrus"
 	"io"
+	"sync"
 )
 
 func ChainedCloser(this io.ReadCloser, other io.Closer) io.ReadCloser {
+	if this == nil {
+		panic("this is nil")
+	}
+	if other == nil {
+		panic("other is nil")
+	}
 	return struct {
 		io.Reader
 		io.Closer
@@ -30,9 +37,12 @@ func (fn closerFunc) Close() error {
 
 // WriterToReader transforms an io.Writer that is provided by the given function into an io.Reader.
 func WriterToReader(reader io.Reader, writerSource func(writer io.Writer) io.WriteCloser) io.Reader {
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 	pr, pw := io.Pipe()
 	go func() {
 		gzr := writerSource(pw)
+		wg.Done()
 		n, err := io.Copy(gzr, reader)
 		errClose := gzr.Close()
 		if err := errors.Join(err, errClose); err != nil {
@@ -42,6 +52,7 @@ func WriterToReader(reader io.Reader, writerSource func(writer io.Writer) io.Wri
 		log.Debugf("wrote %d bytes", n)
 		_ = pw.Close()
 	}()
+	wg.Wait()
 	return pr
 }
 
