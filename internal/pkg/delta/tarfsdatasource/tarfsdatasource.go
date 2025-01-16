@@ -16,9 +16,9 @@ type entry struct {
 	pos    int64
 }
 
-// dataSource implements a file system backed tarpatch.DataSource.
+// DataSource implements a file system backed tarpatch.DataSource.
 // This does not extract the archive, but it creates a temporary file, to which the contents are written lazily.
-type dataSource struct {
+type DataSource struct {
 	rsc          io.ReadSeekCloser
 	entries      map[string]*entry
 	currentEntry *entry
@@ -35,7 +35,7 @@ func NewDataSource(r io.Reader, decompress func(reader io.Reader) (io.Reader, er
 			return nil, err
 		}
 	}
-	res := &dataSource{
+	res := &DataSource{
 		entries: make(map[string]*entry),
 	}
 	rsc, err := readseekcloserwrapper.New(r)
@@ -64,7 +64,7 @@ func NewDataSource(r io.Reader, decompress func(reader io.Reader) (io.Reader, er
 	return res, nil
 }
 
-func (t *dataSource) Read(p []byte) (n int, err error) {
+func (t *DataSource) Read(p []byte) (n int, err error) {
 	if t.currentEntry == nil {
 		return 0, fmt.Errorf("no file set")
 	}
@@ -81,7 +81,7 @@ func (t *dataSource) Read(p []byte) (n int, err error) {
 	return n, nil
 }
 
-func (t *dataSource) Seek(offset int64, whence int) (int64, error) {
+func (t *DataSource) Seek(offset int64, whence int) (int64, error) {
 	var newPos int64
 	switch whence {
 	case io.SeekStart:
@@ -103,17 +103,17 @@ func (t *dataSource) Seek(offset int64, whence int) (int64, error) {
 	return offset - t.currentEntry.pos, nil
 }
 
-func (t *dataSource) Close() error {
+func (t *DataSource) Close() error {
 	// do nothing as close means closing the current file.
 	return nil
 }
 
 // CloseDataSource Close the currently opened reader.
-func (t *dataSource) CloseDataSource() error {
+func (t *DataSource) CloseDataSource() error {
 	return t.rsc.Close()
 }
 
-func (t *dataSource) SetCurrentFile(file string) error {
+func (t *DataSource) SetCurrentFile(file string) error {
 	e, ok := t.entries[file]
 	if !ok {
 		return fmt.Errorf("file not found")

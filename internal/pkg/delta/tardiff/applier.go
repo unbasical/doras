@@ -46,6 +46,9 @@ func (a *applier) Patch(old io.Reader, patch io.Reader) (io.Reader, error) {
 			funcutils.PanicOrLogOnErr(funcutils.IdentityFunc(errInner), false, "failed to close pipe writer after error")
 		}
 		funcutils.PanicOrLogOnErr(pw.Close, true, "failed to close pipe writer")
+		if ds, ok := dataSource.(*tarfsdatasource.DataSource); ok {
+			funcutils.PanicOrLogOnErr(ds.CloseDataSource, false, "failed to close data source after patching")
+		}
 	}()
 	return pr, nil
 }
