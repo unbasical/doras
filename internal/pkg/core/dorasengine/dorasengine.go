@@ -1,6 +1,7 @@
 package dorasengine
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -30,7 +31,11 @@ type engine struct {
 }
 
 func (d *engine) HandleReadDelta(apiDeletgate apidelegate.APIDelegate) {
-	readDelta(d.registry, d.delegate, apiDeletgate)
+	ctx, err := apiDeletgate.RequestContext()
+	if err != nil {
+		log.WithError(err).Error("error getting request context")
+	}
+	readDelta(ctx, d.registry, d.delegate, apiDeletgate)
 }
 
 func NewEngine(registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate) Engine {
@@ -54,7 +59,7 @@ func checkRepoCompatability(a, b string) error {
 }
 
 //nolint:revive // This rule is disabled to get around complexity linter errors. Reducing the complexity of this function is difficult. Refer to the Doras specs in the file docs/delta-creation-spec.md for more information on the semantics of this god function.
-func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate, apiDelegate apidelegate.APIDelegate) {
+func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate, apiDelegate apidelegate.APIDelegate) {
 	fromDigest, toTarget, acceptedAlgorithms, err := apiDelegate.ExtractParams()
 	if err != nil {
 		log.WithError(err).Error("Error extracting parameters")
@@ -196,7 +201,7 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 	go func() {
 		defer funcutils.PanicOrLogOnErr(rcTo.Close, false, "failed to close reader")
 		defer funcutils.PanicOrLogOnErr(rcFrom.Close, false, "failed to close reader")
-		err := delegate.CreateDelta(rcFrom, rcTo, manifOpts, registry)
+		err := delegate.CreateDelta(ctx, rcFrom, rcTo, manifOpts, registry)
 		if err != nil {
 			log.WithError(err).Error("failed to create delta")
 			apiDelegate.HandleError(error2.ErrInternal, "")

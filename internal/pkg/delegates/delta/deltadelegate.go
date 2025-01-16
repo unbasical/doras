@@ -1,6 +1,7 @@
 package deltadelegate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -82,8 +83,8 @@ func extractDigest(image string) (*digest.Digest, error) {
 	return &val, nil
 }
 
-func (d *delegate) CreateDelta(from, to io.ReadCloser, manifOpts registrydelegate.DeltaManifestOptions, dst registrydelegate.RegistryDelegate) error {
-	// TODO: avoid leaking readers
+func (d *delegate) CreateDelta(ctx context.Context, from, to io.ReadCloser, manifOpts registrydelegate.DeltaManifestOptions, dst registrydelegate.RegistryDelegate) error {
+	ctx = context.Background() // TODO: remove this line and improve shutdown handling.
 	deltaReader, err := manifOpts.Differ.Diff(from, to)
 	if err != nil {
 		return err
@@ -103,7 +104,7 @@ func (d *delegate) CreateDelta(from, to io.ReadCloser, manifOpts registrydelegat
 	d.activeRequests[deltaLocationWithTag] = nil
 	d.m.Unlock()
 	log.Debugf("handling request for %q", deltaLocationWithTag)
-	err = dst.PushDelta(deltaLocationWithTag, manifOpts, compressedDelta)
+	err = dst.PushDelta(ctx, deltaLocationWithTag, manifOpts, compressedDelta)
 	d.m.Lock()
 	delete(d.activeRequests, deltaLocationWithTag)
 	d.m.Unlock()
@@ -123,5 +124,5 @@ type DeltaDelegate interface {
 	GetDeltaLocation(deltaMf registrydelegate.DeltaManifestOptions) (string, error)
 	// CreateDelta constructs the delta and pushes it to the registry.
 	// This method should handle synchronization at the instance level.
-	CreateDelta(from, to io.ReadCloser, manifOpts registrydelegate.DeltaManifestOptions, dst registrydelegate.RegistryDelegate) error
+	CreateDelta(ctx context.Context, from, to io.ReadCloser, manifOpts registrydelegate.DeltaManifestOptions, dst registrydelegate.RegistryDelegate) error
 }

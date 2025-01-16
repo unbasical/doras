@@ -87,7 +87,7 @@ func (t *testRegistryDelegate) LoadArtifact(mf v1.Manifest, source oras.ReadOnly
 	return source.Fetch(t.ctx, mf.Layers[0])
 }
 
-func (t *testRegistryDelegate) PushDelta(image string, manifOpts registrydelegate.DeltaManifestOptions, content io.ReadCloser) error {
+func (t *testRegistryDelegate) PushDelta(ctx context.Context, image string, manifOpts registrydelegate.DeltaManifestOptions, content io.ReadCloser) error {
 	_, tag, _, err := ociutils.ParseOciImageString(image)
 	if err != nil {
 		return err
@@ -185,6 +185,10 @@ type testAPIDelegate struct {
 	lastErrMsg         string
 	response           apicommon.ReadDeltaResponse
 	hasHandledCallback bool
+}
+
+func (t *testAPIDelegate) RequestContext() (context.Context, error) {
+	return context.Background(), nil
 }
 
 func (t *testAPIDelegate) ExtractClientAuth() (auth2.RegistryAuth, error) {
@@ -312,7 +316,7 @@ func Test_readDelta(t *testing.T) {
 			// This is necessary due to the asynchronous nature of the readDelta function,
 			// which spawns a go routine.
 			for {
-				readDelta(tt.args.registry, tt.args.delegate, &tt.args.apiDelegate)
+				readDelta(ctx, tt.args.registry, tt.args.delegate, &tt.args.apiDelegate)
 				if tt.args.apiDelegate.hasHandledCallback {
 					break
 				}
@@ -418,7 +422,7 @@ func Test_readDelta_Token(t *testing.T) {
 			// This is necessary due to the asynchronous nature of the readDelta function,
 			// which spawns a go routine.
 			for {
-				readDelta(tt.args.registry, tt.args.delegate, &tt.args.apiDelegate)
+				readDelta(ctx, tt.args.registry, tt.args.delegate, &tt.args.apiDelegate)
 				if tt.args.apiDelegate.hasHandledCallback {
 					break
 				}

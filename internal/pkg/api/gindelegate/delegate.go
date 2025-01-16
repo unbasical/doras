@@ -1,13 +1,13 @@
 package gindelegate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/unbasical/doras-server/internal/pkg/auth"
-
 	apidelegate "github.com/unbasical/doras-server/internal/pkg/delegates/api"
 
 	"github.com/gin-gonic/gin"
@@ -19,6 +19,10 @@ import (
 // ginDorasContext implements the apidelegate.APIDelegate interface for gin HTTP servers.
 type ginDorasContext struct {
 	c *gin.Context
+}
+
+func (g *ginDorasContext) RequestContext() (context.Context, error) {
+	return g.c.Request.Context(), nil
 }
 
 func (g *ginDorasContext) ExtractClientAuth() (auth.RegistryAuth, error) {
