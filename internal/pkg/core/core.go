@@ -18,10 +18,11 @@ import (
 )
 
 type Doras struct {
-	engine   *gin.Engine
 	srv      *http.Server
+	engine   dorasengine.Engine
 	hostname string
 	port     uint16
+	config   configs.ServerConfig
 }
 
 // New returns an instance of a Doras server.
@@ -64,23 +65,24 @@ func (d *Doras) init(config configs.ServerConfig) *Doras {
 		deltaDelegate = deltadelegate.NewDeltaDelegate(repoUrl)
 	}
 	dorasEngine := dorasengine.NewEngine(registryDelegate, deltaDelegate)
-	d.engine = api.BuildApp(dorasEngine)
-	err = d.engine.SetTrustedProxies(config.ConfigFile.TrustedProxies)
+	r := api.BuildApp(dorasEngine)
+	err = r.SetTrustedProxies(config.ConfigFile.TrustedProxies)
 	if err != nil {
 		log.WithError(err).Fatal("failed to set trusted proxies")
 	}
-
+	d.srv = &http.Server{
+		Addr:    fmt.Sprintf("%s:%d", d.hostname, d.port),
+		Handler: r,
+	}
+	d.engine = dorasEngine
+	d.config = config
 	return d
 }
 
 // Start the Doras server.
 func (d *Doras) Start() {
 	log.Info("Starting Doras server")
-	serverURL := fmt.Sprintf("%s:%d", d.hostname, d.port)
-	d.srv = &http.Server{
-		Addr:    serverURL,
-		Handler: d.engine,
-	}
+
 	go func() {
 		if err := d.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.WithError(err).Fatal("failed to start server")
@@ -92,5 +94,6 @@ func (d *Doras) Start() {
 
 // Stop the Doras server.
 func (d *Doras) Stop(ctx context.Context) error {
+	go d.engine.Stop(ctx)
 	return d.srv.Shutdown(ctx)
 }

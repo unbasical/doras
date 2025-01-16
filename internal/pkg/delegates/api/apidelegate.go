@@ -1,7 +1,6 @@
 package apidelegate
 
 import (
-	"context"
 	auth2 "github.com/unbasical/doras-server/internal/pkg/auth"
 )
 
@@ -11,5 +10,4 @@ type APIDelegate interface {
 	HandleError(err error, msg string)
 	HandleSuccess(response any)
 	HandleAccepted()
-	RequestContext() (context.Context, error)
 }

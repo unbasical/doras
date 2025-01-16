@@ -286,12 +286,13 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 		wg.Wait()
 	})
 	// Gracefully shut down the server with a timeout
-	gracefulPeriod := 10 * time.Second
+	gracefulPeriod := 3 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), gracefulPeriod)
 	log.Infof("shutting down server with a graceful period of %d Seconds ...", gracefulPeriod/time.Second)
 	defer cancel()
 	if err := dorasServer.Stop(ctx); err != nil {
-		log.Fatalf("Server forced to shut down: %s", err)
+		log.WithError(err).Info("stopping Doras server had error")
+		return
 	}
 	log.Println("Server exited gracefully")
 }

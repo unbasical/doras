@@ -1,7 +1,6 @@
 package gindelegate
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -19,13 +18,6 @@ import (
 // ginDorasContext implements the apidelegate.APIDelegate interface for gin HTTP servers.
 type ginDorasContext struct {
 	c *gin.Context
-}
-
-func (g *ginDorasContext) RequestContext() (context.Context, error) {
-	_ = g.c.Request.Context()
-	// Overwrite the context because this seems to block requests.
-	ctx := context.Background()
-	return ctx, nil
 }
 
 func (g *ginDorasContext) ExtractClientAuth() (auth.RegistryAuth, error) {
