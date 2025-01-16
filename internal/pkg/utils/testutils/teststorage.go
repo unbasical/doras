@@ -11,14 +11,21 @@ import (
 	"oras.land/oras-go/v2/content/oci"
 )
 
+// FileDescription represents a file that is stored as an OCI image.
 type FileDescription struct {
-	Name        string
-	Data        []byte
-	MediaType   string
-	Tag         string
+	// Name of the file.
+	Name string
+	// Data of the file.
+	Data []byte
+	// MediaType of the file.
+	MediaType string
+	// Tag of the file.
+	Tag string
+	// NeedsUnpack indicates if it is an archived file or not.
 	NeedsUnpack bool
 }
 
+// StorageFromFiles creates an oras.ReadOnlyTarget that stores the given files.
 func StorageFromFiles(ctx context.Context, rootDir string, files []FileDescription) (oras.ReadOnlyTarget, error) {
 	store, err := oci.New(rootDir)
 	if err != nil {

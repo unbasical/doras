@@ -18,21 +18,23 @@ import (
 	"github.com/unbasical/doras-server/pkg/constants"
 )
 
-type Delegate struct {
+type delegate struct {
 	baseUrl        string
 	activeRequests map[string]any
 	m              sync.Mutex
 }
 
+// NewDeltaDelegate construct a DeltaDelegate that is used to handle delta creation operations.
+// The baseUrl affects repository names/paths.
 func NewDeltaDelegate(baseUrl string) DeltaDelegate {
-	return &Delegate{
+	return &delegate{
 		baseUrl:        baseUrl,
 		activeRequests: make(map[string]any),
 		m:              sync.Mutex{},
 	}
 }
 
-func (d *Delegate) IsDummy(mf v1.Manifest) (isDummy bool, expired bool) {
+func (d *delegate) IsDummy(mf v1.Manifest) (isDummy bool, expired bool) {
 	if mf.Annotations[constants.DorasAnnotationIsDummy] != "true" {
 		return false, false
 	}
@@ -48,7 +50,7 @@ func (d *Delegate) IsDummy(mf v1.Manifest) (isDummy bool, expired bool) {
 	return
 }
 
-func (d *Delegate) GetDeltaLocation(deltaMf registrydelegate.DeltaManifestOptions) (string, error) {
+func (d *delegate) GetDeltaLocation(deltaMf registrydelegate.DeltaManifestOptions) (string, error) {
 	digestFrom, err := extractDigest(deltaMf.From)
 	if err != nil {
 		return "", err
@@ -57,7 +59,7 @@ func (d *Delegate) GetDeltaLocation(deltaMf registrydelegate.DeltaManifestOption
 	if err != nil {
 		return "", err
 	}
-	dgstIdentifier := digest.FromBytes([]byte(digestFrom.Encoded() + digestTo.Encoded() + deltaMf.GetTag()))
+	dgstIdentifier := digest.FromBytes([]byte(digestFrom.Encoded() + digestTo.Encoded() + deltaMf.GetTagSuffix()))
 	repoName, _, _, err := ociutils.ParseOciImageString(deltaMf.From)
 	if err != nil {
 		return "", err
@@ -80,7 +82,7 @@ func extractDigest(image string) (*digest.Digest, error) {
 	return &val, nil
 }
 
-func (d *Delegate) CreateDelta(from, to io.ReadCloser, manifOpts registrydelegate.DeltaManifestOptions, dst registrydelegate.RegistryDelegate) error {
+func (d *delegate) CreateDelta(from, to io.ReadCloser, manifOpts registrydelegate.DeltaManifestOptions, dst registrydelegate.RegistryDelegate) error {
 	// TODO: avoid leaking readers
 	deltaReader, err := manifOpts.Differ.Diff(from, to)
 	if err != nil {
@@ -111,8 +113,15 @@ func (d *Delegate) CreateDelta(from, to io.ReadCloser, manifOpts registrydelegat
 	return nil
 }
 
+// DeltaDelegate abstracts over operations that are required to create deltas.
 type DeltaDelegate interface {
+	// IsDummy checks if the provided v1.Manifest refers to a dummy image that has not expired.
+	// Dummy images are used to communicate to other Doras instances that a server is working on creating this delta.
+	// This method should handle synchronization at the instance level.
 	IsDummy(mf v1.Manifest) (isDummy bool, expired bool)
+	// GetDeltaLocation returns the image at which the delta with the given options is/should be stored.
 	GetDeltaLocation(deltaMf registrydelegate.DeltaManifestOptions) (string, error)
+	// CreateDelta constructs the delta and pushes it to the registry.
+	// This method should handle synchronization at the instance level.
 	CreateDelta(from, to io.ReadCloser, manifOpts registrydelegate.DeltaManifestOptions, dst registrydelegate.RegistryDelegate) error
 }

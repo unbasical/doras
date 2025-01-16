@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-type FileBackedReadSeekCloser struct {
+type fileBackedReadSeekCloser struct {
 	r io.Reader
 	// this file is automatically appended to when the provided reader is read from
 	fileIngest *os.File
@@ -22,8 +22,8 @@ type FileBackedReadSeekCloser struct {
 	offsetFile int64
 }
 
-func newImpl(r io.Reader) (*FileBackedReadSeekCloser, error) {
-	res := &FileBackedReadSeekCloser{}
+func newImpl(r io.Reader) (*fileBackedReadSeekCloser, error) {
+	res := &fileBackedReadSeekCloser{}
 	tmpFile, err := os.CreateTemp(os.TempDir(), "rsc_*")
 	if err != nil {
 		return nil, fmt.Errorf("error creating temp file for writing: %w", err)
@@ -40,12 +40,14 @@ func newImpl(r io.Reader) (*FileBackedReadSeekCloser, error) {
 	return res, nil
 }
 
+// New turn the io.Reader into a file-backed io.ReadSeekCloser.
+// Calling Close() deletes the backing file.
 func New(r io.Reader) (io.ReadSeekCloser, error) {
 	return newImpl(r)
 }
 
 // Read reads from the original ReadCloser or the temporary file if it has been created.
-func (frsc *FileBackedReadSeekCloser) Read(p []byte) (int, error) {
+func (frsc *fileBackedReadSeekCloser) Read(p []byte) (int, error) {
 	if frsc.offsetReader < frsc.offsetFile {
 		bytesBehind := frsc.offsetFile - frsc.offsetReader
 		data, err := io.ReadAll(io.LimitReader(frsc.r, bytesBehind))
@@ -86,7 +88,8 @@ func (frsc *FileBackedReadSeekCloser) Read(p []byte) (int, error) {
 	return n, nil
 }
 
-func (frsc *FileBackedReadSeekCloser) Seek(offset int64, whence int) (int64, error) {
+// Seek to the offset based on whence.
+func (frsc *fileBackedReadSeekCloser) Seek(offset int64, whence int) (int64, error) {
 	_, err := frsc.fileOut.Seek(frsc.offsetFile, io.SeekStart)
 	if err != nil {
 		return 0, err
@@ -96,7 +99,8 @@ func (frsc *FileBackedReadSeekCloser) Seek(offset int64, whence int) (int64, err
 	return offset, err
 }
 
-func (frsc *FileBackedReadSeekCloser) Close() error {
+// Close the reader.
+func (frsc *fileBackedReadSeekCloser) Close() error {
 	closer := func(f *os.File) {
 		if err := f.Close(); err != nil {
 			fmt.Printf("error closing file: %v\n", err)

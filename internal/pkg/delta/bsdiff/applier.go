@@ -1,16 +1,18 @@
 package bsdiff
 
 import (
+	"github.com/unbasical/doras-server/pkg/algorithm/delta"
 	"io"
 
-	"github.com/gabstv/go-bsdiff/pkg/bspatch"
+	bspatchdep "github.com/gabstv/go-bsdiff/pkg/bspatch"
 	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 )
 
-func Bspatch(old io.Reader, patch io.Reader) (io.ReadCloser, error) {
+func bspatch(old io.Reader, patch io.Reader) (io.ReadCloser, error) {
+	// Use pipes to turn the writer into a reader.
 	pr, pw := io.Pipe()
 	go func() {
-		err := bspatch.Reader(old, pw, patch)
+		err := bspatchdep.Reader(old, pw, patch)
 		if err != nil {
 			errInner := pw.CloseWithError(err)
 			funcutils.PanicOrLogOnErr(funcutils.IdentityFunc(errInner), false, "failed to close pipe writer after error")
@@ -20,12 +22,17 @@ func Bspatch(old io.Reader, patch io.Reader) (io.ReadCloser, error) {
 	return pr, nil
 }
 
-type Applier struct {
+type patcher struct {
 }
 
-func (a *Applier) Patch(old io.Reader, new io.Reader) (io.Reader, error) {
-	return Bspatch(old, new)
+// NewPatcher return a bsdiff delta.Patcher.
+func NewPatcher() delta.Patcher {
+	return &patcher{}
 }
-func (a *Applier) Name() string {
+
+func (a *patcher) Patch(old io.Reader, new io.Reader) (io.Reader, error) {
+	return bspatch(old, new)
+}
+func (a *patcher) Name() string {
 	return "bsdiff"
 }

@@ -19,12 +19,14 @@ type Doras struct {
 	port     uint16
 }
 
+// New returns an instance of a Doras server.
 func New(config configs.ServerConfig) *Doras {
 	doras := Doras{}
-	return doras.Init(config)
+	return doras.init(config)
 }
 
-func (d *Doras) Init(config configs.ServerConfig) *Doras {
+// init initializes the
+func (d *Doras) init(config configs.ServerConfig) *Doras {
 	// TODO: replace repository with a mechanism that resolves a string to a target, e.g. a remote repository
 	reg, err := remote.NewRegistry(config.ConfigFile.Storage.URL)
 	if err != nil {
@@ -39,8 +41,7 @@ func (d *Doras) Init(config configs.ServerConfig) *Doras {
 	d.port = config.CliOpts.HTTPPort
 
 	appConfig := &apicommon.Config{
-		ArtifactStorage: apicommon.NewRegistryStorage(reg, ""),
-		RepoClients:     clientConfigs,
+		RepoClients: clientConfigs,
 	}
 	if config.CliOpts.LogLevel != "debug" {
 		gin.SetMode(gin.ReleaseMode)
@@ -54,17 +55,18 @@ func (d *Doras) Init(config configs.ServerConfig) *Doras {
 	return d
 }
 
+// Start the Doras server.
 func (d *Doras) Start() {
-	// TODO: use goroutine and channel to handle shutdown
 	log.Info("Starting doras")
 	d.stop = make(chan bool, 1)
 	serverURL := fmt.Sprintf("%s:%d", d.hostname, d.port)
 	err := d.engine.Run(serverURL)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 }
 
+// Stop the Doras server.
 func (d *Doras) Stop() {
 	// TODO: use goroutine and channel to handle shutdown
 	log.Info("Stopping doras")

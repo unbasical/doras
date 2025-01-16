@@ -31,7 +31,7 @@ type DeltaManifestOptions struct {
 	algorithmchoice.DifferChoice
 }
 
-type RegistryImpl struct {
+type registryImpl struct {
 	// TODO: replace with map of configured registries
 	*remote.Registry
 	registryUrl   string
@@ -39,8 +39,9 @@ type RegistryImpl struct {
 	activeDummies map[string]any
 }
 
+// NewRegistryDelegate constructs a RegistryDelegate for a given registry that is located at the provided registryUrl.
 func NewRegistryDelegate(registryUrl string, registry *remote.Registry) RegistryDelegate {
-	return &RegistryImpl{
+	return &registryImpl{
 		Registry:      registry,
 		registryUrl:   registryUrl,
 		m:             sync.Mutex{},
@@ -48,7 +49,7 @@ func NewRegistryDelegate(registryUrl string, registry *remote.Registry) Registry
 	}
 }
 
-func (r *RegistryImpl) Resolve(image string, expectDigest bool, creds auth.CredentialFunc) (oras.ReadOnlyTarget, string, v1.Descriptor, error) {
+func (r *registryImpl) Resolve(image string, expectDigest bool, creds auth.CredentialFunc) (oras.ReadOnlyTarget, string, v1.Descriptor, error) {
 	ctx := context.Background()
 
 	repoName, tag, isDigest, err := ociutils.ParseOciImageString(image)
@@ -82,16 +83,20 @@ func (r *RegistryImpl) Resolve(image string, expectDigest bool, creds auth.Crede
 	return repository, imageDigest, d, nil
 }
 
-func (r *RegistryImpl) LoadManifest(target v1.Descriptor, source oras.ReadOnlyTarget) (v1.Manifest, error) {
+func (r *registryImpl) LoadManifest(target v1.Descriptor, source oras.ReadOnlyTarget) (v1.Manifest, error) {
 	mfReader, err := source.Fetch(context.Background(), target)
 	if err != nil {
 		return v1.Manifest{}, err
 	}
 	defer funcutils.PanicOrLogOnErr(mfReader.Close, false, "failed to close reader")
-	return ociutils.ParseManifest(mfReader)
+	mf, err := ociutils.ParseManifestJSON(mfReader)
+	if err != nil {
+		return v1.Manifest{}, err
+	}
+	return *mf, err
 }
 
-func (r *RegistryImpl) LoadArtifact(mf v1.Manifest, source oras.ReadOnlyTarget) (io.ReadCloser, error) {
+func (r *registryImpl) LoadArtifact(mf v1.Manifest, source oras.ReadOnlyTarget) (io.ReadCloser, error) {
 	if len(mf.Layers) != 1 {
 		return nil, errors.New("expected single layer")
 	}
@@ -102,7 +107,7 @@ func (r *RegistryImpl) LoadArtifact(mf v1.Manifest, source oras.ReadOnlyTarget) 
 	return rc, nil
 }
 
-func (r *RegistryImpl) PushDelta(image string, manifOpts DeltaManifestOptions, content io.ReadCloser) error {
+func (r *registryImpl) PushDelta(image string, manifOpts DeltaManifestOptions, content io.ReadCloser) error {
 	repoName, tag, _, err := ociutils.ParseOciImageString(image)
 	if err != nil {
 		return err
@@ -132,6 +137,7 @@ func (r *RegistryImpl) PushDelta(image string, manifOpts DeltaManifestOptions, c
 	// hash file while writing it to the disk
 	hasher := sha256.New()
 	teeReader := io.NopCloser(io.TeeReader(content, hasher))
+	defer funcutils.PanicOrLogOnErr(content.Close, false, "failed to close reader")
 	n, err := io.Copy(fp, teeReader)
 	if err != nil {
 		return err
@@ -149,7 +155,8 @@ func (r *RegistryImpl) PushDelta(image string, manifOpts DeltaManifestOptions, c
 	if err != nil {
 		return err
 	}
-	err = repository.Push(ctx, deltaDescriptor, fp)
+	// Wrap with a NopCloser because the push implementation seems to use reflection to close the reader.
+	err = repository.Push(ctx, deltaDescriptor, io.NopCloser(fp))
 	if err != nil {
 		return err
 	}
@@ -172,7 +179,7 @@ func (r *RegistryImpl) PushDelta(image string, manifOpts DeltaManifestOptions, c
 	return nil
 }
 
-func (r *RegistryImpl) PushDummy(image string, manifOpts DeltaManifestOptions) error {
+func (r *registryImpl) PushDummy(image string, manifOpts DeltaManifestOptions) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 	if _, ok := r.activeDummies[image]; ok {

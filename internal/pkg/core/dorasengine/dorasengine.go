@@ -53,6 +53,7 @@ func checkRepoCompatability(a, b string) error {
 	return nil
 }
 
+//nolint:revive // This rule is disabled to get around complexity linter errors. Reducing the complexity of this function is difficult. Refer to the Doras specs in the file docs/delta-creation-spec.md for more information on the semantics of this god function.
 func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate, apiDelegate apidelegate.APIDelegate) {
 	fromDigest, toTarget, acceptedAlgorithms, err := apiDelegate.ExtractParams()
 	if err != nil {
@@ -119,7 +120,7 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 	manifOpts := registrydelegate.DeltaManifestOptions{
 		From:         fromImage,
 		To:           toImage,
-		DifferChoice: algorithmchoice.ChooseAlgorithm(acceptedAlgorithms, &mfFrom, &mfTo),
+		DifferChoice: algorithmchoice.ChooseAlgorithms(acceptedAlgorithms, &mfFrom, &mfTo),
 	}
 
 	deltaImage, err := delegate.GetDeltaLocation(manifOpts)
@@ -210,7 +211,7 @@ func checkCompatability(from *v1.Manifest, to *v1.Manifest) error {
 	if len(from.Layers) != len(to.Layers) {
 		return errors.New("incompatible amount of layers")
 	}
-	if from.Annotations[constants.ContentUnpack] != to.Annotations[constants.ContentUnpack] {
+	if from.Annotations[constants.OrasContentUnpack] != to.Annotations[constants.OrasContentUnpack] {
 		return errors.New("incompatible artifacts")
 	}
 	return nil

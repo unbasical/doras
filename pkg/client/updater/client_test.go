@@ -194,7 +194,7 @@ func (n *NopSeeker) Close() error {
 	return n.Reader.Close()
 }
 
-func (n *NopSeeker) Seek(offset int64, whence int) (int64, error) {
+func (n *NopSeeker) Seek(_ int64, _ int) (int64, error) {
 	// No-op: always return current position (0) and no error
 	return 0, nil
 }

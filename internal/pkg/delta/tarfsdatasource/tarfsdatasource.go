@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"errors"
 	"fmt"
+	tarpatch "github.com/containers/tar-diff/pkg/tar-patch"
 	"github.com/unbasical/doras-server/internal/pkg/utils/readseekcloserwrapper"
 	"io"
 	"path"
@@ -15,23 +16,31 @@ type entry struct {
 	pos    int64
 }
 
-type TarfsDataSource struct {
+// DataSource implements a file system backed tarpatch.DataSource.
+// This does not extract the archive, but it creates a temporary file, to which the contents are written lazily.
+type DataSource struct {
 	rsc          io.ReadSeekCloser
 	entries      map[string]*entry
 	currentEntry *entry
 	currentPos   int64
 }
 
-func New(r io.Reader, extract func(reader io.Reader) io.Reader) *TarfsDataSource {
-	if extract != nil {
-		r = extract(r)
+// NewDataSource constructs a tarpatch.DataSource that optionally decompresses the input archive and writes the archive to a temporary file.
+// Calling Close() cleans up the temporary files.
+func NewDataSource(r io.Reader, decompress func(reader io.Reader) (io.Reader, error)) (tarpatch.DataSource, error) {
+	if decompress != nil {
+		var err error
+		r, err = decompress(r)
+		if err != nil {
+			return nil, err
+		}
 	}
-	res := &TarfsDataSource{
+	res := &DataSource{
 		entries: make(map[string]*entry),
 	}
 	rsc, err := readseekcloserwrapper.New(r)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	res.rsc = rsc
 	tr := tar.NewReader(rsc)
@@ -41,21 +50,21 @@ func New(r io.Reader, extract func(reader io.Reader) io.Reader) *TarfsDataSource
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			panic(err)
+			return nil, err
 		}
 		pos, err := rsc.Seek(0, io.SeekCurrent)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		res.entries[path.Clean(header.Name)] = &entry{
 			header: header,
 			pos:    pos,
 		}
 	}
-	return res
+	return res, nil
 }
 
-func (t *TarfsDataSource) Read(p []byte) (n int, err error) {
+func (t *DataSource) Read(p []byte) (n int, err error) {
 	if t.currentEntry == nil {
 		return 0, fmt.Errorf("no file set")
 	}
@@ -72,7 +81,7 @@ func (t *TarfsDataSource) Read(p []byte) (n int, err error) {
 	return n, nil
 }
 
-func (t *TarfsDataSource) Seek(offset int64, whence int) (int64, error) {
+func (t *DataSource) Seek(offset int64, whence int) (int64, error) {
 	var newPos int64
 	switch whence {
 	case io.SeekStart:
@@ -94,17 +103,17 @@ func (t *TarfsDataSource) Seek(offset int64, whence int) (int64, error) {
 	return offset - t.currentEntry.pos, nil
 }
 
-func (t *TarfsDataSource) Close() error {
+func (t *DataSource) Close() error {
 	// do nothing as close means closing the current file.
 	return nil
 }
 
 // CloseDataSource Close the currently opened reader.
-func (t *TarfsDataSource) CloseDataSource() error {
+func (t *DataSource) CloseDataSource() error {
 	return t.rsc.Close()
 }
 
-func (t *TarfsDataSource) SetCurrentFile(file string) error {
+func (t *DataSource) SetCurrentFile(file string) error {
 	e, ok := t.entries[file]
 	if !ok {
 		return fmt.Errorf("file not found")

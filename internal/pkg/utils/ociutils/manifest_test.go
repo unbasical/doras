@@ -21,7 +21,7 @@ func TestExtractPathFromManifest(t *testing.T) {
 			name: "Valid manifest with archive",
 			manifest: &v1.Manifest{
 				Annotations: map[string]string{
-					constants.ContentUnpack:          "true",
+					constants.OrasContentUnpack:      "true",
 					"org.opencontainers.image.title": "file.txt",
 				},
 			},
@@ -44,7 +44,7 @@ func TestExtractPathFromManifest(t *testing.T) {
 			name: "Missing file title",
 			manifest: &v1.Manifest{
 				Annotations: map[string]string{
-					constants.ContentUnpack: "true",
+					constants.OrasContentUnpack: "true",
 				},
 			},
 			expectedPath:    "",

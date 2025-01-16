@@ -1,9 +1,8 @@
 package bsdiff
 
 import (
+	"github.com/unbasical/doras-server/pkg/algorithm/delta"
 	"io"
-
-	"github.com/unbasical/doras-server/pkg/delta"
 
 	bsdiff2 "github.com/gabstv/go-bsdiff/pkg/bsdiff"
 	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
@@ -12,11 +11,13 @@ import (
 type creator struct {
 }
 
+// NewCreator returns a bsdiff delta.Differ.
 func NewCreator() delta.Differ {
 	return &creator{}
 }
 
 func (c *creator) Diff(old io.Reader, new io.Reader) (io.ReadCloser, error) {
+	// Use a pipe to turn the writer into a reader.
 	pr, pw := io.Pipe()
 	go func() {
 		err := bsdiff2.Reader(old, new, pw)
@@ -25,11 +26,10 @@ func (c *creator) Diff(old io.Reader, new io.Reader) (io.ReadCloser, error) {
 			return
 		}
 		funcutils.PanicOrLogOnErr(pw.Close, false, "failed to close pipe writer")
-
 	}()
 	return pr, nil
 }
 
-func (a *creator) Name() string {
+func (c *creator) Name() string {
 	return "bsdiff"
 }

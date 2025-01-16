@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	delta2 "github.com/unbasical/doras-server/pkg/algorithm/delta"
 	"io"
 	"net/http"
 	"strings"
@@ -14,12 +15,10 @@ import (
 
 	"github.com/unbasical/doras-server/internal/pkg/compression/zstd"
 	"github.com/unbasical/doras-server/internal/pkg/utils/compressionutils"
-	"github.com/unbasical/doras-server/pkg/compression"
+	"github.com/unbasical/doras-server/pkg/algorithm/compression"
 
 	bsdiff2 "github.com/unbasical/doras-server/internal/pkg/delta/bsdiff"
 	"github.com/unbasical/doras-server/internal/pkg/delta/tardiff"
-	delta2 "github.com/unbasical/doras-server/pkg/delta"
-
 	"github.com/unbasical/doras-server/internal/pkg/utils/fileutils"
 	"github.com/unbasical/doras-server/internal/pkg/utils/logutils"
 	testutils2 "github.com/unbasical/doras-server/internal/pkg/utils/testutils"
@@ -71,8 +70,7 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 		ConfigFile: configFile,
 		CliOpts:    configs.CLI{HTTPPort: 8081, Host: "localhost", LogLevel: "debug"},
 	}
-	dorasApp := core.Doras{}
-	go dorasApp.Init(serverConfig).Start()
+	go core.New(serverConfig).Start()
 
 	reg, err := remote.NewRegistry(regUri)
 	if err != nil {
@@ -211,16 +209,16 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 			var patcher delta2.Patcher
 			switch algo {
 			case "tardiff+zstd":
-				patcher = &tardiff.Applier{}
+				patcher = tardiff.NewPatcher()
 				decompressor = zstd.NewDecompressor()
 			case "bsdiff+zstd":
-				patcher = &bsdiff2.Applier{}
+				patcher = bsdiff2.NewPatcher()
 				decompressor = zstd.NewDecompressor()
 			case "tardiff":
-				patcher = &tardiff.Applier{}
+				patcher = tardiff.NewPatcher()
 				decompressor = compressionutils.NewNopDecompressor()
 			case "bsdiff":
-				patcher = &bsdiff2.Applier{}
+				patcher = bsdiff2.NewPatcher()
 				decompressor = compressionutils.NewNopDecompressor()
 			default:
 				t.Error("unknown algorithm")
