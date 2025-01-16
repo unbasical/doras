@@ -41,8 +41,7 @@ func (d *Doras) init(config configs.ServerConfig) *Doras {
 	d.port = config.CliOpts.HTTPPort
 
 	appConfig := &apicommon.Config{
-		ArtifactStorage: apicommon.NewRegistryStorage(reg, ""),
-		RepoClients:     clientConfigs,
+		RepoClients: clientConfigs,
 	}
 	if config.CliOpts.LogLevel != "debug" {
 		gin.SetMode(gin.ReleaseMode)

@@ -74,7 +74,7 @@ func (g *ginDorasContext) HandleError(err error, msg string) {
 	if errors.Is(err, error2.ErrMissingQueryParam) {
 		statusCode = http.StatusBadRequest
 	}
-	apicommon.RespondWithError(g.c, statusCode, err, msg)
+	RespondWithError(g.c, statusCode, err, msg)
 }
 
 func (g *ginDorasContext) ExtractParams() (fromImage, toImage string, acceptedAlgorithms []string, err error) {
@@ -113,4 +113,15 @@ func (g *ginDorasContext) HandleSuccess(response any) {
 
 func (g *ginDorasContext) HandleAccepted() {
 	g.c.Status(http.StatusAccepted)
+}
+
+// RespondWithError sends an error reply to the client.
+func RespondWithError(c *gin.Context, statusCode int, err error, errorContext string) {
+	c.JSON(statusCode, apicommon.APIError{
+		Error: apicommon.APIErrorInner{
+			Code:         statusCode,
+			Message:      err.Error(),
+			ErrorContext: errorContext,
+		},
+	})
 }
