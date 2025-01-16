@@ -2,7 +2,9 @@ package auth
 
 import auth2 "oras.land/oras-go/v2/registry/remote/auth"
 
+// RegistryAuth abstracts over credentials that can be used to access registries.
 type RegistryAuth interface {
+	// CredentialFunc returns an authentication mechanism that can be used to access the registry at the provided URL.
 	CredentialFunc(scope string) (auth2.CredentialFunc, error)
 }
 
