@@ -62,7 +62,7 @@ func (d *Doras) Start() {
 	serverURL := fmt.Sprintf("%s:%d", d.hostname, d.port)
 	err := d.engine.Run(serverURL)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 }
 

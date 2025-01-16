@@ -324,9 +324,9 @@ func getPatcherChoice(mf *v1.Manifest) (algorithmchoice.PatcherChoice, error) {
 	}
 	switch split[0] {
 	case "bsdiff":
-		choice.Patcher = &bsdiff.Applier{}
+		choice.Patcher = bsdiff.NewPatcher()
 	case "tardiff":
-		choice.Patcher = &tardiff.Applier{}
+		choice.Patcher = tardiff.NewPatcher()
 	default:
 		panic("not supported")
 	}

@@ -209,16 +209,16 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 			var patcher delta2.Patcher
 			switch algo {
 			case "tardiff+zstd":
-				patcher = &tardiff.Applier{}
+				patcher = tardiff.NewPatcher()
 				decompressor = zstd.NewDecompressor()
 			case "bsdiff+zstd":
-				patcher = &bsdiff2.Applier{}
+				patcher = bsdiff2.NewPatcher()
 				decompressor = zstd.NewDecompressor()
 			case "tardiff":
-				patcher = &tardiff.Applier{}
+				patcher = tardiff.NewPatcher()
 				decompressor = compressionutils.NewNopDecompressor()
 			case "bsdiff":
-				patcher = &bsdiff2.Applier{}
+				patcher = bsdiff2.NewPatcher()
 				decompressor = compressionutils.NewNopDecompressor()
 			default:
 				t.Error("unknown algorithm")

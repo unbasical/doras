@@ -26,7 +26,6 @@ func (c *creator) Diff(old io.Reader, new io.Reader) (io.ReadCloser, error) {
 			return
 		}
 		funcutils.PanicOrLogOnErr(pw.Close, false, "failed to close pipe writer")
-
 	}()
 	return pr, nil
 }

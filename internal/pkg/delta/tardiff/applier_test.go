@@ -11,7 +11,7 @@ import (
 )
 
 func TestApplier_Apply(t *testing.T) {
-	applier := &Applier{}
+	applier := &applier{}
 
 	diff := fileutils.ReadOrPanic("../../../../test/test-files/delta.patch.tardiff")
 	from := fileutils.ReadOrPanic("../../../../test/test-files/from.tar.gz")
@@ -66,7 +66,7 @@ func TestApplier_Apply(t *testing.T) {
 }
 
 func TestPatcher_Interface(t *testing.T) {
-	var c any = &Applier{}
+	var c any = &applier{}
 	_, ok := (c).(delta.Patcher)
 	if !ok {
 		t.Error("interface not implemented")

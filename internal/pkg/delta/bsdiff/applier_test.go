@@ -13,7 +13,7 @@ func TestApplier_Apply(t *testing.T) {
 	from := []byte("Hello")
 	to := []byte("Hello World")
 	bsDiffPatch, err := bsdiff2.Bytes(from, to)
-	patcher := &Applier{}
+	patcher := &patcher{}
 	if err != nil {
 		t.Error(err)
 	}
@@ -41,21 +41,21 @@ func TestApplier_Apply(t *testing.T) {
 			got, _ := patcher.Patch(tt.args.old, tt.args.patch)
 			data, err := io.ReadAll(got)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Bspatch() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("bspatch() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if (err != nil) && tt.wantErr {
 				return
 			}
 
 			if !bytes.Equal(data, tt.want) {
-				t.Errorf("Bspatch()\ngot = %v,\n want %v", data, tt.want)
+				t.Errorf("bspatch()\ngot = %v,\n want %v", data, tt.want)
 			}
 		})
 	}
 }
 
 func TestPatcher_Interface(t *testing.T) {
-	var c any = &Applier{}
+	var c any = &patcher{}
 	_, ok := (c).(delta.Patcher)
 	if !ok {
 		t.Error("interface not implemented")
