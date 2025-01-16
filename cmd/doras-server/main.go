@@ -39,7 +39,7 @@ func main() {
 	<-quit
 
 	// Gracefully shut down the server with a timeout
-	gracefulPeriod := 20 * time.Second
+	gracefulPeriod := time.Duration(serverConfig.CliOpts.ShutdownTimout) * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), gracefulPeriod)
 	log.Infof("shutting down server with a graceful period of %d Seconds ...", gracefulPeriod/time.Second)
 	defer cancel()
