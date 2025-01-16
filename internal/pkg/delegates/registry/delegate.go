@@ -137,6 +137,7 @@ func (r *registryImpl) PushDelta(image string, manifOpts DeltaManifestOptions, c
 	// hash file while writing it to the disk
 	hasher := sha256.New()
 	teeReader := io.NopCloser(io.TeeReader(content, hasher))
+	defer funcutils.PanicOrLogOnErr(content.Close, false, "failed to close reader")
 	n, err := io.Copy(fp, teeReader)
 	if err != nil {
 		return err
@@ -154,7 +155,8 @@ func (r *registryImpl) PushDelta(image string, manifOpts DeltaManifestOptions, c
 	if err != nil {
 		return err
 	}
-	err = repository.Push(ctx, deltaDescriptor, fp)
+	// Wrap with a NopCloser because the push implementation seems to use reflection to close the reader.
+	err = repository.Push(ctx, deltaDescriptor, io.NopCloser(fp))
 	if err != nil {
 		return err
 	}

@@ -44,3 +44,11 @@ func WriterToReader(reader io.Reader, writerSource func(writer io.Writer) io.Wri
 	}()
 	return pr
 }
+
+// CloserFunc is the basic Close method defined in io.Closer.
+type CloserFunc func() error
+
+// Close performs close operation by the CloserFunc.
+func (fn CloserFunc) Close() error {
+	return fn()
+}

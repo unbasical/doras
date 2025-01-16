@@ -18,14 +18,24 @@ func NewCompressor() compression.Compressor {
 		// Turn the compression writer into a reader.
 		Compressor: &compressionutils.Compressor{
 			Func: func(reader io.ReadCloser) (io.ReadCloser, error) {
+				var closer readerutils.CloserFunc
 				r := readerutils.WriterToReader(reader, func(writer io.Writer) io.WriteCloser {
 					newWriter, err := zstd.NewWriter(writer)
 					if err != nil {
 						panic(err)
 					}
+					closer = newWriter.Close
 					return newWriter
 				})
-				return io.NopCloser(r), nil
+				retval := struct {
+					io.Reader
+					io.Closer
+				}{
+					Reader: r,
+					Closer: closer,
+				}
+				// Prevent resource leak.
+				return readerutils.ChainedCloser(retval, reader), nil
 			},
 			Algo: "zstd",
 		},
