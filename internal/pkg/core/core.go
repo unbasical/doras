@@ -67,7 +67,8 @@ func (d *Doras) Start() {
 	}
 	go func() {
 		if err := d.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("listen: %s\n", err)
+			log.WithError(err).Fatal("failed to start server")
+			panic(err)
 		}
 	}()
 	log.Infof("Listening on %s", d.srv.Addr)
@@ -75,8 +76,5 @@ func (d *Doras) Start() {
 
 // Stop the Doras server.
 func (d *Doras) Stop(ctx context.Context) error {
-	if err := d.srv.Shutdown(ctx); err != nil {
-		return err
-	}
-	return nil
+	return d.srv.Shutdown(ctx)
 }
