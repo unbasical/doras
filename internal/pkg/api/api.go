@@ -18,6 +18,7 @@ import (
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
 )
 
+// logger creates gin.HandlerFunc that uses logrus for logging.
 func logger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		startTime := time.Now()
@@ -50,6 +51,7 @@ func BuildApp(config *apicommon.Config) *gin.Engine {
 	return r
 }
 
+// ping is an endpoint to check if the server is up.
 func ping(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "pong",

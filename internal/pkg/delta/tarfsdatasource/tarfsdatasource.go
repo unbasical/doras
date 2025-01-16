@@ -25,18 +25,22 @@ type dataSource struct {
 	currentPos   int64
 }
 
-// New constructs a tarpatch.DataSource that optionally decompresses the input archive and writes the archive to a temporary file.
+// NewDataSource constructs a tarpatch.DataSource that optionally decompresses the input archive and writes the archive to a temporary file.
 // Calling Close() cleans up the temporary files.
-func New(r io.Reader, decompress func(reader io.Reader) io.Reader) tarpatch.DataSource {
+func NewDataSource(r io.Reader, decompress func(reader io.Reader) (io.Reader, error)) (tarpatch.DataSource, error) {
 	if decompress != nil {
-		r = decompress(r)
+		var err error
+		r, err = decompress(r)
+		if err != nil {
+			return nil, err
+		}
 	}
 	res := &dataSource{
 		entries: make(map[string]*entry),
 	}
 	rsc, err := readseekcloserwrapper.New(r)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	res.rsc = rsc
 	tr := tar.NewReader(rsc)
@@ -46,18 +50,18 @@ func New(r io.Reader, decompress func(reader io.Reader) io.Reader) tarpatch.Data
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			panic(err)
+			return nil, err
 		}
 		pos, err := rsc.Seek(0, io.SeekCurrent)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		res.entries[path.Clean(header.Name)] = &entry{
 			header: header,
 			pos:    pos,
 		}
 	}
-	return res
+	return res, nil
 }
 
 func (t *dataSource) Read(p []byte) (n int, err error) {

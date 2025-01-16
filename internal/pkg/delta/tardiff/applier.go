@@ -24,21 +24,20 @@ func (a *applier) Patch(old io.Reader, patch io.Reader) (io.Reader, error) {
 	pr, pw := io.Pipe()
 	// Create a file system backed tar data source.
 	// This could be possibly improved using zstd seekable compression.
-	dataSource := tarfsdatasource.New(old, func(reader io.Reader) io.Reader {
+	dataSource, err := tarfsdatasource.NewDataSource(old, func(reader io.Reader) (io.Reader, error) {
 		gzr, err := gzip.NewReader(reader)
 		if err != nil {
 			err := pw.CloseWithError(err)
 			if err != nil {
 				log.WithError(err).Error("error closing gzip stream")
 			}
-			return nil
+			return nil, err
 		}
-		return gzr
+		return gzr, nil
 	})
-	// This implies an error in the previous block.
-	// Not the nicest way to do it, but the first call to read the PR will error.
-	if dataSource == nil {
-		return pr, nil
+	if err != nil {
+		_ = pr.Close()
+		return nil, err
 	}
 	go func() {
 		err := tarpatch.Apply(patch, dataSource, pw)

@@ -39,7 +39,10 @@ func Test_General_Functioning(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dataSource := New(&buf, nil)
+	dataSource, err := NewDataSource(&buf, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, file := range files[0:] {
 		err := dataSource.SetCurrentFile(file.Name)
 		if err != nil {
