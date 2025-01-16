@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"os"
+	"os/signal"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/kong"
 
@@ -30,6 +33,20 @@ func main() {
 	// Start up server.
 	doras := core.New(serverConfig)
 	doras.Start()
+	// Wait for an interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+	<-quit
+
+	// Gracefully shut down the server with a timeout
+	gracefulPeriod := 20 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), gracefulPeriod)
+	log.Infof("shutting down server with a graceful period of %d Seconds ...", gracefulPeriod/time.Second)
+	defer cancel()
+	if err := doras.Stop(ctx); err != nil {
+		log.Fatalf("Server forced to shut down: %s", err)
+	}
+	log.Println("Server exited gracefully")
 }
 
 // StringToLogLevel parse a logrus.Level from the string.

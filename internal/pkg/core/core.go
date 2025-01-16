@@ -1,20 +1,22 @@
 package core
 
 import (
+	"context"
+	"errors"
 	"fmt"
-
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/configs"
 	"github.com/unbasical/doras-server/internal/pkg/api"
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
+	"net/http"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 type Doras struct {
 	engine   *gin.Engine
-	stop     chan bool
+	srv      *http.Server
 	hostname string
 	port     uint16
 }
@@ -57,19 +59,24 @@ func (d *Doras) init(config configs.ServerConfig) *Doras {
 
 // Start the Doras server.
 func (d *Doras) Start() {
-	log.Info("Starting doras")
-	d.stop = make(chan bool, 1)
+	log.Info("Starting Doras server")
 	serverURL := fmt.Sprintf("%s:%d", d.hostname, d.port)
-	err := d.engine.Run(serverURL)
-	if err != nil {
-		panic(err)
+	d.srv = &http.Server{
+		Addr:    serverURL,
+		Handler: d.engine,
 	}
+	go func() {
+		if err := d.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("listen: %s\n", err)
+		}
+	}()
+	log.Infof("Listening on %s", d.srv.Addr)
 }
 
 // Stop the Doras server.
-func (d *Doras) Stop() {
-	// TODO: use goroutine and channel to handle shutdown
-	log.Info("Stopping doras")
-	d.stop <- true
-	log.Warn("Stop() is not implemented yet")
+func (d *Doras) Stop(ctx context.Context) error {
+	if err := d.srv.Shutdown(ctx); err != nil {
+		return err
+	}
+	return nil
 }
