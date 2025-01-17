@@ -319,7 +319,6 @@ func Test_readDelta(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			ctx := context.WithValue(context.Background(), "wg", wg)
 			for {
-				wg.Add(1)
 				readDelta(ctx, tt.args.registry, tt.args.delegate, &tt.args.apiDelegate)
 				if tt.args.apiDelegate.hasHandledCallback {
 					break
@@ -428,7 +427,6 @@ func Test_readDelta_Token(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			ctx := context.WithValue(context.Background(), "wg", wg)
 			for {
-				wg.Add(1)
 				readDelta(ctx, tt.args.registry, tt.args.delegate, &tt.args.apiDelegate)
 				if tt.args.apiDelegate.hasHandledCallback {
 					break

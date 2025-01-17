@@ -58,7 +58,6 @@ func (d *engine) Stop(ctx context.Context) {
 
 func (d *engine) HandleReadDelta(apiDeletgate apidelegate.APIDelegate) {
 	ctx := context.WithValue(context.Background(), "wg", d.wg)
-	d.wg.Add(1)
 	readDelta(ctx, d.registry, d.delegate, apiDeletgate)
 }
 
@@ -84,6 +83,7 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 	if !ok {
 		panic("missing wait group in context")
 	}
+	wg.Add(1)
 	defer wg.Done()
 	fromDigest, toTarget, acceptedAlgorithms, err := apiDelegate.ExtractParams()
 	if err != nil {
