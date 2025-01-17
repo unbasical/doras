@@ -8,13 +8,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/configs"
 	"github.com/unbasical/doras-server/internal/pkg/api"
-	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
 	"github.com/unbasical/doras-server/internal/pkg/core/dorasengine"
 	deltadelegate "github.com/unbasical/doras-server/internal/pkg/delegates/delta"
 	registrydelegate "github.com/unbasical/doras-server/internal/pkg/delegates/registry"
 	"net/http"
-	"oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/auth"
+	"oras.land/oras-go/v2/registry/remote/credentials"
 )
 
 type Doras struct {
@@ -33,37 +31,25 @@ func New(config configs.ServerConfig) *Doras {
 
 // init initializes the
 func (d *Doras) init(config configs.ServerConfig) *Doras {
-	// TODO: replace repository with a mechanism that resolves a string to a target, e.g. a remote repository
-	reg, err := remote.NewRegistry(config.ConfigFile.Storage.URL)
-	if err != nil {
-		log.Fatalf("failed to create reg for URL: %s, %s", config.ConfigFile.Storage.URL, err)
-	}
-
-	clientConfigs := map[string]remote.Client{
-		config.ConfigFile.Storage.URL: &auth.Client{},
-	}
-	reg.PlainHTTP = config.ConfigFile.Storage.EnableHTTP
 	d.hostname = config.CliOpts.Host
 	d.port = config.CliOpts.HTTPPort
 
-	appConfig := &apicommon.Config{
-		RepoClients: clientConfigs,
-	}
 	if config.CliOpts.LogLevel != "debug" {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	var registryDelegate registrydelegate.RegistryDelegate
-	var deltaDelegate deltadelegate.DeltaDelegate
-	for repoUrl, repoClient := range appConfig.RepoClients {
-		regTarget, err := remote.NewRegistry(repoUrl)
-		if err != nil {
-			panic(err)
-		}
-		regTarget.PlainHTTP = true
-		regTarget.Client = repoClient
-		registryDelegate = registrydelegate.NewRegistryDelegate(repoUrl, regTarget)
-		deltaDelegate = deltadelegate.NewDeltaDelegate(repoUrl)
+	credentialStore, err := credentials.NewStore(config.CliOpts.DockerConfigFilePath, credentials.StoreOptions{
+		AllowPlaintextPut:        false,
+		DetectDefaultNativeStore: true,
+	})
+	if err != nil {
+		log.WithError(err).Fatal("failed to create credential store from docker config file")
+		panic(err)
 	}
+	creds := credentials.Credential(credentialStore)
+
+	registryDelegate := registrydelegate.NewRegistryDelegate(creds, config.CliOpts.InsecureAllowHTTP)
+	deltaDelegate := deltadelegate.NewDeltaDelegate()
+
 	dorasEngine := dorasengine.NewEngine(registryDelegate, deltaDelegate)
 	r := api.BuildApp(dorasEngine)
 	err = r.SetTrustedProxies(config.ConfigFile.TrustedProxies)

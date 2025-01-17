@@ -14,17 +14,10 @@ type CLI struct {
 	DockerConfigFilePath string `help:"Path to the docker config file which is used to access registry credentials." default:"~/.docker/config.json" env:"DOCKER_CONFIG_FILE_PATH"`
 	LogLevel             string `help:"Server log level." default:"info" enum:"debug,info,warn,error" env:"DORAS_LOG_LEVEL"`
 	ShutdownTimout       uint   `help:"Graceful shutdown timeout (in seconds)." default:"20" env:"DORAS_SHUTDOWN_TIMEOUT"`
+	InsecureAllowHTTP    bool   `help:"Allow INSECURE HTTP connections." default:"false" env:"DORAS_INSECURE_ALLOW_HTTP"`
 }
 
 // ServerConfigFile is used to parse the config files that can be used for more extensive configuration.
 type ServerConfigFile struct {
-	Storage        StorageConfiguration `yaml:"storage"`
-	TrustedProxies []string             `yaml:"trusted-proxies"`
-}
-
-// StorageConfiguration is used to configure a registry that is used to store artifacts and deltas.
-type StorageConfiguration struct {
-	Kind       string `yaml:"kind"`
-	URL        string `yaml:"url"`
-	EnableHTTP bool   `yaml:"enable-http"`
+	TrustedProxies []string `yaml:"trusted-proxies"`
 }

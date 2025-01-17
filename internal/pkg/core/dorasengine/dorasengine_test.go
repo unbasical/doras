@@ -246,7 +246,7 @@ func Test_readDelta(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	delegate := deltadelegate.NewDeltaDelegate("registry.example.org")
+	delegate := deltadelegate.NewDeltaDelegate()
 
 	type args struct {
 		registry    registrydelegate.RegistryDelegate
@@ -365,7 +365,7 @@ func Test_readDelta_Token(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	delegate := deltadelegate.NewDeltaDelegate("registry.example.org")
+	delegate := deltadelegate.NewDeltaDelegate()
 
 	type args struct {
 		registry    registrydelegate.RegistryDelegate

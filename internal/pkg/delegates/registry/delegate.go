@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"sync"
 
 	"oras.land/oras-go/v2/registry/remote/auth"
@@ -32,20 +31,19 @@ type DeltaManifestOptions struct {
 }
 
 type registryImpl struct {
-	// TODO: replace with map of configured registries
-	*remote.Registry
-	registryUrl   string
 	m             sync.Mutex
 	activeDummies map[string]any
+	credentials   auth.CredentialFunc
+	allowHttp     bool
 }
 
 // NewRegistryDelegate constructs a RegistryDelegate for a given registry that is located at the provided registryUrl.
-func NewRegistryDelegate(registryUrl string, registry *remote.Registry) RegistryDelegate {
+func NewRegistryDelegate(creds auth.CredentialFunc, allowHttp bool) RegistryDelegate {
 	return &registryImpl{
-		Registry:      registry,
-		registryUrl:   registryUrl,
 		m:             sync.Mutex{},
 		activeDummies: make(map[string]any),
+		credentials:   creds,
+		allowHttp:     allowHttp,
 	}
 }
 
@@ -72,7 +70,7 @@ func (r *registryImpl) Resolve(image string, expectDigest bool, creds auth.Crede
 		Credential: creds,
 	}
 	// This is kinda hacky.
-	repository.PlainHTTP = r.Registry.PlainHTTP
+	repository.PlainHTTP = r.allowHttp
 
 	// Resolve and return relevant data.
 	d, err := repository.Resolve(ctx, tag)
@@ -112,14 +110,13 @@ func (r *registryImpl) PushDelta(ctx context.Context, image string, manifOpts De
 	if err != nil {
 		return err
 	}
-
-	repoNameTrimmed := strings.TrimPrefix(repoName, r.registryUrl+"/")
-	//if repoNameTrimmed == repoName {
-	//	return errors.New("invalid registry")
-	//}
-	repository, err := r.Registry.Repository(ctx, repoNameTrimmed)
+	repository, err := remote.NewRepository(repoName)
 	if err != nil {
 		return err
+	}
+	repository.PlainHTTP = r.allowHttp
+	repository.Client = &auth.Client{
+		Credential: r.credentials,
 	}
 	tempDir := os.TempDir()
 	fp, err := os.CreateTemp(tempDir, "delta_*")
@@ -184,19 +181,20 @@ func (r *registryImpl) PushDummy(image string, manifOpts DeltaManifestOptions) e
 	if _, ok := r.activeDummies[image]; ok {
 		return nil
 	}
+	ctx := context.Background()
 	repoName, tag, _, err := ociutils.ParseOciImageString(image)
 	if err != nil {
 		return err
 	}
-	repoNameTrimmed := strings.TrimPrefix(repoName, r.registryUrl+"/")
-	//if repoNameTrimmed == repoName {
-	//	return errors.New("invalid registry")
-	//}
-	ctx := context.Background()
-	repository, err := r.Registry.Repository(ctx, repoNameTrimmed)
+	repository, err := remote.NewRepository(repoName)
 	if err != nil {
-		return fmt.Errorf("get repository: %v", err)
+		return err
 	}
+	repository.PlainHTTP = r.allowHttp
+	repository.Client = &auth.Client{
+		Credential: r.credentials,
+	}
+
 	// Dummy manifests use the empty descriptor and set a value in the annotations to indicate a dummy.
 	opts := oras.PackManifestOptions{
 		Layers: []v1.Descriptor{v1.DescriptorEmptyJSON},
