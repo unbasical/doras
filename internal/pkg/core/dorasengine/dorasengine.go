@@ -29,45 +29,36 @@ type Engine interface {
 }
 
 type engine struct {
-	registry       registrydelegate.RegistryDelegate
-	delegate       deltadelegate.DeltaDelegate
-	ctxM           *sync.Mutex
-	cancelContexts map[*context.Context]context.CancelFunc
+	registry registrydelegate.RegistryDelegate
+	delegate deltadelegate.DeltaDelegate
+	wg       *sync.WaitGroup
 }
 
 // NewEngine construct a new dorasengine.Engine with the given delegates.
 func NewEngine(registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate) Engine {
 	return &engine{
-		registry:       registry,
-		delegate:       delegate,
-		cancelContexts: make(map[*context.Context]context.CancelFunc),
-		ctxM:           &sync.Mutex{},
+		registry: registry,
+		delegate: delegate,
+		wg:       &sync.WaitGroup{},
 	}
 }
 func (d *engine) Stop(ctx context.Context) {
+	doneChan := make(chan struct{})
 	go func() {
-		for _, cancel := range d.cancelContexts {
-			cancel()
-		}
+		d.wg.Wait()
+		close(doneChan)
 	}()
 	select {
 	case <-ctx.Done():
 		log.Debug(ctx.Err())
-	default:
-		log.Info("stopped ongoing requests")
+	case <-doneChan:
+		log.Debug("all delta requests have been served")
 	}
 }
 
 func (d *engine) HandleReadDelta(apiDeletgate apidelegate.APIDelegate) {
-	ctx, cancel := context.WithCancel(context.Background())
-	d.ctxM.Lock()
-	d.cancelContexts[&ctx] = cancel
-	d.ctxM.Unlock()
-	ctx = context.WithValue(ctx, "completed", func() {
-		d.ctxM.Lock()
-		delete(d.cancelContexts, &ctx)
-		d.ctxM.Unlock()
-	})
+	ctx := context.WithValue(context.Background(), "wg", d.wg)
+	d.wg.Add(1)
 	readDelta(ctx, d.registry, d.delegate, apiDeletgate)
 }
 
@@ -89,16 +80,11 @@ func checkRepoCompatability(a, b string) error {
 
 //nolint:revive // This rule is disabled to get around complexity linter errors. Reducing the complexity of this function is difficult. Refer to the Doras specs in the file docs/delta-creation-spec.md for more information on the semantics of this god function.
 func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate, apiDelegate apidelegate.APIDelegate) {
-	hasCompleted := false
-	defer func() {
-		if hasCompleted {
-			return
-		}
-		if completed, ok := ctx.Value("completed").(func()); ok {
-			completed()
-			hasCompleted = true
-		}
-	}()
+	wg, ok := ctx.Value("wg").(*sync.WaitGroup)
+	if !ok {
+		panic("missing wait group in context")
+	}
+	defer wg.Done()
 	fromDigest, toTarget, acceptedAlgorithms, err := apiDelegate.ExtractParams()
 	if err != nil {
 		log.WithError(err).Error("Error extracting parameters")
@@ -238,6 +224,8 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 
 	// asynchronously create delta
 	go func() {
+		wg.Add(1)
+		defer wg.Done()
 		defer funcutils.PanicOrLogOnErr(rcTo.Close, false, "failed to close reader")
 		defer funcutils.PanicOrLogOnErr(rcFrom.Close, false, "failed to close reader")
 		err := delegate.CreateDelta(ctx, rcFrom, rcTo, manifOpts, registry)
@@ -245,10 +233,6 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 			log.WithError(err).Error("failed to create delta")
 			apiDelegate.HandleError(error2.ErrInternal, "")
 			return
-		}
-		if completed, ok := ctx.Value("completed").(func()); ok {
-			completed()
-			hasCompleted = true
 		}
 	}()
 	// tell client has the delta has been accepted

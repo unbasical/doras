@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	auth2 "github.com/unbasical/doras-server/internal/pkg/auth"
@@ -258,7 +259,7 @@ func Test_readDelta(t *testing.T) {
 		args args
 	}{
 		{
-			name: "valid token",
+			name: "success",
 			args: args{
 				registry: registryMock,
 				delegate: delegate,
@@ -315,7 +316,10 @@ func Test_readDelta(t *testing.T) {
 			// The purpose of this loop is to make sure the request has executed fully.
 			// This is necessary due to the asynchronous nature of the readDelta function,
 			// which spawns a go routine.
+			wg := &sync.WaitGroup{}
+			ctx := context.WithValue(context.Background(), "wg", wg)
 			for {
+				wg.Add(1)
 				readDelta(ctx, tt.args.registry, tt.args.delegate, &tt.args.apiDelegate)
 				if tt.args.apiDelegate.hasHandledCallback {
 					break
@@ -421,7 +425,10 @@ func Test_readDelta_Token(t *testing.T) {
 			// The purpose of this loop is to make sure the request has executed fully.
 			// This is necessary due to the asynchronous nature of the readDelta function,
 			// which spawns a go routine.
+			wg := &sync.WaitGroup{}
+			ctx := context.WithValue(context.Background(), "wg", wg)
 			for {
+				wg.Add(1)
 				readDelta(ctx, tt.args.registry, tt.args.delegate, &tt.args.apiDelegate)
 				if tt.args.apiDelegate.hasHandledCallback {
 					break
