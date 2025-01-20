@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	auth2 "github.com/unbasical/doras-server/internal/pkg/auth"
@@ -87,7 +88,7 @@ func (t *testRegistryDelegate) LoadArtifact(mf v1.Manifest, source oras.ReadOnly
 	return source.Fetch(t.ctx, mf.Layers[0])
 }
 
-func (t *testRegistryDelegate) PushDelta(image string, manifOpts registrydelegate.DeltaManifestOptions, content io.ReadCloser) error {
+func (t *testRegistryDelegate) PushDelta(ctx context.Context, image string, manifOpts registrydelegate.DeltaManifestOptions, content io.ReadCloser) error {
 	_, tag, _, err := ociutils.ParseOciImageString(image)
 	if err != nil {
 		return err
@@ -187,6 +188,10 @@ type testAPIDelegate struct {
 	hasHandledCallback bool
 }
 
+func (t *testAPIDelegate) RequestContext() (context.Context, error) {
+	return context.Background(), nil
+}
+
 func (t *testAPIDelegate) ExtractClientAuth() (auth2.RegistryAuth, error) {
 	if t.token != "" {
 		return auth2.NewClientAuthFromToken(t.token), nil
@@ -254,7 +259,7 @@ func Test_readDelta(t *testing.T) {
 		args args
 	}{
 		{
-			name: "valid token",
+			name: "success",
 			args: args{
 				registry: registryMock,
 				delegate: delegate,
@@ -311,8 +316,10 @@ func Test_readDelta(t *testing.T) {
 			// The purpose of this loop is to make sure the request has executed fully.
 			// This is necessary due to the asynchronous nature of the readDelta function,
 			// which spawns a go routine.
+			wg := &sync.WaitGroup{}
+			ctx := context.WithValue(context.Background(), "wg", wg)
 			for {
-				readDelta(tt.args.registry, tt.args.delegate, &tt.args.apiDelegate)
+				readDelta(ctx, tt.args.registry, tt.args.delegate, &tt.args.apiDelegate)
 				if tt.args.apiDelegate.hasHandledCallback {
 					break
 				}
@@ -417,8 +424,10 @@ func Test_readDelta_Token(t *testing.T) {
 			// The purpose of this loop is to make sure the request has executed fully.
 			// This is necessary due to the asynchronous nature of the readDelta function,
 			// which spawns a go routine.
+			wg := &sync.WaitGroup{}
+			ctx := context.WithValue(context.Background(), "wg", wg)
 			for {
-				readDelta(tt.args.registry, tt.args.delegate, &tt.args.apiDelegate)
+				readDelta(ctx, tt.args.registry, tt.args.delegate, &tt.args.apiDelegate)
 				if tt.args.apiDelegate.hasHandledCallback {
 					break
 				}

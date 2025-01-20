@@ -1,10 +1,11 @@
 package dorasengine
 
 import (
+	"context"
 	"errors"
 	"fmt"
-
 	"oras.land/oras-go/v2/registry/remote/auth"
+	"sync"
 
 	apidelegate "github.com/unbasical/doras-server/internal/pkg/delegates/api"
 	deltadelegate "github.com/unbasical/doras-server/internal/pkg/delegates/delta"
@@ -20,21 +21,44 @@ import (
 	"github.com/unbasical/doras-server/pkg/constants"
 )
 
+// Engine handles delta requests, including graceful shutdowns.
+// Errors and responses are handled by apidelegate.APIDelegate implementations.
 type Engine interface {
 	HandleReadDelta(apiDeletgate apidelegate.APIDelegate)
+	Stop(ctx context.Context)
 }
 
 type engine struct {
 	registry registrydelegate.RegistryDelegate
 	delegate deltadelegate.DeltaDelegate
+	wg       *sync.WaitGroup
+}
+
+// NewEngine construct a new dorasengine.Engine with the given delegates.
+func NewEngine(registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate) Engine {
+	return &engine{
+		registry: registry,
+		delegate: delegate,
+		wg:       &sync.WaitGroup{},
+	}
+}
+func (d *engine) Stop(ctx context.Context) {
+	doneChan := make(chan struct{})
+	go func() {
+		d.wg.Wait()
+		close(doneChan)
+	}()
+	select {
+	case <-ctx.Done():
+		log.Debug(ctx.Err())
+	case <-doneChan:
+		log.Debug("all delta requests have been served")
+	}
 }
 
 func (d *engine) HandleReadDelta(apiDeletgate apidelegate.APIDelegate) {
-	readDelta(d.registry, d.delegate, apiDeletgate)
-}
-
-func NewEngine(registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate) Engine {
-	return &engine{registry: registry, delegate: delegate}
+	ctx := context.WithValue(context.Background(), "wg", d.wg)
+	readDelta(ctx, d.registry, d.delegate, apiDeletgate)
 }
 
 // checkRepoCompatability ensures that the two provided images are from the same repository.
@@ -54,7 +78,13 @@ func checkRepoCompatability(a, b string) error {
 }
 
 //nolint:revive // This rule is disabled to get around complexity linter errors. Reducing the complexity of this function is difficult. Refer to the Doras specs in the file docs/delta-creation-spec.md for more information on the semantics of this god function.
-func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate, apiDelegate apidelegate.APIDelegate) {
+func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate, apiDelegate apidelegate.APIDelegate) {
+	wg, ok := ctx.Value("wg").(*sync.WaitGroup)
+	if !ok {
+		panic("missing wait group in context")
+	}
+	wg.Add(1)
+	defer wg.Done()
 	fromDigest, toTarget, acceptedAlgorithms, err := apiDelegate.ExtractParams()
 	if err != nil {
 		log.WithError(err).Error("Error extracting parameters")
@@ -194,9 +224,11 @@ func readDelta(registry registrydelegate.RegistryDelegate, delegate deltadelegat
 
 	// asynchronously create delta
 	go func() {
+		wg.Add(1)
+		defer wg.Done()
 		defer funcutils.PanicOrLogOnErr(rcTo.Close, false, "failed to close reader")
 		defer funcutils.PanicOrLogOnErr(rcFrom.Close, false, "failed to close reader")
-		err := delegate.CreateDelta(rcFrom, rcTo, manifOpts, registry)
+		err := delegate.CreateDelta(ctx, rcFrom, rcTo, manifOpts, registry)
 		if err != nil {
 			log.WithError(err).Error("failed to create delta")
 			apiDelegate.HandleError(error2.ErrInternal, "")

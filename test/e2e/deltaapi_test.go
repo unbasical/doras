@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	delta2 "github.com/unbasical/doras-server/pkg/algorithm/delta"
 	"io"
 	"net/http"
@@ -70,7 +71,8 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 		ConfigFile: configFile,
 		CliOpts:    configs.CLI{HTTPPort: 8081, Host: "localhost", LogLevel: "debug"},
 	}
-	go core.New(serverConfig).Start()
+	dorasServer := core.New(serverConfig)
+	go dorasServer.Start()
 
 	reg, err := remote.NewRegistry(regUri)
 	if err != nil {
@@ -283,4 +285,14 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 		}
 		wg.Wait()
 	})
+	// Gracefully shut down the server with a timeout
+	gracefulPeriod := 3 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), gracefulPeriod)
+	log.Infof("shutting down server with a graceful period of %d Seconds ...", gracefulPeriod/time.Second)
+	defer cancel()
+	if err := dorasServer.Stop(ctx); err != nil {
+		log.WithError(err).Info("stopping Doras server had error")
+		return
+	}
+	log.Println("Server exited gracefully")
 }

@@ -1,22 +1,28 @@
 package core
 
 import (
+	"context"
+	"errors"
 	"fmt"
-
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras-server/configs"
 	"github.com/unbasical/doras-server/internal/pkg/api"
 	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
+	"github.com/unbasical/doras-server/internal/pkg/core/dorasengine"
+	deltadelegate "github.com/unbasical/doras-server/internal/pkg/delegates/delta"
+	registrydelegate "github.com/unbasical/doras-server/internal/pkg/delegates/registry"
+	"net/http"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 type Doras struct {
-	engine   *gin.Engine
-	stop     chan bool
+	srv      *http.Server
+	engine   dorasengine.Engine
 	hostname string
 	port     uint16
+	config   configs.ServerConfig
 }
 
 // New returns an instance of a Doras server.
@@ -46,30 +52,48 @@ func (d *Doras) init(config configs.ServerConfig) *Doras {
 	if config.CliOpts.LogLevel != "debug" {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	d.engine = api.BuildApp(appConfig)
-	err = d.engine.SetTrustedProxies(config.ConfigFile.TrustedProxies)
+	var registryDelegate registrydelegate.RegistryDelegate
+	var deltaDelegate deltadelegate.DeltaDelegate
+	for repoUrl, repoClient := range appConfig.RepoClients {
+		regTarget, err := remote.NewRegistry(repoUrl)
+		if err != nil {
+			panic(err)
+		}
+		regTarget.PlainHTTP = true
+		regTarget.Client = repoClient
+		registryDelegate = registrydelegate.NewRegistryDelegate(repoUrl, regTarget)
+		deltaDelegate = deltadelegate.NewDeltaDelegate(repoUrl)
+	}
+	dorasEngine := dorasengine.NewEngine(registryDelegate, deltaDelegate)
+	r := api.BuildApp(dorasEngine)
+	err = r.SetTrustedProxies(config.ConfigFile.TrustedProxies)
 	if err != nil {
 		log.WithError(err).Fatal("failed to set trusted proxies")
 	}
-
+	d.srv = &http.Server{
+		Addr:    fmt.Sprintf("%s:%d", d.hostname, d.port),
+		Handler: r,
+	}
+	d.engine = dorasEngine
+	d.config = config
 	return d
 }
 
 // Start the Doras server.
 func (d *Doras) Start() {
-	log.Info("Starting doras")
-	d.stop = make(chan bool, 1)
-	serverURL := fmt.Sprintf("%s:%d", d.hostname, d.port)
-	err := d.engine.Run(serverURL)
-	if err != nil {
-		panic(err)
-	}
+	log.Info("Starting Doras server")
+
+	go func() {
+		if err := d.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.WithError(err).Fatal("failed to start server")
+			panic(err)
+		}
+	}()
+	log.Infof("Listening on %s", d.srv.Addr)
 }
 
 // Stop the Doras server.
-func (d *Doras) Stop() {
-	// TODO: use goroutine and channel to handle shutdown
-	log.Info("Stopping doras")
-	d.stop <- true
-	log.Warn("Stop() is not implemented yet")
+func (d *Doras) Stop(ctx context.Context) error {
+	go d.engine.Stop(ctx)
+	return d.srv.Shutdown(ctx)
 }

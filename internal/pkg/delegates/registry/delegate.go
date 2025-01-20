@@ -107,7 +107,7 @@ func (r *registryImpl) LoadArtifact(mf v1.Manifest, source oras.ReadOnlyTarget) 
 	return rc, nil
 }
 
-func (r *registryImpl) PushDelta(image string, manifOpts DeltaManifestOptions, content io.ReadCloser) error {
+func (r *registryImpl) PushDelta(ctx context.Context, image string, manifOpts DeltaManifestOptions, content io.ReadCloser) error {
 	repoName, tag, _, err := ociutils.ParseOciImageString(image)
 	if err != nil {
 		return err
@@ -117,7 +117,6 @@ func (r *registryImpl) PushDelta(image string, manifOpts DeltaManifestOptions, c
 	//if repoNameTrimmed == repoName {
 	//	return errors.New("invalid registry")
 	//}
-	ctx := context.Background()
 	repository, err := r.Registry.Repository(ctx, repoNameTrimmed)
 	if err != nil {
 		return err
@@ -227,6 +226,6 @@ type RegistryDelegate interface {
 	Resolve(image string, expectDigest bool, creds auth.CredentialFunc) (oras.ReadOnlyTarget, string, v1.Descriptor, error)
 	LoadManifest(target v1.Descriptor, source oras.ReadOnlyTarget) (v1.Manifest, error)
 	LoadArtifact(mf v1.Manifest, source oras.ReadOnlyTarget) (io.ReadCloser, error)
-	PushDelta(image string, manifOpts DeltaManifestOptions, content io.ReadCloser) error
+	PushDelta(ctx context.Context, image string, manifOpts DeltaManifestOptions, content io.ReadCloser) error
 	PushDummy(image string, manifOpts DeltaManifestOptions) error
 }

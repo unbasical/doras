@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/unbasical/doras-server/internal/pkg/auth"
-
 	apidelegate "github.com/unbasical/doras-server/internal/pkg/delegates/api"
 
 	"github.com/gin-gonic/gin"
