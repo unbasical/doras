@@ -10,16 +10,19 @@ type UTCFormatter struct {
 	logrus.Formatter
 }
 
+// Format the entry with a UTC timestamp.
 func (u *UTCFormatter) Format(e *logrus.Entry) ([]byte, error) {
 	e.Time = e.Time.UTC()
 	return u.Formatter.Format(e)
 }
 
+// SetupTestLogging configures the logger to use the debug log level and use a text output formatter.
 func SetupTestLogging() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetFormatter(&UTCFormatter{Formatter: &logrus.TextFormatter{FullTimestamp: true}})
 }
 
+// SetLogFormat to use either JSON or text based logging.
 func SetLogFormat(logFormat string) {
 	switch logFormat {
 	case "JSON":
@@ -29,6 +32,8 @@ func SetLogFormat(logFormat string) {
 	}
 }
 
+// SetLogLevel configures the logger to use the provided log level.
+// Log level is treated case-insensitive.
 func SetLogLevel(logLevel string) {
 	switch strings.ToUpper(logLevel) {
 	case "INFO":
