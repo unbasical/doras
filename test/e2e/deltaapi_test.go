@@ -61,15 +61,9 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 	regUri := testutils2.LaunchRegistry(ctx)
 
 	host := "localhost:8081"
-	configFile := configs.ServerConfigFile{
-		Storage: configs.StorageConfiguration{
-			URL:        regUri,
-			EnableHTTP: true,
-		},
-	}
 	serverConfig := configs.ServerConfig{
-		ConfigFile: configFile,
-		CliOpts:    configs.CLI{HTTPPort: 8081, Host: "localhost", LogLevel: "debug"},
+		ConfigFile: configs.ServerConfigFile{},
+		CliOpts:    configs.CLI{HTTPPort: 8081, Host: "localhost", LogLevel: "debug", InsecureAllowHTTP: true},
 	}
 	dorasServer := core.New(serverConfig)
 	go dorasServer.Start()

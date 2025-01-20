@@ -20,16 +20,13 @@ import (
 )
 
 type delegate struct {
-	baseUrl        string
 	activeRequests map[string]any
 	m              sync.Mutex
 }
 
 // NewDeltaDelegate construct a DeltaDelegate that is used to handle delta creation operations.
-// The baseUrl affects repository names/paths.
-func NewDeltaDelegate(baseUrl string) DeltaDelegate {
+func NewDeltaDelegate() DeltaDelegate {
 	return &delegate{
-		baseUrl:        baseUrl,
 		activeRequests: make(map[string]any),
 		m:              sync.Mutex{},
 	}
