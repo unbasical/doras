@@ -1,47 +1,48 @@
 package main
 
 import (
+	"github.com/alecthomas/kong"
 	"github.com/unbasical/doras-server/internal/pkg/utils/logutils"
-	"strings"
-
-	"github.com/alecthomas/kingpin/v2"
-	log "github.com/sirupsen/logrus"
 )
 
-func main() {
-	// Parse CLI args.
-	var (
-		app = kingpin.New("doras-cli", "A command-line tool to work with doras delta patches")
+type cliArgs struct {
+	DockerConfigFilePath string `help:"Path to the docker config file which is used to access registry credentials." default:"~/.docker/config.json" env:"DOCKER_CONFIG_FILE_PATH"`
+	LogLevel             string `help:"Log level." default:"info" enum:"debug,info,warn,error" env:"DORAS_LOG_LEVEL"`
+	LogFormat            string `help:"Log format." default:"text" enum:"json,text" env:"DORAS_LOG_FORMAT"`
+	InsecureAllowHTTP    bool   `help:"Allow INSECURE HTTP connections." default:"false" env:"DORAS_INSECURE_ALLOW_HTTP"`
+	DorasServerURL       string `help:"The URL of the Doras server." default:"localhost:8080" env:"DORAS_SERVER_URL"`
+	Push                 struct {
+		Overwrite    bool   `help:"Overwrite existing artifact if it exists." default:"false"`
+		Compress     string `help:"Compress artifact before uploading." default:"zstd" enum:"zstd,gzip,false"`
+		ArchiveFiles bool   `help:"Archive artifact before uploading." default:"false"`
+		Image        string `arg:"" name:"image" help:"Target image/repository where the artifact will be published."`
+		Path         string `arg:"" name:"path" help:"Path of the artifact that should be uploaded (single file or directory)" type:"path"`
+	} `cmd:"" help:"Upload artifact to a registry."`
+	Pull struct {
+		Image string `arg:"" name:"image" help:"Target image/repository which is pulled."`
+		Path  string `arg:"" name:"path" help:"Output directory." type:"path"`
+	} `cmd:"" name:"pull" help:"Pull an artifact from a registry, uses delta updates if possible."`
+}
 
-		// Logging
-		logLevel  = app.Flag("log-level", "Log-Level, must be one of [DEBUG, INFO, WARN, ERROR]").Default("INFO").Envar("LOG_LEVEL").Enum("DEBUG", "INFO", "WARN", "ERROR", "debug", "info", "warn", "error")
-		logFormat = app.Flag("log-format", "Log-Format, must be one of [TEXT, JSON]").Default("TEXT").Envar("LOG_FORMAT").Enum("TEXT", "JSON")
-	)
-	app.HelpFlag.Short('h')
+func main() {
+	// parse args
+	args := cliArgs{}
+	ctx := kong.Parse(&args)
 
 	// Setup logging.
-	setLogLevel(*logLevel)
-	setLogFormat(*logFormat)
-}
+	logutils.SetLogLevel(args.LogLevel)
+	logutils.SetLogFormat(args.LogFormat)
 
-func setLogFormat(logFormat string) {
-	switch logFormat {
-	case "JSON":
-		log.SetFormatter(&logutils.UTCFormatter{Formatter: &log.JSONFormatter{}})
+	var err error
+	switch ctx.Command() {
+	case "push <image> <path>":
+		err = args.push()
+	case "pull <image> <path>":
+		err = args.pull()
 	default:
-		log.SetFormatter(&logutils.UTCFormatter{Formatter: &log.TextFormatter{FullTimestamp: true}})
+		panic(ctx.Command())
 	}
-}
-
-func setLogLevel(logLevel string) {
-	switch strings.ToUpper(logLevel) {
-	case "INFO":
-		log.SetLevel(log.InfoLevel)
-	case "DEBUG":
-		log.SetLevel(log.DebugLevel)
-	case "WARN":
-		log.SetLevel(log.WarnLevel)
-	case "ERROR":
-		log.SetLevel(log.ErrorLevel)
+	if err != nil {
+		panic(err)
 	}
 }
