@@ -124,6 +124,7 @@ dockers:
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
       - "--platform=linux/arm64"
+      - "--attest=type=sbom,generator=docker/scout-sbom-indexer:latest"
   - id: doras-cli-linux-amd64
     goos: linux
     goarch: amd64
@@ -143,6 +144,7 @@ dockers:
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
       - "--platform=linux/amd64"
+      - "--attest=type=sbom,generator=docker/scout-sbom-indexer:latest"
 
 sboms:
   - documents:
