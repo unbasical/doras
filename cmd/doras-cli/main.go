@@ -17,7 +17,7 @@ type cliArgs struct {
 	Remote               string `help:"The URL of the Doras server." default:"localhost:8080" env:"DORAS_SERVER_URL"`
 	Push                 struct {
 		Overwrite    bool   `help:"Overwrite existing artifact if it exists." default:"false"`
-		Compress     string `help:"Compress artifact before uploading." default:"zstd" enum:"zstd,gzip,none"`
+		Compress     string `help:"Compress artifact before uploading." default:"gzip" enum:"zstd,gzip,none"`
 		ArchiveFiles bool   `help:"Archive artifact before uploading." default:"false"`
 		Image        string `arg:"" name:"image" help:"Target image/repository where the artifact will be published."`
 		Path         string `arg:"" name:"path" help:"Path of the artifact that should be uploaded (single file or directory)"`
