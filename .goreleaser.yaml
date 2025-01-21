@@ -114,6 +114,44 @@ dockers:
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
       - "--platform=linux/arm64"
+  - id: doras-cli-linux-arm64
+    goos: linux
+    goarch: arm64
+    ids:
+      - doras-cli
+    image_templates:
+      - "gcr.io/unbasical/doras-cli:latest-arm64"
+      - "gcr.io/unbasical/doras-cli:{{ .Tag }}-arm64"
+    skip_push: false
+    dockerfile: "pipeline-cli.Dockerfile"
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/arm64"
+  - id: doras-cli-linux-amd64
+    goos: linux
+    goarch: amd64
+    ids:
+      - doras-cli
+    image_templates:
+      - "gcr.io/unbasical/doras-cli:latest"
+      - "gcr.io/unbasical/doras-cli:{{ .Tag }}"
+    skip_push: false
+    dockerfile: "pipeline-cli.Dockerfile"
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/amd64"
 changelog:
   sort: asc
   filters:
