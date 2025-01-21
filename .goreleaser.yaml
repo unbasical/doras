@@ -106,7 +106,7 @@ sboms:
   - documents:
       - "${artifact}.spdx.sbom.json"
     cmd: syft
-    args: ["$artifact", "--output", "cyclonedx-json=$document"]
+    args: ["$artifact", "--output", "spdx-json=$document"]
     artifacts: binary
     ids:
       - doras-server
