@@ -64,43 +64,41 @@ archives:
         format: zip
     allow_different_binary_count: true
 
-dockers:
+kos:
   - id: doras-server
-    ids:
-      - doras-server
-    image_templates:
-      - "gcr.io/unbasical/doras-server:latest"
-      - "gcr.io/unbasical/doras-server:{{ .Tag }}"
-    skip_push: false
-    dockerfile: "pipeline.Dockerfile"
-    use: buildx
-    build_flag_templates:
-      - "--pull"
-      - "--platform=linux/amd64"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--platform=linux/amd64,linux/arm64"
-      - "--attest=type=sbom,generator=docker/scout-sbom-indexer:latest"
+    build: doras-server
+    main: ./cmd/doras-server
+    working_dir: .
+    base_image: cgr.dev/chainguard/static
+    repositories:
+      - ghcr.io/unbasical/doras-server
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    tags:
+      - latest
+      - "{{.Tag}}"
+      - "{{if not .Prerelease}}stable{{end}}"
+    creation_time: "{{.CommitTimestamp}}"
+    ko_data_creation_time: "{{.CommitTimestamp}}"
+    sbom: spdx
   - id: doras-cli
-    ids:
-      - doras-cli
-    image_templates:
-      - "gcr.io/unbasical/doras-cli:latest"
-      - "gcr.io/unbasical/doras-cli:{{ .Tag }}"
-    skip_push: false
-    dockerfile: "pipeline-cli.Dockerfile"
-    use: buildx
-    build_flag_templates:
-      - "--pull"
-      - "--platform=linux/arm64"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--platform=linux/amd64,linux/arm64"
-      - "--attest=type=sbom,generator=docker/scout-sbom-indexer:latest"
+    build: doras-cli
+    main: ./cmd/doras-cli
+    working_dir: .
+    base_image: cgr.dev/chainguard/static
+    repositories:
+      - ghcr.io/unbasical/doras-cli
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    tags:
+      - latest
+      - "{{.Tag}}"
+      - "{{if not .Prerelease}}stable{{end}}"
+    creation_time: "{{.CommitTimestamp}}"
+    ko_data_creation_time: "{{.CommitTimestamp}}"
+    sbom: spdx
 
 sboms:
   - documents:
