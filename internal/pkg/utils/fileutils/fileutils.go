@@ -2,6 +2,7 @@ package fileutils
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
 	"io"
@@ -78,4 +79,15 @@ func ReadOrPanic(p string) []byte {
 		panic(err)
 	}
 	return data
+}
+
+func ExistsAndIsDirectory(path string) (exists, isDir bool, err error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, false, nil
+		}
+		return false, false, err
+	}
+	return true, info.IsDir(), nil
 }
