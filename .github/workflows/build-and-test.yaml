@@ -40,4 +40,19 @@ jobs:
     - name: Run tests
       run: TEST_OUTPUT=text make test
 
+  build:
+    name: Build
+    if: ${{ !github.base_ref }}
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.23'
 
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Build
+        run: make build

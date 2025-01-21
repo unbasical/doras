@@ -30,8 +30,8 @@ func NewPatcher() delta.Patcher {
 	return &patcher{}
 }
 
-func (a *patcher) Patch(old io.Reader, new io.Reader) (io.Reader, error) {
-	return bspatch(old, new)
+func (a *patcher) Patch(oldfile io.Reader, newfile io.Reader) (io.Reader, error) {
+	return bspatch(oldfile, newfile)
 }
 func (a *patcher) Name() string {
 	return "bsdiff"

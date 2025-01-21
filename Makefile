@@ -80,9 +80,9 @@ lint-dep: ## Install linting dependencies
 	@sh -c "(cd /tmp && go install github.com/jstemmer/go-junit-report@latest && go install github.com/axw/gocov/gocov@latest && go install github.com/AlekSi/gocov-xml@latest && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest)"
 
 lint: lint-dep ## Lint Golang files
-	@test -f .golangci.yml || { echo ".golangci.yml file is missing"; exit 1; }
+	@test -f .golangci.yaml || { echo ".golangci.yaml file is missing"; exit 1; }
 	@echo "========== Performing lint stage"
-	@$(shell go env GOPATH)/bin/golangci-lint -c .golangci.yml run
+	@$(shell go env GOPATH)/bin/golangci-lint -c .golangci.yaml run
 
 format: ## Go-format entire project
 	@echo "========== Performing format stage"

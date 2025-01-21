@@ -1,7 +1,0 @@
-services:
-  doras-server:
-    build:
-      context: ../../
-      dockerfile: examples/docker-compose/doras.Dockerfile
-    ports:
-      - "8080:8080"
