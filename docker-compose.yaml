@@ -1,4 +1,10 @@
 services:
+  doras-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
   registry:
     image: registry:2.8
     environment:
@@ -6,7 +12,6 @@ services:
     volumes:
       - registry-storage:/registry-storage
     ports:
-      - "5000:5000"
+      - "5001:5000"
 volumes:
   registry-storage:
-
