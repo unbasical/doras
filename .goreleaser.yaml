@@ -65,9 +65,7 @@ archives:
     allow_different_binary_count: true
 
 dockers:
-  - id: doras-server-linux-amd64
-    goos: linux
-    goarch: amd64
+  - id: doras-server
     ids:
       - doras-server
     image_templates:
@@ -83,51 +81,9 @@ dockers:
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--platform=linux/amd64"
+      - "--platform=linux/amd64,linux/arm64"
       - "--attest=type=sbom,generator=docker/scout-sbom-indexer:latest"
-  - id: doras-server-linux-arm64
-    goos: linux
-    goarch: arm64
-    ids:
-      - doras-server
-    image_templates:
-      - "gcr.io/unbasical/doras-server:latest-arm64"
-      - "gcr.io/unbasical/doras-server:{{ .Tag }}-arm64"
-    skip_push: false
-    dockerfile: "pipeline.Dockerfile"
-    use: buildx
-    build_flag_templates:
-      - "--pull"
-      - "--platform=linux/arm64"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--platform=linux/arm64"
-      - "--attest=type=sbom,generator=docker/scout-sbom-indexer:latest"
-  - id: doras-cli-linux-arm64
-    goos: linux
-    goarch: arm64
-    ids:
-      - doras-cli
-    image_templates:
-      - "gcr.io/unbasical/doras-cli:latest-arm64"
-      - "gcr.io/unbasical/doras-cli:{{ .Tag }}-arm64"
-    skip_push: false
-    dockerfile: "pipeline-cli.Dockerfile"
-    use: buildx
-    build_flag_templates:
-      - "--pull"
-      - "--platform=linux/arm64"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--platform=linux/arm64"
-      - "--attest=type=sbom,generator=docker/scout-sbom-indexer:latest"
-  - id: doras-cli-linux-amd64
-    goos: linux
-    goarch: amd64
+  - id: doras-cli
     ids:
       - doras-cli
     image_templates:
@@ -138,12 +94,12 @@ dockers:
     use: buildx
     build_flag_templates:
       - "--pull"
-      - "--platform=linux/amd64"
+      - "--platform=linux/arm64"
       - "--label=org.opencontainers.image.created={{.Date}}"
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--platform=linux/amd64"
+      - "--platform=linux/amd64,linux/arm64"
       - "--attest=type=sbom,generator=docker/scout-sbom-indexer:latest"
 
 sboms:
