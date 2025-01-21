@@ -16,11 +16,11 @@ func NewCreator() delta.Differ {
 	return &creator{}
 }
 
-func (c *creator) Diff(old io.Reader, new io.Reader) (io.ReadCloser, error) {
+func (c *creator) Diff(oldfile io.Reader, newfile io.Reader) (io.ReadCloser, error) {
 	// Use a pipe to turn the writer into a reader.
 	pr, pw := io.Pipe()
 	go func() {
-		err := bsdiff2.Reader(old, new, pw)
+		err := bsdiff2.Reader(oldfile, newfile, pw)
 		if err != nil {
 			_ = pw.CloseWithError(err)
 			return

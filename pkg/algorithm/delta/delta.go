@@ -16,5 +16,5 @@ type Patcher interface {
 type Differ interface {
 	algorithm.Algorithm
 	// Diff creates a patch from old to new.
-	Diff(old io.Reader, new io.Reader) (io.ReadCloser, error)
+	Diff(oldfile io.Reader, newfile io.Reader) (io.ReadCloser, error)
 }

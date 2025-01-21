@@ -40,14 +40,14 @@ func loadToTempFile(reader io.Reader, fNamePattern string, c chan func() (*os.Fi
 	c <- func() (*os.File, error) { return f, nil }
 }
 
-func (c *Creator) Diff(old io.Reader, new io.Reader) (io.ReadCloser, error) {
+func (c *Creator) Diff(oldfile io.Reader, newfile io.Reader) (io.ReadCloser, error) {
 	// parallelize loading the files, as they might be coming from a remote location
 	fromFinished := make(chan func() (*os.File, error), 1)
 	toFinished := make(chan func() (*os.File, error), 1)
 
 	// load files in parallel
-	go loadToTempFile(old, "from.*.tar.gz", fromFinished)
-	go loadToTempFile(new, "to.*.tar.gz", toFinished)
+	go loadToTempFile(oldfile, "from.*.tar.gz", fromFinished)
+	go loadToTempFile(newfile, "to.*.tar.gz", toFinished)
 	fpFrom, errFrom := (<-fromFinished)()
 	fpTo, errTo := (<-toFinished)()
 
