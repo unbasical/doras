@@ -26,7 +26,6 @@ builds:
       - -trimpath
     mod_timestamp: '{{ .CommitTimestamp }}'
 
-
   - id: doras-cli
     binary: doras-cli-{{ .Os }}-{{ .Arch }}
     no_unique_dist_dir: true
@@ -48,7 +47,6 @@ builds:
     flags:
       - -trimpath
     mod_timestamp: '{{ .CommitTimestamp }}'
-
 
 archives:
   - format: tar.gz
@@ -143,6 +141,18 @@ dockers:
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
       - "--platform=linux/amd64"
+
+sboms:
+  - documents:
+      - "${artifact}.spdx.sbom.json"
+    cmd: syft
+    args: ["$artifact", "--output", "cyclonedx-json=$document"]
+    artifacts: binary
+    ids:
+      - doras-server
+      - doras-cli
+
+
 changelog:
   sort: asc
   filters:
