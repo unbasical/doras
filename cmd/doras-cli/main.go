@@ -23,7 +23,7 @@ type cliArgs struct {
 	} `cmd:"" help:"Upload artifact to a registry."`
 	Pull struct {
 		Image  string `arg:"" name:"image" help:"Target image/repository which is pulled."`
-		Output string `name:"path" help:"Output directory." type:"path" default:"."`
+		Output string `help:"Output directory." type:"path" default:"."`
 	} `cmd:"" name:"pull" help:"Pull an artifact from a registry, uses delta updates if possible."`
 }
 
