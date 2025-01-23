@@ -22,4 +22,6 @@ vendor/
 # Added by goreleaser init:
 dist/
 
+# Ignore .env
 .env
+
