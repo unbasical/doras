@@ -81,6 +81,7 @@ kos:
       - "{{if not .Prerelease}}stable{{end}}"
     creation_time: "{{.CommitTimestamp}}"
     ko_data_creation_time: "{{.CommitTimestamp}}"
+    bare: true
     sbom: spdx
   - id: doras-cli
     build: doras-cli
@@ -98,6 +99,7 @@ kos:
       - "{{if not .Prerelease}}stable{{end}}"
     creation_time: "{{.CommitTimestamp}}"
     ko_data_creation_time: "{{.CommitTimestamp}}"
+    bare: true
     sbom: spdx
 
 sboms:
