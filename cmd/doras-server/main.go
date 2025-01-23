@@ -26,7 +26,7 @@ func main() {
 	var configFile configs.ServerConfigFile
 	exists, err := fileutils.SafeReadYAML(serverConfig.CliOpts.ConfigFilePath, &serverConfig.ConfigFile, os.FileMode(0644))
 	if !exists || err != nil {
-		log.Fatalf("Error reading configFile file %s: %s", serverConfig.CliOpts.ConfigFilePath, err)
+		log.Errorf("Error reading configFile file %s: %s", serverConfig.CliOpts.ConfigFilePath, err)
 	}
 	log.Debugf("Config: %+v", configFile)
 

@@ -12,7 +12,6 @@ type clientOpts struct {
 	OutputDirectory    string
 	InternalDirectory  string
 	DockerConfigPath   string
-	RegistryURL        string
 	AcceptedAlgorithms []string
 }
 
@@ -29,7 +28,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	for _, option := range options {
 		option(client)
 	}
-	c, err := edgeapi.NewEdgeClient(client.opts.RemoteURL, client.opts.RegistryURL, true, nil)
+	c, err := edgeapi.NewEdgeClient(client.opts.RemoteURL, true, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -42,13 +41,6 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 func WithRemoteURL(remoteURL string) func(*Client) {
 	return func(c *Client) {
 		c.opts.RemoteURL = remoteURL
-	}
-}
-
-// WithRegistry adds a registry URL to the client configuration.
-func WithRegistry(registry string) func(*Client) {
-	return func(c *Client) {
-		c.opts.RegistryURL = registry
 	}
 }
 
