@@ -227,7 +227,7 @@ func pushAndTag(ctx context.Context, target oras.Target, d v1.Descriptor, conten
 	if err != nil {
 		return v1.Descriptor{}, err
 	}
-
+	log.Infof("manifest descriptor: %v", mfDesc)
 	// Tag the image.
 	if err = target.Tag(ctx, mfDesc, tag); err != nil {
 		return v1.Descriptor{}, fmt.Errorf("failed to tag manifest: %v", err)

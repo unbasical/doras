@@ -25,9 +25,9 @@ import (
 
 // Client provides the functionality to interact with the Doras server API.
 type Client struct {
-	base    *client.DorasBaseClient
-	reg     *remote.Registry
-	backoff BackoffStrategy
+	base      *client.DorasBaseClient
+	backoff   BackoffStrategy
+	plainHTTP bool
 }
 
 // exponentialBackoffWithJitter implements the BackoffStrategy interface
@@ -92,19 +92,14 @@ func DefaultBackoff() BackoffStrategy {
 }
 
 // NewEdgeClient returns a client that can be used to interact with the Doras server API.
-func NewEdgeClient(serverURL, registry string, allowHttp bool, tokenProvider client.AuthTokenProvider) (*Client, error) {
-	if tokenProvider != nil && allowHttp {
-		return nil, errors.New("using a login token while allowing HTTP is not supported to avoid leaking credentials")
-	}
-	reg, err := remote.NewRegistry(registry)
-	if err != nil {
-		return nil, err
-	}
-	reg.PlainHTTP = allowHttp
+func NewEdgeClient(serverURL string, allowHttp bool, tokenProvider client.AuthTokenProvider) (*Client, error) {
+	//if tokenProvider != nil && allowHttp {
+	//	return nil, errors.New("using a login token while allowing HTTP is not supported to avoid leaking credentials")
+	//}
 	return &Client{
-		base:    client.NewBaseClient(serverURL, nil),
-		reg:     reg,
-		backoff: DefaultBackoff(),
+		base:      client.NewBaseClient(serverURL, tokenProvider),
+		backoff:   DefaultBackoff(),
+		plainHTTP: allowHttp,
 	}, nil
 }
 
@@ -131,10 +126,10 @@ func (c *Client) ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (r
 	if c.base.TokenProvider != nil {
 		log.Debug("attempting to load token")
 		token, err := c.base.TokenProvider.GetAuthToken()
-		if err != nil {
-			return nil, false, err
+		if err == nil {
+			req.Header.Set("Authorization", "Bearer "+token)
 		}
-		req.Header.Set("Authorization", "Bearer "+token)
+		log.WithError(err).Debug("could not load auth token")
 	}
 
 	resp, err := c.base.Client.Get(url)
@@ -195,7 +190,7 @@ func (c *Client) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string)
 		return nil, "", nil, err
 	}
 	repo.Client = c.base.Client
-	repo.PlainHTTP = c.reg.PlainHTTP
+	repo.PlainHTTP = c.plainHTTP
 	descriptor, rc, err := repo.FetchReference(context.Background(), tag)
 	if err != nil {
 		return nil, "", nil, err

@@ -5,6 +5,11 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
+    environment:
+      DORAS_HOST: 0.0.0.0
+      DORAS_INSECURE_ALLOW_HTTP: True
+      DORAS_LOG_LEVEL: debug
+
   registry:
     image: registry:2.8
     environment:

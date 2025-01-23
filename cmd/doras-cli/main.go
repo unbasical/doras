@@ -14,7 +14,7 @@ type cliArgs struct {
 	LogLevel             string `help:"Log level." default:"info" enum:"debug,info,warn,error" env:"DORAS_LOG_LEVEL"`
 	LogFormat            string `help:"Log format." default:"text" enum:"json,text" env:"DORAS_LOG_FORMAT"`
 	InsecureAllowHTTP    bool   `help:"Allow INSECURE HTTP connections." default:"false" env:"DORAS_INSECURE_ALLOW_HTTP"`
-	Remote               string `help:"The URL of the Doras server." default:"localhost:8080" env:"DORAS_SERVER_URL"`
+	Remote               string `help:"The URL of the Doras server." default:"http://localhost:8080" env:"DORAS_SERVER_URL"`
 	Push                 struct {
 		Compress     string `help:"Compress artifact before uploading." default:"gzip" enum:"zstd,gzip,none"`
 		ArchiveFiles bool   `help:"Archive artifact before uploading." default:"false"`
@@ -24,7 +24,12 @@ type cliArgs struct {
 	Pull struct {
 		Image  string `arg:"" name:"image" help:"Target image/repository which is pulled."`
 		Output string `help:"Output directory." type:"path" default:"."`
-	} `cmd:"" name:"pull" help:"Pull an artifact from a registry, uses delta updates if possible."`
+	} `cmd:"" name:"pull" help:"Pull an artifact from a registry, uses readDelta updates if possible."`
+	ReadDelta struct {
+		From  string `help:"From which image the delta will be built."`
+		To    string `help:"To which image the delta will be built."`
+		Async bool   `help:"Do not block until the delta is created." default:"false"`
+	} `cmd:"" help:"Request a delta image from the Doras server."`
 }
 
 func main() {
@@ -43,6 +48,8 @@ func main() {
 		err = args.push(ctx)
 	case "pull <image>":
 		err = args.pull(ctx)
+	case "read-delta":
+		err = args.readDelta(ctx)
 	default:
 		log.Fatalf("Unknown command: %v", cliCtx.Command())
 	}
