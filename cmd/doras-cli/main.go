@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/alecthomas/kong"
 	log "github.com/sirupsen/logrus"
-	"github.com/unbasical/doras-server/internal/pkg/utils/logutils"
+	"github.com/unbasical/doras/internal/pkg/utils/logutils"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/credentials"
 )

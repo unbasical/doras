@@ -6,7 +6,7 @@ import (
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/assert"
-	"github.com/unbasical/doras-server/pkg/constants"
+	"github.com/unbasical/doras/pkg/constants"
 )
 
 func TestExtractPathFromManifest(t *testing.T) {

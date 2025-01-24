@@ -7,18 +7,18 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"sync"
 
-	apidelegate "github.com/unbasical/doras-server/internal/pkg/delegates/api"
-	deltadelegate "github.com/unbasical/doras-server/internal/pkg/delegates/delta"
-	registrydelegate "github.com/unbasical/doras-server/internal/pkg/delegates/registry"
-	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
+	apidelegate "github.com/unbasical/doras/internal/pkg/delegates/api"
+	deltadelegate "github.com/unbasical/doras/internal/pkg/delegates/delta"
+	registrydelegate "github.com/unbasical/doras/internal/pkg/delegates/registry"
+	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	log "github.com/sirupsen/logrus"
-	"github.com/unbasical/doras-server/internal/pkg/algorithmchoice"
-	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
-	error2 "github.com/unbasical/doras-server/internal/pkg/error"
-	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
-	"github.com/unbasical/doras-server/pkg/constants"
+	"github.com/unbasical/doras/internal/pkg/algorithmchoice"
+	"github.com/unbasical/doras/internal/pkg/api/apicommon"
+	error2 "github.com/unbasical/doras/internal/pkg/error"
+	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
+	"github.com/unbasical/doras/pkg/constants"
 )
 
 // Engine handles delta requests, including graceful shutdowns.

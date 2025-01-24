@@ -10,13 +10,13 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
+	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 
-	registrydelegate "github.com/unbasical/doras-server/internal/pkg/delegates/registry"
+	registrydelegate "github.com/unbasical/doras/internal/pkg/delegates/registry"
 
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/unbasical/doras-server/pkg/constants"
+	"github.com/unbasical/doras/pkg/constants"
 )
 
 type delegate struct {

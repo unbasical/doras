@@ -3,11 +3,11 @@ package tardiff
 import (
 	"bytes"
 	"compress/gzip"
-	"github.com/unbasical/doras-server/pkg/algorithm/delta"
+	"github.com/unbasical/doras/pkg/algorithm/delta"
 	"io"
 	"testing"
 
-	"github.com/unbasical/doras-server/internal/pkg/utils/fileutils"
+	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 )
 
 func TestApplier_Apply(t *testing.T) {

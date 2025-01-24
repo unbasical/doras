@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/unbasical/doras-server/internal/pkg/auth"
-	apidelegate "github.com/unbasical/doras-server/internal/pkg/delegates/api"
+	"github.com/unbasical/doras/internal/pkg/auth"
+	apidelegate "github.com/unbasical/doras/internal/pkg/delegates/api"
 
 	"github.com/gin-gonic/gin"
-	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
-	error2 "github.com/unbasical/doras-server/internal/pkg/error"
-	"github.com/unbasical/doras-server/pkg/constants"
+	"github.com/unbasical/doras/internal/pkg/api/apicommon"
+	error2 "github.com/unbasical/doras/internal/pkg/error"
+	"github.com/unbasical/doras/pkg/constants"
 )
 
 // ginDorasContext implements the apidelegate.APIDelegate interface for gin HTTP servers.

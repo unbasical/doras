@@ -2,7 +2,7 @@ package bsdiff
 
 import (
 	"bytes"
-	"github.com/unbasical/doras-server/pkg/algorithm/delta"
+	"github.com/unbasical/doras/pkg/algorithm/delta"
 	"io"
 	"testing"
 

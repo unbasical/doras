@@ -3,7 +3,7 @@ package ociutils
 import (
 	"errors"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/unbasical/doras-server/pkg/constants"
+	"github.com/unbasical/doras/pkg/constants"
 )
 
 // ExtractPathFromManifest returns the path information and whether the artifact contains an archive.

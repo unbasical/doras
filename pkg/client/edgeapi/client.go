@@ -12,14 +12,14 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
+	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
-	"github.com/unbasical/doras-server/internal/pkg/client"
-	"github.com/unbasical/doras-server/internal/pkg/utils/buildurl"
-	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
-	"github.com/unbasical/doras-server/pkg/constants"
+	"github.com/unbasical/doras/internal/pkg/api/apicommon"
+	"github.com/unbasical/doras/internal/pkg/client"
+	"github.com/unbasical/doras/internal/pkg/utils/buildurl"
+	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
+	"github.com/unbasical/doras/pkg/constants"
 	"oras.land/oras-go/v2/registry/remote"
 )
 

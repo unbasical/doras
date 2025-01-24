@@ -5,12 +5,12 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/unbasical/doras-server/internal/pkg/api/gindelegate"
+	"github.com/unbasical/doras/internal/pkg/api/gindelegate"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
-	"github.com/unbasical/doras-server/internal/pkg/api/apicommon"
-	"github.com/unbasical/doras-server/internal/pkg/core/dorasengine"
+	"github.com/unbasical/doras/internal/pkg/api/apicommon"
+	"github.com/unbasical/doras/internal/pkg/core/dorasengine"
 )
 
 // logger creates gin.HandlerFunc that uses logrus for logging.

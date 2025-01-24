@@ -1,7 +1,7 @@
 package delta
 
 import (
-	"github.com/unbasical/doras-server/pkg/algorithm"
+	"github.com/unbasical/doras/pkg/algorithm"
 	"io"
 )
 

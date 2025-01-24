@@ -12,14 +12,14 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
 
-	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
+	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
-	"github.com/unbasical/doras-server/internal/pkg/algorithmchoice"
-	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
-	"github.com/unbasical/doras-server/pkg/constants"
+	"github.com/unbasical/doras/internal/pkg/algorithmchoice"
+	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
+	"github.com/unbasical/doras/pkg/constants"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
 )

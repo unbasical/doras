@@ -1,7 +1,7 @@
 package apidelegate
 
 import (
-	auth2 "github.com/unbasical/doras-server/internal/pkg/auth"
+	auth2 "github.com/unbasical/doras/internal/pkg/auth"
 )
 
 type APIDelegate interface {

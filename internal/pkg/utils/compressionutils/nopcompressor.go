@@ -3,7 +3,7 @@ package compressionutils
 import (
 	"io"
 
-	"github.com/unbasical/doras-server/pkg/algorithm/compression"
+	"github.com/unbasical/doras/pkg/algorithm/compression"
 )
 
 type noCompression struct {

@@ -5,8 +5,8 @@ import (
 
 	"github.com/klauspost/compress/zstd"
 
-	"github.com/unbasical/doras-server/internal/pkg/utils/compressionutils"
-	"github.com/unbasical/doras-server/pkg/algorithm/compression"
+	"github.com/unbasical/doras/internal/pkg/utils/compressionutils"
+	"github.com/unbasical/doras/pkg/algorithm/compression"
 )
 
 // NewDecompressor returns a zstd compression.Decompressor.

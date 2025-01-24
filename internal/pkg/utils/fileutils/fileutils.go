@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
+	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 	"io"
 	"os"
 
-	"github.com/unbasical/doras-server/internal/pkg/utils/writerutils"
+	"github.com/unbasical/doras/internal/pkg/utils/writerutils"
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"

@@ -3,12 +3,12 @@ package gzip
 import (
 	"io"
 
-	"github.com/unbasical/doras-server/internal/pkg/utils/readerutils"
+	"github.com/unbasical/doras/internal/pkg/utils/readerutils"
 
 	"github.com/klauspost/compress/gzip"
 
-	"github.com/unbasical/doras-server/internal/pkg/utils/compressionutils"
-	"github.com/unbasical/doras-server/pkg/algorithm/compression"
+	"github.com/unbasical/doras/internal/pkg/utils/compressionutils"
+	"github.com/unbasical/doras/pkg/algorithm/compression"
 )
 
 // NewCompressor returns a gzip compression.Compressor.
