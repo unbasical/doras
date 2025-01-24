@@ -1,7 +1,3 @@
-sources:
-  localhost:5001:
-    enable-http: true
-storage:
-  kind: oci
-  url: localhost:5000
-  enable-http: true
+trusted-proxies:
+  - https://proxy1.example.org
+  - https://proxy2.example.org
