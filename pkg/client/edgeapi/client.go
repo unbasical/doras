@@ -70,7 +70,7 @@ func (e *exponentialBackoffWithJitter) Wait() error {
 	}
 
 	// Sleep for the calculated delay
-	fmt.Printf("Waiting for %v (attempt %d)\n", delay, e.currentAttempt)
+	log.Debugf("Waiting for %v (attempt %d)\n", delay, e.currentAttempt)
 	time.Sleep(delay)
 
 	// Increment the attempt number for the next retry
@@ -86,9 +86,9 @@ type BackoffStrategy interface {
 
 // DefaultBackoff returns a sensible default BackoffStrategy (exponential with an upper bound).
 func DefaultBackoff() BackoffStrategy {
-	const defaultBaseDelay = 1000 * time.Millisecond
+	const defaultBaseDelay = 100 * time.Millisecond
 	const defaultMaxDelay = 1 * time.Minute
-	return NewExponentialBackoffWithJitter(defaultBaseDelay, defaultMaxDelay, 5)
+	return NewExponentialBackoffWithJitter(defaultBaseDelay, defaultMaxDelay, 10)
 }
 
 // NewEdgeClient returns a client that can be used to interact with the Doras server API.
@@ -129,7 +129,7 @@ func (c *Client) ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (r
 		if err == nil {
 			req.Header.Set("Authorization", "Bearer "+token)
 		}
-		log.WithError(err).Debug("could not load auth token")
+		log.WithError(err).Debug("could not load auth token, using no authentication")
 	}
 
 	resp, err := c.base.Client.Get(url)
@@ -168,6 +168,7 @@ func (c *Client) ReadDelta(from, to string, acceptedAlgorithms []string) (*apico
 		if exists {
 			return response, nil
 		}
+		log.Debugf("request was accepted, trying again after waiting period")
 		err = c.backoff.Wait()
 		if err != nil {
 			return nil, err
