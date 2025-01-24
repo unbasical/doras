@@ -1,11 +1,11 @@
 package bsdiff
 
 import (
-	"github.com/unbasical/doras-server/pkg/algorithm/delta"
+	"github.com/unbasical/doras/pkg/algorithm/delta"
 	"io"
 
 	bsdiff2 "github.com/gabstv/go-bsdiff/pkg/bsdiff"
-	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
+	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 )
 
 type creator struct {

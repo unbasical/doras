@@ -3,13 +3,13 @@ package tardiff
 import (
 	"compress/gzip"
 	log "github.com/sirupsen/logrus"
-	"github.com/unbasical/doras-server/pkg/algorithm/delta"
+	"github.com/unbasical/doras/pkg/algorithm/delta"
 	"io"
 
 	tarpatch "github.com/containers/tar-diff/pkg/tar-patch"
 
-	"github.com/unbasical/doras-server/internal/pkg/delta/tarfsdatasource"
-	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
+	"github.com/unbasical/doras/internal/pkg/delta/tarfsdatasource"
+	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 )
 
 type applier struct {

@@ -2,20 +2,20 @@ package algorithmchoice
 
 import (
 	"fmt"
-	"github.com/unbasical/doras-server/pkg/algorithm/delta"
+	"github.com/unbasical/doras/pkg/algorithm/delta"
 	"slices"
 
-	"github.com/unbasical/doras-server/internal/pkg/compression/zstd"
+	"github.com/unbasical/doras/internal/pkg/compression/zstd"
 
-	"github.com/unbasical/doras-server/pkg/constants"
+	"github.com/unbasical/doras/pkg/constants"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/unbasical/doras-server/internal/pkg/compression/gzip"
-	"github.com/unbasical/doras-server/internal/pkg/delta/bsdiff"
-	"github.com/unbasical/doras-server/internal/pkg/delta/tardiff"
-	"github.com/unbasical/doras-server/internal/pkg/utils/compressionutils"
+	"github.com/unbasical/doras/internal/pkg/compression/gzip"
+	"github.com/unbasical/doras/internal/pkg/delta/bsdiff"
+	"github.com/unbasical/doras/internal/pkg/delta/tardiff"
+	"github.com/unbasical/doras/internal/pkg/utils/compressionutils"
 
-	"github.com/unbasical/doras-server/pkg/algorithm/compression"
+	"github.com/unbasical/doras/pkg/algorithm/compression"
 )
 
 // PatcherChoice aggregates the two algorithms that are used to apply a delta patch.

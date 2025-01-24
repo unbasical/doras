@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
+	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 	"hash"
 	"io"
 	"os"
@@ -14,18 +14,18 @@ import (
 	"strings"
 
 	"github.com/opencontainers/go-digest"
-	"github.com/unbasical/doras-server/internal/pkg/compression/gzip"
-	"github.com/unbasical/doras-server/internal/pkg/compression/zstd"
-	"github.com/unbasical/doras-server/internal/pkg/delta/bsdiff"
-	"github.com/unbasical/doras-server/internal/pkg/delta/tardiff"
-	"github.com/unbasical/doras-server/internal/pkg/utils/fileutils"
-	"github.com/unbasical/doras-server/internal/pkg/utils/ociutils"
-	"github.com/unbasical/doras-server/internal/pkg/utils/writerutils"
+	"github.com/unbasical/doras/internal/pkg/compression/gzip"
+	"github.com/unbasical/doras/internal/pkg/compression/zstd"
+	"github.com/unbasical/doras/internal/pkg/delta/bsdiff"
+	"github.com/unbasical/doras/internal/pkg/delta/tardiff"
+	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
+	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
+	"github.com/unbasical/doras/internal/pkg/utils/writerutils"
 	"oras.land/oras-go/v2/registry/remote"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/unbasical/doras-server/internal/pkg/algorithmchoice"
-	"github.com/unbasical/doras-server/pkg/client/edgeapi"
+	"github.com/unbasical/doras/internal/pkg/algorithmchoice"
+	"github.com/unbasical/doras/pkg/client/edgeapi"
 )
 
 type dorasStateData struct {

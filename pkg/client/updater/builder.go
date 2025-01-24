@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/unbasical/doras-server/pkg/client/edgeapi"
+	"github.com/unbasical/doras/pkg/client/edgeapi"
 )
 
 type clientOpts struct {

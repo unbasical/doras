@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	tarpatch "github.com/containers/tar-diff/pkg/tar-patch"
-	"github.com/unbasical/doras-server/internal/pkg/utils/readseekcloserwrapper"
+	"github.com/unbasical/doras/internal/pkg/utils/readseekcloserwrapper"
 	"io"
 	"path"
 )

@@ -1,11 +1,11 @@
 package bsdiff
 
 import (
-	"github.com/unbasical/doras-server/pkg/algorithm/delta"
+	"github.com/unbasical/doras/pkg/algorithm/delta"
 	"io"
 
 	bspatchdep "github.com/gabstv/go-bsdiff/pkg/bspatch"
-	"github.com/unbasical/doras-server/internal/pkg/utils/funcutils"
+	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 )
 
 func bspatch(old io.Reader, patch io.Reader) (io.ReadCloser, error) {
