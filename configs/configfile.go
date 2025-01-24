@@ -19,5 +19,20 @@ type CLI struct {
 
 // ServerConfigFile is used to parse the config files that can be used for more extensive configuration.
 type ServerConfigFile struct {
-	TrustedProxies []string `yaml:"trusted-proxies"`
+	TrustedProxies []string             `yaml:"trusted-proxies"`
+	Registries     map[string]RegConfig `yaml:"registries"`
+}
+
+// RegConfig stores the configuration for a OCI registry.
+// Currently only wraps Auth, but more options may be added in the future.
+type RegConfig struct {
+	Auth RepoAuth `yaml:"auth"`
+}
+
+// RepoAuth stores registry login secrets.
+// AccessToken is mutually exclusive to the other fields.
+type RepoAuth struct {
+	Username    string `yaml:"username"`
+	Password    string `yaml:"password"`
+	AccessToken string `yaml:"access-token"`
 }

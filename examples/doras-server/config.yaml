@@ -1,3 +1,8 @@
 trusted-proxies:
   - https://proxy1.example.org
   - https://proxy2.example.org
+registries:
+  registry.example.org:
+    auth:
+      username: foo
+      password: bar
