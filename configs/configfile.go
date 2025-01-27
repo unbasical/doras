@@ -15,6 +15,7 @@ type CLI struct {
 	LogLevel             string `help:"Server log level." default:"info" enum:"debug,info,warn,error" env:"DORAS_LOG_LEVEL"`
 	ShutdownTimout       uint   `help:"Graceful shutdown timeout (in seconds)." default:"20" env:"DORAS_SHUTDOWN_TIMEOUT"`
 	InsecureAllowHTTP    bool   `help:"Allow INSECURE HTTP connections." default:"false" env:"DORAS_INSECURE_ALLOW_HTTP"`
+	Version              bool   `help:"Print version number version and exit." default:"false"`
 }
 
 // ServerConfigFile is used to parse the config files that can be used for more extensive configuration.
