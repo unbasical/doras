@@ -25,6 +25,8 @@ builds:
     flags:
       - -trimpath
     mod_timestamp: '{{ .CommitTimestamp }}'
+    ldflags:
+      "-s -w -X main.version={{.Tag}}"
 
   - id: doras-cli
     binary: doras-cli-{{ .Os }}-{{ .Arch }}
@@ -85,7 +87,7 @@ kos:
     bare: true
     sbom: spdx
     ldflags:
-      - -s -w -X main.build={{.Version}}
+      - "-s -w -X main.version={{.Tag}}"
   - id: doras-cli
     build: doras-cli
     main: ./cmd/doras-cli
