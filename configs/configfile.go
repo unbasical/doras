@@ -18,6 +18,8 @@ type CLI struct {
 	ExampleConfig        struct {
 		Output string `help:"Write example config to this location instead of printing to stdout." type:"path"`
 	} `cmd:"" help:"Print or store example config."`
+	Run struct {
+	} `cmd:"" help:"Run the server." default:"1"`
 	Version bool `help:"Print version number version and exit." default:"false"`
 }
 
