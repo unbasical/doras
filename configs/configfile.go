@@ -26,7 +26,7 @@ type ServerConfigFile struct {
 	Registries     map[string]RegConfig `yaml:"registries"`
 }
 
-// RegConfig stores the configuration for a OCI registry.
+// RegConfig stores the configuration for an OCI registry.
 // Currently only wraps Auth, but more options may be added in the future.
 type RegConfig struct {
 	Auth RepoAuth `yaml:"auth"`
