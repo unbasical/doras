@@ -11,8 +11,11 @@ import (
 	"github.com/unbasical/doras/internal/pkg/core/dorasengine"
 	deltadelegate "github.com/unbasical/doras/internal/pkg/delegates/delta"
 	registrydelegate "github.com/unbasical/doras/internal/pkg/delegates/registry"
+	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 	"net/http"
+	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/credentials"
+	"os"
 )
 
 type Doras struct {
@@ -37,22 +40,44 @@ func (d *Doras) init(config configs.ServerConfig) *Doras {
 	if config.CliOpts.LogLevel != "debug" {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	credentialStore, err := credentials.NewStore(config.CliOpts.DockerConfigFilePath, credentials.StoreOptions{
-		AllowPlaintextPut:        false,
-		DetectDefaultNativeStore: true,
-	})
-	if err != nil {
-		log.WithError(err).Fatal("failed to create credential store from docker config file")
-		panic(err)
+	var opts []func(aggregate *ociutils.CredFuncAggregate)
+
+	// Load credentials configured in the config file.
+	for regName, regConf := range config.ConfigFile.Registries {
+		authConf := regConf.Auth
+		if authConf.Username == "" || authConf.Password == "" || authConf.AccessToken == "" {
+			log.Warnf("config file provided no credenitals for registry %s", regName)
+		}
+		if authConf.AccessToken != "" {
+			token := os.ExpandEnv(authConf.AccessToken)
+			opts = append(opts, ociutils.WithCredFunc(auth.StaticCredential(regName, auth.Credential{AccessToken: token})))
+		}
+		if authConf.Password != "" && authConf.Username != "" {
+			username := os.ExpandEnv(authConf.Username)
+			password := os.ExpandEnv(authConf.Password)
+			opts = append(opts, ociutils.WithCredFunc(auth.StaticCredential(regName, auth.Credential{Username: username, Password: password})))
+		}
 	}
-	creds := credentials.Credential(credentialStore)
+	// Load credentials configured via the docker config file.
+	// This is done seconds so it does not shadow credentials loaded from the config file.
+	if config.CliOpts.DockerConfigFilePath != "" {
+		credentialStore, err := credentials.NewStore(config.CliOpts.DockerConfigFilePath, credentials.StoreOptions{
+			AllowPlaintextPut:        false,
+			DetectDefaultNativeStore: true,
+		})
+		if err != nil {
+			log.WithError(err).Fatal("failed to create credential store from docker config file")
+		}
+		opts = append(opts, ociutils.WithCredFunc(credentials.Credential(credentialStore)))
+	}
+	creds := ociutils.NewCredentialsAggregate(opts...)
 
 	registryDelegate := registrydelegate.NewRegistryDelegate(creds, config.CliOpts.InsecureAllowHTTP)
 	deltaDelegate := deltadelegate.NewDeltaDelegate()
 
 	dorasEngine := dorasengine.NewEngine(registryDelegate, deltaDelegate)
 	r := api.BuildApp(dorasEngine)
-	err = r.SetTrustedProxies(config.ConfigFile.TrustedProxies)
+	err := r.SetTrustedProxies(config.ConfigFile.TrustedProxies)
 	if err != nil {
 		log.WithError(err).Fatal("failed to set trusted proxies")
 	}

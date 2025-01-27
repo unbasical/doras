@@ -1,3 +1,21 @@
 trusted-proxies:
   - https://proxy1.example.org
   - https://proxy2.example.org
+# This can be used to configure the registries the server can access.
+registries:
+  # Use the hostname as the top level key.
+  registry1.example.org:
+    # configure user-password credentials
+    auth:
+      username: foo
+      password: bar
+  registry2.example.org:
+    # Alternatively use an environment variable.
+    auth:
+      username: ${REGISTRY_USER}
+      password: ${REGISTRY_PASS}
+  registry3.example.org:
+    # Access tokens are also a viable option.
+    # Note: username, password and access-token are mutually exclusive.
+    auth:
+      access-token: ${REGISTRY_TOKEN}

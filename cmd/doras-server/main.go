@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"github.com/unbasical/doras/examples"
 	"os"
 	"os/signal"
 	"strings"
@@ -21,13 +23,32 @@ var version = "development"
 func main() {
 	serverConfig := configs.ServerConfig{}
 	// Parse CLI options
-	_ = kong.Parse(&serverConfig.CliOpts)
+	kongCtx := kong.Parse(&serverConfig.CliOpts)
 	if serverConfig.CliOpts.Version {
 		println(version)
 		return
 	}
 	logLevel := StringToLogLevel(serverConfig.CliOpts.LogLevel)
 	log.SetLevel(logLevel)
+
+	if kongCtx.Command() == "example-config" {
+		exampleConfig := examples.DorasExampleConfig()
+		if serverConfig.CliOpts.ExampleConfig.Output != "" {
+			file, err := os.OpenFile(serverConfig.CliOpts.ExampleConfig.Output, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+			if err != nil {
+				log.Fatal(err)
+			}
+			_, err = file.Write([]byte(exampleConfig))
+			if err != nil {
+				log.Fatal(err)
+			}
+			_ = file.Close()
+			log.Infof("Example config written to %s", serverConfig.CliOpts.ExampleConfig.Output)
+			return
+		}
+		_, _ = fmt.Printf("%s\n", exampleConfig)
+		return
+	}
 
 	var configFile configs.ServerConfigFile
 	exists, err := fileutils.SafeReadYAML(serverConfig.CliOpts.ConfigFilePath, &serverConfig.ConfigFile, os.FileMode(0644))
