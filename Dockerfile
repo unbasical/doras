@@ -6,7 +6,7 @@ WORKDIR /go/src/app
 ADD . /go/src/app
 
 RUN go mod download
-RUN go build -o /go/bin/doras-server github.com/unbasical/doras-server/cmd/doras-server
+RUN go build -o /go/bin/doras-server github.com/unbasical/doras/cmd/doras-server
 
 FROM gcr.io/distroless/base AS build
 ARG PORT=8080

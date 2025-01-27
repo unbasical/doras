@@ -47,7 +47,8 @@ builds:
     flags:
       - -trimpath
     mod_timestamp: '{{ .CommitTimestamp }}'
-
+    ldflags:
+      - -s -w -X main.build={{.Version}}
 archives:
   - format: tar.gz
     # this name template makes the OS and Arch compatible with the results of `uname`.
@@ -83,6 +84,8 @@ kos:
     ko_data_creation_time: "{{.CommitTimestamp}}"
     bare: true
     sbom: spdx
+    ldflags:
+      - -s -w -X main.build={{.Version}}
   - id: doras-cli
     build: doras-cli
     main: ./cmd/doras-cli

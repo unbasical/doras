@@ -15,10 +15,30 @@ type CLI struct {
 	LogLevel             string `help:"Server log level." default:"info" enum:"debug,info,warn,error" env:"DORAS_LOG_LEVEL"`
 	ShutdownTimout       uint   `help:"Graceful shutdown timeout (in seconds)." default:"20" env:"DORAS_SHUTDOWN_TIMEOUT"`
 	InsecureAllowHTTP    bool   `help:"Allow INSECURE HTTP connections." default:"false" env:"DORAS_INSECURE_ALLOW_HTTP"`
-	Version              bool   `help:"Print version number version and exit." default:"false"`
+	ExampleConfig        struct {
+		Output string `help:"Write example config to this location instead of printing to stdout." type:"path"`
+	} `cmd:"" help:"Print or store example config."`
+	Run struct {
+	} `cmd:"" help:"Run the server." default:"1"`
+	Version bool `help:"Print version number version and exit." default:"false"`
 }
 
 // ServerConfigFile is used to parse the config files that can be used for more extensive configuration.
 type ServerConfigFile struct {
-	TrustedProxies []string `yaml:"trusted-proxies"`
+	TrustedProxies []string             `yaml:"trusted-proxies"`
+	Registries     map[string]RegConfig `yaml:"registries"`
+}
+
+// RegConfig stores the configuration for an OCI registry.
+// Currently only wraps Auth, but more options may be added in the future.
+type RegConfig struct {
+	Auth RepoAuth `yaml:"auth"`
+}
+
+// RepoAuth stores registry login secrets.
+// AccessToken is mutually exclusive to the other fields.
+type RepoAuth struct {
+	Username    string `yaml:"username"`
+	Password    string `yaml:"password"`
+	AccessToken string `yaml:"access-token"`
 }
