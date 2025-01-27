@@ -1,0 +1,30 @@
+name: Create Version Tag
+on:
+  push:
+    branches:
+      - main  # Trigger only on the main branch
+    paths:
+      - common/version.txt
+
+jobs:
+  create-tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Read version
+        id: read-version
+        run: |
+          VERSION=$(cat common/version.txt) # Replace with your file path
+          echo "version=$VERSION" >> $GITHUB_ENV
+      - name: Create tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          VERSION=${{ env.version }}
+          git tag -a "$VERSION" -m "Release version $VERSION"
+          git push origin "$VERSION"
