@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/unbasical/doras/common"
 	"github.com/unbasical/doras/examples"
 	"os"
 	"os/signal"
@@ -22,6 +23,10 @@ func main() {
 	serverConfig := configs.ServerConfig{}
 	// Parse CLI options
 	kongCtx := kong.Parse(&serverConfig.CliOpts)
+	if serverConfig.CliOpts.Version {
+		println(common.Version())
+		return
+	}
 	logLevel := StringToLogLevel(serverConfig.CliOpts.LogLevel)
 	log.SetLevel(logLevel)
 

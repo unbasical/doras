@@ -18,6 +18,7 @@ type CLI struct {
 	ExampleConfig        struct {
 		Output string `help:"Write example config to this location instead of printing to stdout." type:"path"`
 	} `cmd:"" help:"Print or store example config."`
+	Version bool `help:"Print version number version and exit." default:"false"`
 }
 
 // ServerConfigFile is used to parse the config files that can be used for more extensive configuration.
