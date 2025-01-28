@@ -45,7 +45,7 @@ func (d *Doras) init(config configs.ServerConfig) *Doras {
 	// Load credentials configured in the config file.
 	for regName, regConf := range config.ConfigFile.Registries {
 		authConf := regConf.Auth
-		if authConf.Username == "" || authConf.Password == "" || authConf.AccessToken == "" {
+		if (authConf.Username == "" || authConf.Password == "") && authConf.AccessToken == "" {
 			log.Warnf("config file provided no credenitals for registry %s", regName)
 		}
 		if authConf.AccessToken != "" {
