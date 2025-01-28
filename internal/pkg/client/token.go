@@ -1,5 +1,7 @@
 package client
 
-type AuthTokenProvider interface {
-	GetAuthToken() (string, error)
+import "oras.land/oras-go/v2/registry/remote/auth"
+
+type AuthProvider interface {
+	GetAuth() (auth.Credential, error)
 }

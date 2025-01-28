@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/unbasical/doras/internal/pkg/auth"
 	"io"
 	"math/rand"
 	"net/http"
+	auth2 "oras.land/oras-go/v2/registry/remote/auth"
 	"strings"
 	"time"
 
@@ -92,7 +94,7 @@ func DefaultBackoff() BackoffStrategy {
 }
 
 // NewEdgeClient returns a client that can be used to interact with the Doras server API.
-func NewEdgeClient(serverURL string, allowHttp bool, tokenProvider client.AuthTokenProvider) (*Client, error) {
+func NewEdgeClient(serverURL string, allowHttp bool, tokenProvider client.AuthProvider) (*Client, error) {
 	//if tokenProvider != nil && allowHttp {
 	//	return nil, errors.New("using a login token while allowing HTTP is not supported to avoid leaking credentials")
 	//}
@@ -125,11 +127,12 @@ func (c *Client) ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (r
 
 	if c.base.TokenProvider != nil {
 		log.Debug("attempting to load token")
-		token, err := c.base.TokenProvider.GetAuthToken()
-		if err == nil {
-			req.Header.Set("Authorization", "Bearer "+token)
+		creds, err := c.base.TokenProvider.GetAuth()
+		if err != nil {
+			log.WithError(err).Debug("could not load auth token, using no authentication")
+		} else {
+			setupAuthHeader(creds, req)
 		}
-		log.WithError(err).Debug("could not load auth token, using no authentication")
 	}
 
 	resp, err := c.base.Client.Get(url)
@@ -153,6 +156,15 @@ func (c *Client) ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (r
 		return nil, false, nil
 	default:
 		return nil, false, errors.New(resp.Status)
+	}
+}
+
+func setupAuthHeader(creds auth2.Credential, req *http.Request) {
+	if creds.AccessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+creds.AccessToken)
+	}
+	if creds.Username != "" && creds.Password != "" {
+		req.Header.Set("Authorization", auth.GenerateBasicAuth(creds.Username, creds.Password))
 	}
 }
 

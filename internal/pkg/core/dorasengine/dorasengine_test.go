@@ -179,7 +179,7 @@ func (t *testRegistryDelegate) PushDummy(image string, manifOpts registrydelegat
 }
 
 type testAPIDelegate struct {
-	token              string
+	creds              auth.Credential
 	fromImage          string
 	toImage            string
 	acceptedAlgorithms []string
@@ -194,8 +194,11 @@ func (t *testAPIDelegate) RequestContext() (context.Context, error) {
 }
 
 func (t *testAPIDelegate) ExtractClientAuth() (auth2.RegistryAuth, error) {
-	if t.token != "" {
-		return auth2.NewClientAuthFromToken(t.token), nil
+	if t.creds.AccessToken != "" {
+		return auth2.NewClientAuthFromToken(t.creds.AccessToken), nil
+	}
+	if t.creds.Username != "" && t.creds.Password != "" {
+		return auth2.NewClientAuthFromUsernamePassword(t.creds.Username, t.creds.Password), nil
 	}
 	return nil, errors.New("no token provided")
 }
@@ -387,7 +390,7 @@ func Test_readDelta_Token(t *testing.T) {
 				registry: registryMock,
 				delegate: delegate,
 				apiDelegate: testAPIDelegate{
-					token:              dummyToken,
+					creds:              auth.Credential{AccessToken: dummyToken},
 					fromImage:          image1,
 					toImage:            image2,
 					acceptedAlgorithms: []string{"bsdiff", "tardiff", "zstd", "gzip"},
@@ -401,7 +404,7 @@ func Test_readDelta_Token(t *testing.T) {
 				registry: registryMock,
 				delegate: delegate,
 				apiDelegate: testAPIDelegate{
-					token:              "invalid token",
+					creds:              auth.Credential{AccessToken: "invalid token"},
 					fromImage:          image1,
 					toImage:            image2,
 					acceptedAlgorithms: []string{"bsdiff", "tardiff", "zstd", "gzip"},

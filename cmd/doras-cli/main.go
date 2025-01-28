@@ -60,12 +60,15 @@ func main() {
 
 // getCredentialFunc loads the configured docker credential store and returns an auth.CredentialFunc.
 func (args *cliArgs) getCredentialFunc() (auth.CredentialFunc, error) {
+	log.Debug("attempting to load credentials using provided docker config file")
 	credentialStore, err := credentials.NewStore(args.DockerConfigFilePath, credentials.StoreOptions{
 		AllowPlaintextPut:        false,
 		DetectDefaultNativeStore: true,
 	})
 	if err != nil {
+		log.WithError(err).Debug("load credential store from docker config")
 		return nil, err
 	}
+	log.Debug("loaded credential store successfully")
 	return credentials.Credential(credentialStore), nil
 }
