@@ -19,6 +19,7 @@ var (
 	ErrBadRequest                  = errors.New("bad request")
 	ErrInvalidOciImage             = errors.New("invalid oci image")
 	ErrMissingQueryParam           = errors.New("missing query param")
+	ErrExpectedDigest              = errors.New("expected digest")
 	ErrUnauthorized                = errors.New("unauthorized")
 	ErrFailedToResolve             = errors.New("failed to resolve")
 )

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	error2 "github.com/unbasical/doras/internal/pkg/error"
 	"io"
 	"os"
 	"sync"
@@ -56,7 +57,7 @@ func (r *registryImpl) Resolve(image string, expectDigest bool, creds auth.Crede
 	}
 	// Enforce that image is "tagged" with the digest.
 	if expectDigest && !isDigest {
-		return nil, "", v1.Descriptor{}, errors.New("expected digest")
+		return nil, "", v1.Descriptor{}, error2.ErrExpectedDigest
 	}
 
 	repository, err := remote.NewRepository(repoName)
