@@ -57,6 +57,7 @@ func main() {
 	}
 	log.Debugf("Config: %+v", configFile)
 
+	log.Infof("Doras version: %v", version)
 	// Start up server.
 	doras := core.New(serverConfig)
 	doras.Start()

@@ -134,11 +134,7 @@ func (c *Client) ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (r
 			setupAuthHeader(creds, req)
 		}
 	}
-
-	resp, err := c.base.Client.Get(url)
-	if err != nil {
-		return nil, false, err
-	}
+	resp, err := c.base.Client.Do(req)
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
 			log.Error(err)
