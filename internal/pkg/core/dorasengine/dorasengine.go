@@ -132,6 +132,7 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 	srcFrom, fromImage, fromDescriptor, err := registry.Resolve(fromDigest, true, creds)
 	if err != nil {
 		log.WithError(err).Errorf("Error resolving target %q", fromDigest)
+		// assume there is the string "unauthorized" in the error message when there is an auth failure
 		if strings.Contains(err.Error(), "unauthorized") {
 			apiDelegate.HandleError(error2.ErrUnauthorized, "")
 			return
@@ -142,6 +143,7 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 	srcTo, toImage, toDescriptor, err := registry.Resolve(toTarget, false, creds)
 	if err != nil {
 		log.WithError(err).Errorf("Error resolving target %q", toTarget)
+		// assume there is the string "unauthorized" in the error message when there is an auth failure
 		if strings.Contains(err.Error(), "unauthorized") {
 			apiDelegate.HandleError(error2.ErrUnauthorized, "")
 			return
