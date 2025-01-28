@@ -96,7 +96,7 @@ func (r *registryImpl) LoadManifest(target v1.Descriptor, source oras.ReadOnlyTa
 }
 
 func (r *registryImpl) LoadArtifact(mf ociutils.Manifest, source oras.ReadOnlyTarget) (io.ReadCloser, error) {
-	if len(mf.Layers) != 1 && len(mf.Layers) != 1 {
+	if len(mf.Layers) != 1 && len(mf.Blobs) != 1 {
 		return nil, errors.New("expected single layer or blob")
 	}
 	if len(mf.Layers) != 1 {
