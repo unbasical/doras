@@ -15,7 +15,6 @@ import (
 	registrydelegate "github.com/unbasical/doras/internal/pkg/delegates/registry"
 
 	"github.com/opencontainers/go-digest"
-	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/unbasical/doras/pkg/constants"
 )
 
@@ -32,7 +31,7 @@ func NewDeltaDelegate() DeltaDelegate {
 	}
 }
 
-func (d *delegate) IsDummy(mf v1.Manifest) (isDummy bool, expired bool) {
+func (d *delegate) IsDummy(mf ociutils.Manifest) (isDummy bool, expired bool) {
 	if mf.Annotations[constants.DorasAnnotationIsDummy] != "true" {
 		return false, false
 	}
@@ -112,10 +111,10 @@ func (d *delegate) CreateDelta(ctx context.Context, from, to io.ReadCloser, mani
 
 // DeltaDelegate abstracts over operations that are required to create deltas.
 type DeltaDelegate interface {
-	// IsDummy checks if the provided v1.Manifest refers to a dummy image that has not expired.
+	// IsDummy checks if the provided ociutils.Manifest refers to a dummy image that has not expired.
 	// Dummy images are used to communicate to other Doras instances that a server is working on creating this delta.
 	// This method should handle synchronization at the instance level.
-	IsDummy(mf v1.Manifest) (isDummy bool, expired bool)
+	IsDummy(mf ociutils.Manifest) (isDummy bool, expired bool)
 	// GetDeltaLocation returns the image at which the delta with the given options is/should be stored.
 	GetDeltaLocation(deltaMf registrydelegate.DeltaManifestOptions) (string, error)
 	// CreateDelta constructs the delta and pushes it to the registry.

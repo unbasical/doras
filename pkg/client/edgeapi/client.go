@@ -210,7 +210,7 @@ func (c *Client) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string)
 		return nil, "", nil, err
 	}
 	defer funcutils.PanicOrLogOnErr(rc.Close, false, "failed to close fetch reader")
-	var mf v1.Manifest
+	var mf ociutils.Manifest
 	err = json.NewDecoder(rc).Decode(&mf)
 	if err != nil {
 		return nil, "", nil, err

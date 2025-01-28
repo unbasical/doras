@@ -82,23 +82,32 @@ func (r *registryImpl) Resolve(image string, expectDigest bool, creds auth.Crede
 	return repository, imageDigest, d, nil
 }
 
-func (r *registryImpl) LoadManifest(target v1.Descriptor, source oras.ReadOnlyTarget) (v1.Manifest, error) {
+func (r *registryImpl) LoadManifest(target v1.Descriptor, source oras.ReadOnlyTarget) (ociutils.Manifest, error) {
 	mfReader, err := source.Fetch(context.Background(), target)
 	if err != nil {
-		return v1.Manifest{}, err
+		return ociutils.Manifest{}, err
 	}
 	defer funcutils.PanicOrLogOnErr(mfReader.Close, false, "failed to close reader")
 	mf, err := ociutils.ParseManifestJSON(mfReader)
 	if err != nil {
-		return v1.Manifest{}, err
+		return ociutils.Manifest{}, err
 	}
 	return *mf, err
 }
 
-func (r *registryImpl) LoadArtifact(mf v1.Manifest, source oras.ReadOnlyTarget) (io.ReadCloser, error) {
-	if len(mf.Layers) != 1 {
-		return nil, errors.New("expected single layer")
+func (r *registryImpl) LoadArtifact(mf ociutils.Manifest, source oras.ReadOnlyTarget) (io.ReadCloser, error) {
+	if len(mf.Layers) != 1 && len(mf.Layers) != 1 {
+		return nil, errors.New("expected single layer or blob")
 	}
+	if len(mf.Layers) != 1 {
+		// Fall back to Blobs if there are no layers to support older manifest kinds, that oras might push.
+		rc, err := source.Fetch(context.Background(), mf.Blobs[0])
+		if err != nil {
+			return nil, err
+		}
+		return rc, nil
+	}
+
 	rc, err := source.Fetch(context.Background(), mf.Layers[0])
 	if err != nil {
 		return nil, err
@@ -223,8 +232,8 @@ type RegistryDelegate interface {
 	// Enforces whether the image is tagged or uses a digest.
 	// If an authToken is provided it, and ONLY it has to be used to authenticate to the registry.
 	Resolve(image string, expectDigest bool, creds auth.CredentialFunc) (oras.ReadOnlyTarget, string, v1.Descriptor, error)
-	LoadManifest(target v1.Descriptor, source oras.ReadOnlyTarget) (v1.Manifest, error)
-	LoadArtifact(mf v1.Manifest, source oras.ReadOnlyTarget) (io.ReadCloser, error)
+	LoadManifest(target v1.Descriptor, source oras.ReadOnlyTarget) (ociutils.Manifest, error)
+	LoadArtifact(mf ociutils.Manifest, source oras.ReadOnlyTarget) (io.ReadCloser, error)
 	PushDelta(ctx context.Context, image string, manifOpts DeltaManifestOptions, content io.ReadCloser) error
 	PushDummy(image string, manifOpts DeltaManifestOptions) error
 }

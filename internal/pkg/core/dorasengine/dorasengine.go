@@ -13,7 +13,6 @@ import (
 	registrydelegate "github.com/unbasical/doras/internal/pkg/delegates/registry"
 	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 
-	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras/internal/pkg/algorithmchoice"
 	"github.com/unbasical/doras/internal/pkg/api/apicommon"
@@ -265,7 +264,7 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 	apiDelegate.HandleAccepted()
 }
 
-func checkCompatability(from *v1.Manifest, to *v1.Manifest) error {
+func checkCompatability(from *ociutils.Manifest, to *ociutils.Manifest) error {
 	if len(from.Layers) != len(to.Layers) {
 		return errors.New("incompatible amount of layers")
 	}

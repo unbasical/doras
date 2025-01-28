@@ -86,45 +86,45 @@ func (c *Client) Pull(image string) error {
 // RegistryDelegate is used to load artifacts from a registry.
 // This should handle partial downloads if possible.
 type RegistryDelegate interface {
-	ResolveAndLoad(image string) (v1.Manifest, io.ReadCloser, error)
+	ResolveAndLoad(image string) (ociutils.Manifest, io.ReadCloser, error)
 }
 
 type registryImpl struct {
 	workingDir string
 }
 
-func (r *registryImpl) ResolveAndLoad(image string) (v1.Manifest, io.ReadCloser, error) {
+func (r *registryImpl) ResolveAndLoad(image string) (ociutils.Manifest, io.ReadCloser, error) {
 	name, tag, isDigest, err := ociutils.ParseOciImageString(image)
 	if err != nil {
-		return v1.Manifest{}, nil, err
+		return ociutils.Manifest{}, nil, err
 	}
 	if !isDigest {
-		return v1.Manifest{}, nil, errors.New("expected image with digest")
+		return ociutils.Manifest{}, nil, errors.New("expected image with digest")
 	}
 	reg, err := remote.NewRepository(name)
 	if err != nil {
-		return v1.Manifest{}, nil, err
+		return ociutils.Manifest{}, nil, err
 	}
 	_, mfReader, err := reg.FetchReference(context.Background(), tag)
 	if err != nil {
-		return v1.Manifest{}, nil, err
+		return ociutils.Manifest{}, nil, err
 	}
 	defer funcutils.PanicOrLogOnErr(mfReader.Close, false, "failed to close reader")
 	mf, err := ociutils.ParseManifestJSON(mfReader)
 	if err != nil {
-		return v1.Manifest{}, nil, err
+		return ociutils.Manifest{}, nil, err
 	}
 	rc, err := reg.Fetch(context.Background(), mf.Layers[0])
 	if err != nil {
-		return v1.Manifest{}, nil, err
+		return ociutils.Manifest{}, nil, err
 	}
 	fPath, err := r.ingest(mf.Layers[0], rc)
 	if err != nil {
-		return v1.Manifest{}, nil, err
+		return ociutils.Manifest{}, nil, err
 	}
 	fp, err := os.Open(fPath)
 	if err != nil {
-		return v1.Manifest{}, nil, err
+		return ociutils.Manifest{}, nil, err
 	}
 	return *mf, fp, nil
 }
@@ -247,7 +247,7 @@ type Patcher interface {
 type patcherImpl struct {
 	directory string
 	algos     algorithmchoice.PatcherChoice
-	mf        *v1.Manifest
+	mf        *ociutils.Manifest
 }
 
 func (p *patcherImpl) PatchFile(fPath string, delta io.Reader) error {
@@ -296,7 +296,7 @@ func (p *patcherImpl) PatchDirectory(_ string, _ io.Reader) {
 	panic("implement me")
 }
 
-func newPatcher(workingDir string, algos algorithmchoice.PatcherChoice, mf *v1.Manifest) Patcher {
+func newPatcher(workingDir string, algos algorithmchoice.PatcherChoice, mf *ociutils.Manifest) Patcher {
 	return &patcherImpl{
 		directory: workingDir,
 		algos:     algos,
@@ -304,7 +304,7 @@ func newPatcher(workingDir string, algos algorithmchoice.PatcherChoice, mf *v1.M
 	}
 }
 
-func getPatcherChoice(mf *v1.Manifest) (algorithmchoice.PatcherChoice, error) {
+func getPatcherChoice(mf *ociutils.Manifest) (algorithmchoice.PatcherChoice, error) {
 	choice := algorithmchoice.PatcherChoice{}
 	if len(mf.Layers) != 1 {
 		return choice, fmt.Errorf("manifest must contain exactly one layer")

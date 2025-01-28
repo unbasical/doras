@@ -72,20 +72,20 @@ func (t *testRegistryDelegate) Resolve(image string, expectDigest bool, creds au
 	return t.storage, image, d, nil
 }
 
-func (t *testRegistryDelegate) LoadManifest(target v1.Descriptor, source oras.ReadOnlyTarget) (v1.Manifest, error) {
+func (t *testRegistryDelegate) LoadManifest(target v1.Descriptor, source oras.ReadOnlyTarget) (ociutils.Manifest, error) {
 	rc, err := source.Fetch(t.ctx, target)
 	if err != nil {
-		return v1.Manifest{}, err
+		return ociutils.Manifest{}, err
 	}
 	defer funcutils.PanicOrLogOnErr(rc.Close, false, "failed to close reader")
 	mf, err := ociutils.ParseManifestJSON(rc)
 	if err != nil {
-		return v1.Manifest{}, err
+		return ociutils.Manifest{}, err
 	}
 	return *mf, nil
 }
 
-func (t *testRegistryDelegate) LoadArtifact(mf v1.Manifest, source oras.ReadOnlyTarget) (io.ReadCloser, error) {
+func (t *testRegistryDelegate) LoadArtifact(mf ociutils.Manifest, source oras.ReadOnlyTarget) (io.ReadCloser, error) {
 	return source.Fetch(t.ctx, mf.Layers[0])
 }
 

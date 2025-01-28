@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/unbasical/doras/pkg/constants"
 )
@@ -12,14 +11,14 @@ import (
 func TestExtractPathFromManifest(t *testing.T) {
 	tests := []struct {
 		name            string
-		manifest        *v1.Manifest
+		manifest        *Manifest
 		expectedPath    string
 		expectedArchive bool
 		expectedErr     error
 	}{
 		{
 			name: "Valid manifest with archive",
-			manifest: &v1.Manifest{
+			manifest: &Manifest{
 				Annotations: map[string]string{
 					constants.OrasContentUnpack:      "true",
 					"org.opencontainers.image.title": "file.txt",
@@ -31,7 +30,7 @@ func TestExtractPathFromManifest(t *testing.T) {
 		},
 		{
 			name: "Valid manifest without archive",
-			manifest: &v1.Manifest{
+			manifest: &Manifest{
 				Annotations: map[string]string{
 					"org.opencontainers.image.title": "file.txt",
 				},
@@ -42,7 +41,7 @@ func TestExtractPathFromManifest(t *testing.T) {
 		},
 		{
 			name: "Missing file title",
-			manifest: &v1.Manifest{
+			manifest: &Manifest{
 				Annotations: map[string]string{
 					constants.OrasContentUnpack: "true",
 				},
@@ -53,7 +52,7 @@ func TestExtractPathFromManifest(t *testing.T) {
 		},
 		{
 			name: "Empty annotations",
-			manifest: &v1.Manifest{
+			manifest: &Manifest{
 				Annotations: map[string]string{},
 			},
 			expectedPath:    "",

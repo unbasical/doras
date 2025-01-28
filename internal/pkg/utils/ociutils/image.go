@@ -10,13 +10,11 @@ import (
 	"strings"
 
 	"golang.org/x/net/idna"
-
-	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// ParseManifestJSON return the v1.manifest that is yielded by the reader.
-func ParseManifestJSON(data io.Reader) (*v1.Manifest, error) {
-	var manifest *v1.Manifest
+// ParseManifestJSON return the Manifest that is yielded by the reader.
+func ParseManifestJSON(data io.Reader) (*Manifest, error) {
+	var manifest *Manifest
 	err := json.NewDecoder(data).Decode(&manifest)
 	if err != nil {
 		return nil, err
