@@ -2,6 +2,8 @@ package algorithmchoice
 
 import (
 	"fmt"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 	"github.com/unbasical/doras/pkg/algorithm/delta"
 	"slices"
 
@@ -9,7 +11,6 @@ import (
 
 	"github.com/unbasical/doras/pkg/constants"
 
-	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/unbasical/doras/internal/pkg/compression/gzip"
 	"github.com/unbasical/doras/internal/pkg/delta/bsdiff"
 	"github.com/unbasical/doras/internal/pkg/delta/tardiff"
@@ -62,14 +63,21 @@ func (c *DifferChoice) GetFileExt() string {
 
 // ChooseAlgorithms returns a DifferChoice that is the most suitable to create a delta patch for the given artifacts,
 // under the constraint of only using the acceptedAlgorithms.
-func ChooseAlgorithms(acceptedAlgorithms []string, mfFrom, mfTo *v1.Manifest) DifferChoice {
+func ChooseAlgorithms(acceptedAlgorithms []string, mfFrom, mfTo *ociutils.Manifest) DifferChoice {
 	_ = mfTo
 
 	algorithm := DifferChoice{
 		Differ:     bsdiff.NewCreator(),
 		Compressor: compressionutils.NewNopCompressor(),
 	}
-	if mfFrom.Layers[0].Annotations[constants.OrasContentUnpack] == "true" && slices.Contains(acceptedAlgorithms, "tardiff") {
+	var artifacts []v1.Descriptor
+	if len(mfFrom.Layers) == 1 {
+		artifacts = mfFrom.Layers
+	}
+	if len(mfTo.Blobs) == 1 {
+		artifacts = mfTo.Blobs
+	}
+	if artifacts[0].Annotations[constants.OrasContentUnpack] == "true" && slices.Contains(acceptedAlgorithms, "tardiff") {
 		algorithm.Differ = tardiff.NewCreator()
 	}
 	// The order is inverse to the priority.
