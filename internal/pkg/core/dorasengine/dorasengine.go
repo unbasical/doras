@@ -139,6 +139,7 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 		}
 		if errors.Is(err, error2.ErrExpectedDigest) {
 			apiDelegate.HandleError(error2.ErrBadRequest, "expected digest")
+			return
 		}
 		apiDelegate.HandleError(error2.ErrFailedToResolve, fromDigest)
 		return
