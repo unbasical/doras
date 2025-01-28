@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/sirupsen/logrus"
 	"golang.org/x/net/idna"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -42,7 +41,6 @@ func ParseOciImageString(r string) (repoName string, tag string, isDigest bool, 
 	if !strings.HasPrefix(r, "oci://") {
 		r = "oci://" + r
 	}
-	logrus.Debugf("Parsing OCI image: %s", r)
 	u, err := url.Parse(r)
 	if err != nil {
 		return "", "", false, err
