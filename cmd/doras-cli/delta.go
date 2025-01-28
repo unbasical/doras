@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras/internal/pkg/api/apicommon"
 	"github.com/unbasical/doras/internal/pkg/client"
 	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 	"github.com/unbasical/doras/pkg/client/edgeapi"
+	"net/url"
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
@@ -21,7 +21,7 @@ func (args *cliArgs) readDelta(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	var tokenProvider client.AuthTokenProvider
+	var tokenProvider client.AuthProvider
 	tokenProvider, err = newCredentialFuncTokenProvider(creds, args.ReadDelta.From)
 	if err != nil {
 		log.WithError(err).Info("did not load any auth token providers")
@@ -64,29 +64,27 @@ func (args *cliArgs) readDelta(ctx context.Context) error {
 
 type credentialFuncTokenProvider struct {
 	auth.CredentialFunc
-	registry string
+	registry url.URL
 }
 
 // newCredentialFuncTokenProvider creates a token provider that uses the provided auth.CredentialFunc to load access tokens.
 // Only works if the credential function is token based.
-func newCredentialFuncTokenProvider(creds auth.CredentialFunc, image string) (client.AuthTokenProvider, error) {
-	url, err := ociutils.ParseOciUrl(image)
+func newCredentialFuncTokenProvider(creds auth.CredentialFunc, image string) (client.AuthProvider, error) {
+	serverUrl, err := ociutils.ParseOciUrl(image)
 	if err != nil {
 		return nil, err
 	}
 	return &credentialFuncTokenProvider{
 		CredentialFunc: creds,
-		registry:       url.Host,
+		registry:       *serverUrl,
 	}, nil
 }
 
-func (c *credentialFuncTokenProvider) GetAuthToken() (string, error) {
-	credential, err := c.CredentialFunc(context.Background(), c.registry)
+func (c *credentialFuncTokenProvider) GetAuth() (auth.Credential, error) {
+	serverUrl := c.registry.Host
+	credential, err := c.CredentialFunc(context.Background(), serverUrl)
 	if err != nil {
-		return "", err
+		return auth.Credential{}, err
 	}
-	if credential.AccessToken == "" {
-		return "", errors.New("no access token found")
-	}
-	return credential.AccessToken, nil
+	return credential, nil
 }

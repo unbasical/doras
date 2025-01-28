@@ -1,6 +1,7 @@
 package gindelegate
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -23,11 +24,33 @@ type ginDorasContext struct {
 func (g *ginDorasContext) ExtractClientAuth() (auth.RegistryAuth, error) {
 	// Extract the Bearer token from the Auth Header.
 	authHeader := g.c.GetHeader("Authorization")
-	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+	isBasicAuth := strings.HasPrefix(authHeader, "Basic ")
+	isBearerToken := strings.HasPrefix(authHeader, "Bearer ")
+	if authHeader == "" || (!isBasicAuth && !isBearerToken) {
 		return nil, fmt.Errorf("missing or invalid Authorization header")
 	}
-	token := strings.TrimPrefix(authHeader, "Bearer ")
-	return auth.NewClientAuthFromToken(token), nil
+	if isBearerToken {
+		token := strings.TrimPrefix(authHeader, "Bearer ")
+		return auth.NewClientAuthFromToken(token), nil
+	}
+	if isBasicAuth {
+		// Trim the "Basic " prefix
+		encodedCredentials := strings.TrimPrefix(authHeader, "Basic ")
+		// Decode the base64-encoded credentials
+		decodedBytes, err := base64.StdEncoding.DecodeString(encodedCredentials)
+		if err != nil {
+			return nil, errors.New("invalid base64 encoding in authorization header")
+		}
+		decodedCredentials := string(decodedBytes)
+
+		// Split into username and password
+		parts := strings.SplitN(decodedCredentials, ":", 2)
+		if len(parts) != 2 {
+			return nil, errors.New("invalid authorization header: missing username or password")
+		}
+		return auth.NewClientAuthFromUsernamePassword(parts[0], parts[1]), nil
+	}
+	return nil, fmt.Errorf("missing or invalid Authorization header")
 }
 
 // NewDelegate constructs an apidelegate.APIDelegate for a given gin.Context.

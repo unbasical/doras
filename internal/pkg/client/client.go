@@ -6,11 +6,11 @@ import "net/http"
 type DorasBaseClient struct {
 	DorasURL      string
 	Client        *http.Client
-	TokenProvider AuthTokenProvider
+	TokenProvider AuthProvider
 }
 
 // NewBaseClient constructs a DorasBaseClient.
-func NewBaseClient(serverURL string, tokenProvider AuthTokenProvider) *DorasBaseClient {
+func NewBaseClient(serverURL string, tokenProvider AuthProvider) *DorasBaseClient {
 	return &DorasBaseClient{
 		DorasURL:      serverURL,
 		Client:        http.DefaultClient,
