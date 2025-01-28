@@ -75,7 +75,7 @@ func (d *Doras) init(config configs.ServerConfig) *Doras {
 	registryDelegate := registrydelegate.NewRegistryDelegate(creds, config.CliOpts.InsecureAllowHTTP)
 	deltaDelegate := deltadelegate.NewDeltaDelegate()
 
-	dorasEngine := dorasengine.NewEngine(registryDelegate, deltaDelegate)
+	dorasEngine := dorasengine.NewEngine(registryDelegate, deltaDelegate, config.CliOpts.RequireClientAuth)
 	r := api.BuildApp(dorasEngine)
 	err := r.SetTrustedProxies(config.ConfigFile.TrustedProxies)
 	if err != nil {
