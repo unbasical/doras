@@ -26,8 +26,8 @@ func (g *ginDorasContext) ExtractClientAuth() (auth.RegistryAuth, error) {
 	authHeader := g.c.GetHeader("Authorization")
 	isBasicAuth := strings.HasPrefix(authHeader, "Basic ")
 	isBearerToken := strings.HasPrefix(authHeader, "Bearer ")
-	if authHeader == "" || (!isBasicAuth && !isBearerToken) {
-		return nil, fmt.Errorf("missing or invalid Authorization header")
+	if authHeader == "" {
+		return nil, fmt.Errorf("missing Authorization header")
 	}
 	if isBearerToken {
 		token := strings.TrimPrefix(authHeader, "Bearer ")
@@ -50,7 +50,7 @@ func (g *ginDorasContext) ExtractClientAuth() (auth.RegistryAuth, error) {
 		}
 		return auth.NewClientAuthFromUsernamePassword(parts[0], parts[1]), nil
 	}
-	return nil, fmt.Errorf("missing or invalid Authorization header")
+	return nil, fmt.Errorf("invalid Authorization header")
 }
 
 // NewDelegate constructs an apidelegate.APIDelegate for a given gin.Context.

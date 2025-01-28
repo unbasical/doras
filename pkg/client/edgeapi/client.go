@@ -161,11 +161,16 @@ func (c *Client) ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (r
 
 func setupAuthHeader(creds auth2.Credential, req *http.Request) {
 	if creds.AccessToken != "" {
+		log.Debug("using an access token")
 		req.Header.Set("Authorization", "Bearer "+creds.AccessToken)
+		return
 	}
 	if creds.Username != "" && creds.Password != "" {
+		log.Debug("using basic auth")
 		req.Header.Set("Authorization", auth.GenerateBasicAuth(creds.Username, creds.Password))
+		return
 	}
+	log.Debug("no header was set")
 }
 
 // ReadDelta requests a delta between the two provided images and returns the server's response.
