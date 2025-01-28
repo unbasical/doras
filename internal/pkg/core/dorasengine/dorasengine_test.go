@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	error2 "github.com/unbasical/doras/internal/pkg/error"
 	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 	"io"
 	"os"
@@ -41,7 +42,7 @@ func (t *testRegistryDelegate) Resolve(image string, expectDigest bool, creds au
 	}
 	if t.expectedAuth != "" {
 		if creds == nil {
-			return nil, "", v1.Descriptor{}, fmt.Errorf("auth failure")
+			return nil, "", v1.Descriptor{}, fmt.Errorf("unauthorized")
 		}
 		hostport := strings.TrimSuffix(fmt.Sprintf("%s:%s", url.Host, url.Port()), ":")
 		c, err := creds(context.Background(), hostport)
@@ -49,7 +50,7 @@ func (t *testRegistryDelegate) Resolve(image string, expectDigest bool, creds au
 			return nil, "", v1.Descriptor{}, err
 		}
 		if t.expectedAuth != c.AccessToken {
-			return nil, "", v1.Descriptor{}, fmt.Errorf("auth failure")
+			return nil, "", v1.Descriptor{}, fmt.Errorf("unauthorized")
 		}
 	}
 
@@ -200,7 +201,10 @@ func (t *testAPIDelegate) ExtractClientAuth() (auth2.RegistryAuth, error) {
 }
 
 func (t *testAPIDelegate) ExtractParams() (fromImage, toImage string, acceptedAlgorithms []string, err error) {
-	return t.fromImage, t.toImage, t.acceptedAlgorithms, nil
+	if t.fromImage != "" && t.toImage != "" {
+		return t.fromImage, t.toImage, t.acceptedAlgorithms, nil
+	}
+	return "", "", nil, errors.New("no image provided")
 }
 
 func (t *testAPIDelegate) HandleError(err error, msg string) {
@@ -319,7 +323,7 @@ func Test_readDelta(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			ctx := context.WithValue(context.Background(), "wg", wg)
 			for {
-				readDelta(ctx, tt.args.registry, tt.args.delegate, &tt.args.apiDelegate)
+				readDelta(ctx, tt.args.registry, tt.args.delegate, &tt.args.apiDelegate, false)
 				if tt.args.apiDelegate.hasHandledCallback {
 					break
 				}
@@ -418,6 +422,18 @@ func Test_readDelta_Token(t *testing.T) {
 				expectErr: true,
 			},
 		},
+		{
+			name: "unauthorized on missing params when token is required",
+			args: args{
+				registry: registryMock,
+				delegate: delegate,
+				apiDelegate: testAPIDelegate{
+					fromImage: "",
+					toImage:   "",
+				},
+				expectErr: true,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -427,7 +443,7 @@ func Test_readDelta_Token(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			ctx := context.WithValue(context.Background(), "wg", wg)
 			for {
-				readDelta(ctx, tt.args.registry, tt.args.delegate, &tt.args.apiDelegate)
+				readDelta(ctx, tt.args.registry, tt.args.delegate, &tt.args.apiDelegate, true)
 				if tt.args.apiDelegate.hasHandledCallback {
 					break
 				}
@@ -436,6 +452,9 @@ func Test_readDelta_Token(t *testing.T) {
 			if (err != nil) != tt.args.expectErr {
 				t.Fatalf("readDelta() error = %v, wantErr %v", err, tt.args.expectErr)
 				return
+			}
+			if tt.args.expectErr && !errors.Is(err, error2.ErrUnauthorized) {
+				t.Fatalf("readDelta() error = %v, expectedErr %v", err, error2.ErrUnauthorized)
 			}
 			response := tt.args.apiDelegate.response
 			fmt.Printf("%v\n", response)

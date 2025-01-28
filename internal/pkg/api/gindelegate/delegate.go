@@ -73,6 +73,12 @@ func (g *ginDorasContext) HandleError(err error, msg string) {
 	if errors.Is(err, error2.ErrMissingQueryParam) {
 		statusCode = http.StatusBadRequest
 	}
+	if errors.Is(err, error2.ErrUnauthorized) {
+		statusCode = http.StatusUnauthorized
+	}
+	if errors.Is(err, error2.ErrFailedToResolve) {
+		statusCode = http.StatusNotFound
+	}
 	RespondWithError(g.c, statusCode, err, msg)
 }
 

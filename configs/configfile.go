@@ -15,6 +15,7 @@ type CLI struct {
 	LogLevel             string `help:"Server log level." default:"info" enum:"debug,info,warn,error" env:"DORAS_LOG_LEVEL"`
 	ShutdownTimout       uint   `help:"Graceful shutdown timeout (in seconds)." default:"20" env:"DORAS_SHUTDOWN_TIMEOUT"`
 	InsecureAllowHTTP    bool   `help:"Allow INSECURE HTTP connections." default:"false" env:"DORAS_INSECURE_ALLOW_HTTP"`
+	RequireClientAuth    bool   `help:"Always require clients to provide an authentication token, regardless of repo access rights." default:"true" env:"DORAS_REQUIRE_CLIENT_AUTH"`
 	ExampleConfig        struct {
 		Output string `help:"Write example config to this location instead of printing to stdout." type:"path"`
 	} `cmd:"" help:"Print or store example config."`

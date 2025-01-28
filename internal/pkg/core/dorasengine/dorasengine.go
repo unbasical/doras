@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"oras.land/oras-go/v2/registry/remote/auth"
+	"strings"
 	"sync"
 
 	apidelegate "github.com/unbasical/doras/internal/pkg/delegates/api"
@@ -29,17 +30,19 @@ type Engine interface {
 }
 
 type engine struct {
-	registry registrydelegate.RegistryDelegate
-	delegate deltadelegate.DeltaDelegate
-	wg       *sync.WaitGroup
+	registry          registrydelegate.RegistryDelegate
+	delegate          deltadelegate.DeltaDelegate
+	requireClientAuth bool
+	wg                *sync.WaitGroup
 }
 
 // NewEngine construct a new dorasengine.Engine with the given delegates.
-func NewEngine(registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate) Engine {
+func NewEngine(registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate, requireClientAuth bool) Engine {
 	return &engine{
-		registry: registry,
-		delegate: delegate,
-		wg:       &sync.WaitGroup{},
+		registry:          registry,
+		delegate:          delegate,
+		wg:                &sync.WaitGroup{},
+		requireClientAuth: requireClientAuth,
 	}
 }
 func (d *engine) Stop(ctx context.Context) {
@@ -58,7 +61,7 @@ func (d *engine) Stop(ctx context.Context) {
 
 func (d *engine) HandleReadDelta(apiDeletgate apidelegate.APIDelegate) {
 	ctx := context.WithValue(context.Background(), "wg", d.wg)
-	readDelta(ctx, d.registry, d.delegate, apiDeletgate)
+	readDelta(ctx, d.registry, d.delegate, apiDeletgate, d.requireClientAuth)
 }
 
 // checkRepoCompatability ensures that the two provided images are from the same repository.
@@ -78,7 +81,7 @@ func checkRepoCompatability(a, b string) error {
 }
 
 //nolint:revive // This rule is disabled to get around complexity linter errors. Reducing the complexity of this function is difficult. Refer to the Doras specs in the file docs/delta-creation-spec.md for more information on the semantics of this god function.
-func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate, apiDelegate apidelegate.APIDelegate) {
+func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate, apiDelegate apidelegate.APIDelegate, requireClientAuth bool) {
 	wg, ok := ctx.Value("wg").(*sync.WaitGroup)
 	if !ok {
 		panic("missing wait group in context")
@@ -88,19 +91,21 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 	fromDigest, toTarget, acceptedAlgorithms, err := apiDelegate.ExtractParams()
 	if err != nil {
 		log.WithError(err).Error("Error extracting parameters")
-		apiDelegate.HandleError(error2.ErrInternal, "")
+		if requireClientAuth {
+			apiDelegate.HandleError(error2.ErrUnauthorized, "")
+			return
+		}
+		apiDelegate.HandleError(error2.ErrBadRequest, "")
 		return
 	}
-	err = checkRepoCompatability(fromDigest, toTarget)
-	if err != nil {
-		log.WithError(err).Error("Error checking repo compatibility")
-		apiDelegate.HandleError(error2.ErrInternal, err.Error())
-		return
-	}
-
 	var creds auth.CredentialFunc
-	if clientAuth, err := apiDelegate.ExtractClientAuth(); err != nil {
+	clientAuth, err := apiDelegate.ExtractClientAuth()
+	if err != nil {
 		log.WithError(err).Debug("Error extracting client token")
+		if requireClientAuth {
+			apiDelegate.HandleError(error2.ErrUnauthorized, "")
+			return
+		}
 	} else {
 		repoUrl, err := ociutils.ParseOciUrl(fromDigest)
 		if err != nil {
@@ -116,16 +121,33 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 		}
 	}
 
+	err = checkRepoCompatability(fromDigest, toTarget)
+	if err != nil {
+		log.WithError(err).Error("Error checking repo compatibility")
+		apiDelegate.HandleError(error2.ErrInternal, err.Error())
+		return
+	}
+
 	// resolve images to ensure they exist
 	srcFrom, fromImage, fromDescriptor, err := registry.Resolve(fromDigest, true, creds)
 	if err != nil {
 		log.WithError(err).Errorf("Error resolving target %q", fromDigest)
-		apiDelegate.HandleError(error2.ErrInvalidOciImage, fromDigest)
+		// assume there is the string "unauthorized" in the error message when there is an auth failure
+		if strings.Contains(err.Error(), "unauthorized") {
+			apiDelegate.HandleError(error2.ErrUnauthorized, "")
+			return
+		}
+		apiDelegate.HandleError(error2.ErrFailedToResolve, fromDigest)
 		return
 	}
 	srcTo, toImage, toDescriptor, err := registry.Resolve(toTarget, false, creds)
 	if err != nil {
 		log.WithError(err).Errorf("Error resolving target %q", toTarget)
+		// assume there is the string "unauthorized" in the error message when there is an auth failure
+		if strings.Contains(err.Error(), "unauthorized") {
+			apiDelegate.HandleError(error2.ErrUnauthorized, "")
+			return
+		}
 		apiDelegate.HandleError(error2.ErrInvalidOciImage, toTarget)
 		return
 	}

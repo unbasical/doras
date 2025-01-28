@@ -19,6 +19,9 @@ func logger() gin.HandlerFunc {
 		startTime := time.Now()
 		c.Next()
 		latency := time.Since(startTime)
+		if c.Request.URL.Path == "/api/v1/ping" {
+			return
+		}
 		log.WithFields(log.Fields{
 			"status":    c.Writer.Status(),
 			"method":    c.Request.Method,
