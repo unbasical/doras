@@ -92,7 +92,7 @@ func (r *registryImpl) LoadManifest(target v1.Descriptor, source oras.ReadOnlyTa
 	if err != nil {
 		return ociutils.Manifest{}, err
 	}
-	return *mf, err
+	return *mf, nil
 }
 
 func (r *registryImpl) LoadArtifact(mf ociutils.Manifest, source oras.ReadOnlyTarget) (io.ReadCloser, error) {
