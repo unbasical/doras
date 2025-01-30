@@ -8,11 +8,13 @@ import (
 	error2 "github.com/unbasical/doras/internal/pkg/error"
 	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
+	"github.com/unbasical/doras/internal/pkg/utils/readerutils"
 	"io"
 	"os"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	auth2 "github.com/unbasical/doras/internal/pkg/auth"
 
@@ -34,6 +36,7 @@ type testRegistryDelegate struct {
 	storage      oras.Target
 	ctx          context.Context
 	expectedAuth string
+	ioLatency    *time.Duration
 }
 
 func (t *testRegistryDelegate) Resolve(image string, expectDigest bool, creds auth.CredentialFunc) (oras.ReadOnlyTarget, string, v1.Descriptor, error) {
@@ -87,7 +90,18 @@ func (t *testRegistryDelegate) LoadManifest(target v1.Descriptor, source oras.Re
 }
 
 func (t *testRegistryDelegate) LoadArtifact(mf ociutils.Manifest, source oras.ReadOnlyTarget) (io.ReadCloser, error) {
-	return source.Fetch(t.ctx, mf.Layers[0])
+	rc, err := source.Fetch(t.ctx, mf.Layers[0])
+	if err != nil {
+		return nil, err
+	}
+	if t.ioLatency != nil {
+		latencyReader := &readerutils.LatencyReader{
+			Reader: rc,
+			Delay:  *t.ioLatency,
+		}
+		rc = readerutils.ChainedCloser(io.NopCloser(latencyReader), rc)
+	}
+	return rc, nil
 }
 
 func (t *testRegistryDelegate) PushDelta(ctx context.Context, image string, manifOpts registrydelegate.DeltaManifestOptions, content io.ReadCloser) error {
@@ -278,7 +292,9 @@ func Test_readDelta(t *testing.T) {
 		delegate    deltadelegate.DeltaDelegate
 		apiDelegate testAPIDelegate
 		expectErr   bool
+		latency     *time.Duration
 	}
+	latency := time.Millisecond * 100
 	tests := []struct {
 		name string
 		args args
@@ -294,6 +310,20 @@ func Test_readDelta(t *testing.T) {
 					acceptedAlgorithms: []string{"bsdiff"},
 				},
 				expectErr: false,
+			},
+		},
+		{
+			name: "success (bsdiff with latency)",
+			args: args{
+				registry: registryMock,
+				delegate: delegate,
+				apiDelegate: testAPIDelegate{
+					fromImage:          bsdiffImage1,
+					toImage:            bsdiffImage2,
+					acceptedAlgorithms: []string{"bsdiff"},
+				},
+				expectErr: false,
+				latency:   &latency,
 			},
 		},
 		{
@@ -400,6 +430,20 @@ func Test_readDelta(t *testing.T) {
 				expectErr: true,
 			},
 		},
+		{
+			name: "success (tardiff with latency)",
+			args: args{
+				registry: registryMock,
+				delegate: delegate,
+				apiDelegate: testAPIDelegate{
+					fromImage:          tardiffImage1,
+					toImage:            tardiffImage2,
+					acceptedAlgorithms: []string{"tardiff"},
+				},
+				expectErr: false,
+				latency:   &latency,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -408,12 +452,14 @@ func Test_readDelta(t *testing.T) {
 			// which spawns a go routine.
 			wg := &sync.WaitGroup{}
 			ctx := context.WithValue(context.Background(), "wg", wg)
+			registryMock.ioLatency = tt.args.latency
 			for {
 				readDelta(ctx, tt.args.registry, tt.args.delegate, &tt.args.apiDelegate, false)
 				if tt.args.apiDelegate.hasHandledCallback {
 					break
 				}
 			}
+
 			err = tt.args.apiDelegate.lastErr
 			if (err != nil) != tt.args.expectErr {
 				t.Fatalf("readDelta() error = %v, wantErr %v", err, tt.args.expectErr)

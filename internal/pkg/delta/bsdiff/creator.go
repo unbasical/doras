@@ -8,15 +8,15 @@ import (
 	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 )
 
-type creator struct {
+type differ struct {
 }
 
-// NewCreator returns a bsdiff delta.Differ.
-func NewCreator() delta.Differ {
-	return &creator{}
+// NewDiffer returns a bsdiff delta.Differ.
+func NewDiffer() delta.Differ {
+	return &differ{}
 }
 
-func (c *creator) Diff(oldfile io.Reader, newfile io.Reader) (io.ReadCloser, error) {
+func (c *differ) Diff(oldfile io.Reader, newfile io.Reader) (io.ReadCloser, error) {
 	// Use a pipe to turn the writer into a reader.
 	pr, pw := io.Pipe()
 	go func() {
@@ -30,6 +30,6 @@ func (c *creator) Diff(oldfile io.Reader, newfile io.Reader) (io.ReadCloser, err
 	return pr, nil
 }
 
-func (c *creator) Name() string {
+func (c *differ) Name() string {
 	return "bsdiff"
 }

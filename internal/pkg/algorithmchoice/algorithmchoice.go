@@ -68,7 +68,7 @@ func ChooseAlgorithms(acceptedAlgorithms []string, mfFrom, mfTo *ociutils.Manife
 	_ = mfTo
 
 	algorithm := DifferChoice{
-		Differ:     bsdiff.NewCreator(),
+		Differ:     bsdiff.NewDiffer(),
 		Compressor: compressionutils.NewNopCompressor(),
 	}
 	var artifacts []v1.Descriptor

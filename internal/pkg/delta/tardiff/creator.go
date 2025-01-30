@@ -10,12 +10,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type Creator struct {
+type differ struct {
 }
 
 // NewCreator returns a tardiff delta.Differ.
 func NewCreator() delta.Differ {
-	return &Creator{}
+	return &differ{}
 }
 
 // loadToTempFile and sends a function that produces the file or an error to the provided channel
@@ -42,7 +42,7 @@ func loadToTempFile(reader io.Reader, fNamePattern string, c chan func() (*os.Fi
 	c <- func() (*os.File, error) { return f, nil }
 }
 
-func (c *Creator) Diff(oldfile io.Reader, newfile io.Reader) (io.ReadCloser, error) {
+func (c *differ) Diff(oldfile io.Reader, newfile io.Reader) (io.ReadCloser, error) {
 	// parallelize loading the files, as they might be coming from a remote location
 	fromFinished := make(chan func() (*os.File, error), 1)
 	toFinished := make(chan func() (*os.File, error), 1)
@@ -97,6 +97,6 @@ func (c *Creator) Diff(oldfile io.Reader, newfile io.Reader) (io.ReadCloser, err
 	return pr, nil
 }
 
-func (c *Creator) Name() string {
+func (c *differ) Name() string {
 	return "tardiff"
 }

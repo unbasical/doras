@@ -10,7 +10,7 @@ import (
 )
 
 func TestDiffer_Interface(t *testing.T) {
-	var c any = &creator{}
+	var c any = &differ{}
 	_, ok := (c).(delta.Differ)
 	if !ok {
 		t.Error("interface not implemented")
@@ -18,7 +18,7 @@ func TestDiffer_Interface(t *testing.T) {
 }
 
 func TestCreator_Diff(t *testing.T) {
-	differ := NewCreator()
+	differ := NewDiffer()
 	from := "hello"
 	to := "world"
 	expected, err := bsdiff2.Bytes([]byte(from), []byte(to))

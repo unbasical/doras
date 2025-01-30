@@ -9,7 +9,7 @@ import (
 )
 
 func TestDiffer_Interface(t *testing.T) {
-	var c any = &Creator{}
+	var c any = &differ{}
 	_, ok := (c).(delta.Differ)
 	if !ok {
 		t.Error("interface not implemented")

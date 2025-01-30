@@ -5,6 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"io"
 	"sync"
+	"time"
 )
 
 func ChainedCloser(this io.ReadCloser, other io.Closer) io.ReadCloser {
@@ -62,4 +63,15 @@ type CloserFunc func() error
 // Close performs close operation by the CloserFunc.
 func (fn CloserFunc) Close() error {
 	return fn()
+}
+
+// LatencyReader wraps an io.Reader and introduces a delay before each read.
+type LatencyReader struct {
+	Reader io.Reader
+	Delay  time.Duration
+}
+
+func (l *LatencyReader) Read(p []byte) (int, error) {
+	time.Sleep(l.Delay) // Introduce latency
+	return l.Reader.Read(p)
 }
