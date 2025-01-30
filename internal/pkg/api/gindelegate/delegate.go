@@ -128,7 +128,7 @@ func (g *ginDorasContext) ExtractParams() (fromImage, toImage string, acceptedAl
 	if toDigest != "" {
 		toImage = toDigest
 	}
-	acceptedAlgorithms = g.c.QueryArray("acceptedAlgorithms")
+	acceptedAlgorithms = g.c.QueryArray(constants.QueryKeyAcceptedAlgorithm)
 	if len(acceptedAlgorithms) == 0 {
 		acceptedAlgorithms = constants.DefaultAlgorithms()
 	}
