@@ -67,6 +67,19 @@ func (c *differ) Diff(oldfile io.Reader, newfile io.Reader) (io.ReadCloser, erro
 		log.Debug("cleaned up temporary files")
 		return nil, err
 	}
+	// make sure temp files are cleaned up
+	defer func() {
+		log.Debug("cleaned up tardiff input temp files")
+		errCleanup := errors.Join(
+			fpFrom.Close(),
+			fpTo.Close(),
+			os.Remove(fpFrom.Name()),
+			os.Remove(fpTo.Name()),
+		)
+		if errCleanup != nil {
+			log.WithError(errCleanup).Debug("encountered error while cleaning input temp files for tardiff")
+		}
+	}()
 	// finally create a delta
 	optsTarDiff := tardiff.NewOptions()
 	tmpDir := os.TempDir()
@@ -78,15 +91,20 @@ func (c *differ) Diff(oldfile io.Reader, newfile io.Reader) (io.ReadCloser, erro
 	if err != nil {
 		log.WithError(err).Debug("encountered error while creating tardiff, cleaning up")
 		errCleanup := errors.Join(
+			fpW.Close(),
 			os.Remove(fpW.Name()),
-			os.Remove(fpFrom.Name()),
-			os.Remove(fpTo.Name()),
 		)
 		if err != nil {
 			log.WithError(errCleanup).Debug("encountered error while cleaning up tardiff")
 		}
 		return nil, err
 	}
+	// fetch file size for logging purposes
+	stats, err := os.Stat(fpW.Name())
+	if err != nil {
+		return nil, err
+	}
+	log.Debugf("wrote tardiff with %d bytes to temporary file", stats.Size())
 	_, err = fpW.Seek(0, io.SeekStart)
 	if err != nil {
 		log.WithError(err).Debug("encountered error while seeking temp file used for tardiff")
