@@ -7,6 +7,7 @@ package tar_diff
 import (
 	"archive/tar"
 	"bytes"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
@@ -305,7 +306,7 @@ func Diff(oldTarFile io.ReadSeeker, newTarFile io.ReadSeeker, diffFile io.Writer
 	// Compare new and old for delta information
 	analysis, err := analyzeForDelta(oldInfo, newInfo, oldTarFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("tardiff analysis failed: %v", err)
 	}
 	defer analysis.Close()
 

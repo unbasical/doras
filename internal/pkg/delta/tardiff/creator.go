@@ -94,7 +94,7 @@ func (c *differ) Diff(oldfile io.Reader, newfile io.Reader) (io.ReadCloser, erro
 			fpW.Close(),
 			os.Remove(fpW.Name()),
 		)
-		if err != nil {
+		if errCleanup != nil {
 			log.WithError(errCleanup).Debug("encountered error while cleaning up tardiff")
 		}
 		return nil, err
