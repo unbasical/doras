@@ -79,9 +79,7 @@ func ChooseAlgorithms(acceptedAlgorithms []string, mfFrom, mfTo *ociutils.Manife
 		artifacts = mfTo.Blobs
 	}
 	if artifacts[0].Annotations[constants.OrasContentUnpack] == "true" && slices.Contains(acceptedAlgorithms, "tardiff") {
-		// tardiffs are already compressed
 		algorithm.Differ = tardiff.NewCreator()
-		return algorithm
 	}
 	// The order is inverse to the priority.
 	if slices.Contains(acceptedAlgorithms, "gzip") {
