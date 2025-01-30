@@ -77,11 +77,13 @@ func (c *Creator) Diff(oldfile io.Reader, newfile io.Reader) (io.ReadCloser, err
 				log.WithError(errors.Join(errDiff, errPwClose)).Error("error closing tar diff")
 			}
 		} else {
+			log.Debug("tardiff completed, closing pipe")
 			err = pw.Close()
 			if err != nil {
 				log.WithError(err).Error("error closing tar diff")
 			}
 		}
+		log.Debug("cleaning up temporary files used for tar-diffing")
 		err := errors.Join(
 			os.Remove(fpFrom.Name()),
 			os.Remove(fpTo.Name()),
