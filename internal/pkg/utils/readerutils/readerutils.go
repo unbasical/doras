@@ -75,3 +75,28 @@ func (l *LatencyReader) Read(p []byte) (int, error) {
 	time.Sleep(l.Delay) // Introduce latency
 	return l.Reader.Read(p)
 }
+
+// CleanupReadCloser wraps an io.ReadCloser and a function to be called on Close.
+type CleanupReadCloser struct {
+	reader      io.ReadCloser
+	cleanupFunc func() error
+}
+
+// NewCleanupReadCloser creates an io.ReadCloser that calls the cleanup function after closing the original closer.
+// This is useful for cleaning up temporary files.
+func NewCleanupReadCloser(r io.ReadCloser, cleanup func() error) io.ReadCloser {
+	return &CleanupReadCloser{reader: r, cleanupFunc: cleanup}
+}
+
+// Read delegates to the underlying reader.
+func (f *CleanupReadCloser) Read(p []byte) (int, error) {
+	return f.reader.Read(p)
+}
+
+// Close closes the reader and calls the provided function.
+func (f *CleanupReadCloser) Close() error {
+	return errors.Join(
+		f.reader.Close(),
+		f.cleanupFunc(),
+	)
+}

@@ -2,6 +2,7 @@ package tardiff
 
 import (
 	"errors"
+	"github.com/unbasical/doras/internal/pkg/utils/readerutils"
 	"github.com/unbasical/doras/pkg/algorithm/delta"
 	"io"
 	"os"
@@ -68,33 +69,33 @@ func (c *differ) Diff(oldfile io.Reader, newfile io.Reader) (io.ReadCloser, erro
 	}
 	// finally create a delta
 	optsTarDiff := tardiff.NewOptions()
-	pr, pw := io.Pipe()
-	go func() {
-		errDiff := tardiff.Diff(fpFrom, fpTo, pw, optsTarDiff)
-		if errDiff != nil {
-			errPwClose := pw.CloseWithError(errDiff)
-			if errDiff != nil {
-				log.WithError(errors.Join(errDiff, errPwClose)).Error("error closing tar diff")
-			}
-		} else {
-			log.Debug("tardiff completed, closing pipe")
-			err = pw.Close()
-			if err != nil {
-				log.WithError(err).Error("error closing tar diff")
-			}
-		}
-		log.Debug("cleaning up temporary files used for tar-diffing")
-		err := errors.Join(
+	tmpDir := os.TempDir()
+	fpW, err := os.CreateTemp(tmpDir, "*.tardiff")
+	if err != nil {
+		return nil, err
+	}
+	err = tardiff.Diff(fpFrom, fpTo, fpW, optsTarDiff)
+	if err != nil {
+		log.WithError(err).Debug("encountered error while creating tardiff, cleaning up")
+		errCleanup := errors.Join(
+			os.Remove(fpW.Name()),
 			os.Remove(fpFrom.Name()),
 			os.Remove(fpTo.Name()),
 		)
 		if err != nil {
-			log.WithError(err).Error("error during tardiff cleanup")
-			return
+			log.WithError(errCleanup).Debug("encountered error while cleaning up tardiff")
 		}
-		log.Debug("tardiff cleanup complete")
-	}()
-	return pr, nil
+		return nil, err
+	}
+	_, err = fpW.Seek(0, io.SeekStart)
+	if err != nil {
+		log.WithError(err).Debug("encountered error while seeking temp file used for tardiff")
+		return nil, err
+	}
+	rc := readerutils.NewCleanupReadCloser(fpW, func() error {
+		return os.Remove(fpW.Name())
+	})
+	return rc, nil
 }
 
 func (c *differ) Name() string {
