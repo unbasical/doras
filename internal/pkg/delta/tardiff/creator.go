@@ -26,12 +26,14 @@ func loadToTempFile(reader io.Reader, fNamePattern string, c chan func() (*os.Fi
 		c <- func() (*os.File, error) { return nil, err }
 		return
 	}
-	_, err = io.Copy(f, reader)
+	n, err := io.Copy(f, reader)
 	if err != nil {
+		log.WithError(err).Error("failed to copy file to temp file, removing ...")
 		_ = os.Remove(f.Name())
 		c <- func() (*os.File, error) { return nil, err }
 		return
 	}
+	log.Debugf("wrote %d bytes to temporary file", n)
 	// reset the file to the start for the consuming function
 	_, err = f.Seek(0, io.SeekStart)
 	if err != nil {
@@ -54,12 +56,14 @@ func (c *Creator) Diff(oldfile io.Reader, newfile io.Reader) (io.ReadCloser, err
 	// delete both files if we got an error
 	err := errors.Join(errFrom, errTo)
 	if err != nil {
+		log.WithError(err).Debug("encountered error while loading input tars, cleaning up")
 		if fpFrom != nil {
 			_ = os.Remove(fpFrom.Name())
 		}
 		if fpTo != nil {
 			_ = os.Remove(fpTo.Name())
 		}
+		log.Debug("cleaned up temporary files")
 		return nil, err
 	}
 	// finally create a delta
@@ -70,18 +74,23 @@ func (c *Creator) Diff(oldfile io.Reader, newfile io.Reader) (io.ReadCloser, err
 		if errDiff != nil {
 			errPwClose := pw.CloseWithError(errDiff)
 			if errDiff != nil {
-				log.WithError(errors.Join(errDiff, errPwClose)).Error("Error closing tar diff")
+				log.WithError(errors.Join(errDiff, errPwClose)).Error("error closing tar diff")
 			}
-			return
+		} else {
+			err = pw.Close()
+			if err != nil {
+				log.WithError(err).Error("error closing tar diff")
+			}
 		}
 		err := errors.Join(
-			pw.Close(),
 			os.Remove(fpFrom.Name()),
 			os.Remove(fpTo.Name()),
 		)
 		if err != nil {
-			log.WithError(err).Error("Error during tardiff cleanup")
+			log.WithError(err).Error("error during tardiff cleanup")
+			return
 		}
+		log.Debug("tardiff cleanup complete")
 	}()
 	return pr, nil
 }

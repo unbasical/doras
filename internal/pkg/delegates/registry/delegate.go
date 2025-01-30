@@ -17,7 +17,7 @@ import (
 
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras/internal/pkg/algorithmchoice"
 	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 	"github.com/unbasical/doras/pkg/constants"
@@ -135,7 +135,7 @@ func (r *registryImpl) PushDelta(ctx context.Context, image string, manifOpts De
 	}
 	defer func() {
 		if err := errors.Join(fp.Close(), os.Remove(fp.Name())); err != nil {
-			logrus.WithError(err).Error("failed temp file clean up")
+			log.WithError(err).Error("failed temp file clean up")
 		}
 	}()
 
@@ -147,6 +147,10 @@ func (r *registryImpl) PushDelta(ctx context.Context, image string, manifOpts De
 	n, err := io.Copy(fp, teeReader)
 	if err != nil {
 		return err
+	}
+	if n == 0 {
+		log.Debug("failed to copy any bytes to file with delta, aborting")
+		return errors.New("failed to copy any bytes")
 	}
 	deltaDescriptor := v1.Descriptor{
 		MediaType: manifOpts.GetMediaType(),
@@ -181,7 +185,7 @@ func (r *registryImpl) PushDelta(ctx context.Context, image string, manifOpts De
 	if err != nil {
 		return err
 	}
-	logrus.Infof("created delta at %s with (tag/digest) (%s/%s)", image, tag, mfDescriptor.Digest.Encoded())
+	log.Infof("created delta at %s with (tag/digest) (%s/%s)", image, tag, mfDescriptor.Digest.Encoded())
 	return nil
 }
 
@@ -223,7 +227,7 @@ func (r *registryImpl) PushDummy(image string, manifOpts DeltaManifestOptions) e
 		return fmt.Errorf("failed to tag manifest: %v", err)
 	}
 	delete(r.activeDummies, image)
-	logrus.Infof("created dummy at %s", image)
+	log.Infof("created dummy at %s", image)
 	return nil
 }
 
