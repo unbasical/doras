@@ -2,12 +2,12 @@ package tardiff
 
 import (
 	"errors"
+	tardiff "github.com/unbasical/doras/internal/pkg/utils/differutils/tar-diff"
 	"github.com/unbasical/doras/internal/pkg/utils/readerutils"
 	"github.com/unbasical/doras/pkg/algorithm/delta"
 	"io"
 	"os"
 
-	tardiff "github.com/containers/tar-diff/pkg/tar-diff"
 	log "github.com/sirupsen/logrus"
 )
 
