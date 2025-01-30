@@ -9,7 +9,7 @@ services:
       DORAS_HOST: 0.0.0.0
       DORAS_INSECURE_ALLOW_HTTP: True
       DORAS_LOG_LEVEL: debug
-      DORAS_REQUIRE_CLIENT_AUTH: 1
+      DORAS_REQUIRE_CLIENT_AUTH: 0
   registry:
     image: registry:2.8
     environment:
