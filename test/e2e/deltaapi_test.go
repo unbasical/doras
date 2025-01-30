@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	gzip2 "github.com/unbasical/doras/internal/pkg/compression/gzip"
 	delta2 "github.com/unbasical/doras/pkg/algorithm/delta"
 	"io"
 	"net/http"
@@ -152,40 +153,92 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, tt := range []struct {
-		name       string
-		from       string
-		fromDesc   v1.Descriptor
-		to         string
-		fromReader io.Reader
-		toReader   io.Reader
-		want       []byte
+		name               string
+		from               string
+		fromDesc           v1.Descriptor
+		to                 string
+		fromReader         io.Reader
+		toReader           io.Reader
+		acceptedAlgorithms []string
+		want               []byte
+		wantAlgo           string
 	}{
 		{
-			name:       "bsdiff",
-			from:       tag1Bsdiff,
-			fromDesc:   descriptors["v1-bsdiff"],
-			fromReader: bytes.NewBuffer(fromDataBsdiff),
-			to:         tag2Bsdiff,
-			toReader:   bytes.NewBuffer(toDataBsdiff),
-			want:       deltaWantBsdiff,
+			name:               "bsdiff (no compression)",
+			from:               tag1Bsdiff,
+			fromDesc:           descriptors["v1-bsdiff"],
+			fromReader:         bytes.NewBuffer(fromDataBsdiff),
+			to:                 tag2Bsdiff,
+			toReader:           bytes.NewBuffer(toDataBsdiff),
+			want:               deltaWantBsdiff,
+			wantAlgo:           "bsdiff",
+			acceptedAlgorithms: []string{"bsdiff"},
 		},
 		{
-			name:       "tardiff",
-			from:       tag1Tardiff,
-			fromDesc:   descriptors["v1-tardiff"],
-			fromReader: bytes.NewBuffer(fromDataTarDiff),
-			to:         tag2Tardiff,
-			toReader:   bytes.NewBuffer(toDataTarDiff),
-			want:       deltaWantTarDiff,
+			name:               "same bsdiff again to test repeated requests",
+			from:               tag1Bsdiff,
+			fromDesc:           descriptors["v1-bsdiff"],
+			fromReader:         bytes.NewBuffer(fromDataBsdiff),
+			to:                 tag2Bsdiff,
+			toReader:           bytes.NewBuffer(toDataBsdiff),
+			wantAlgo:           "bsdiff",
+			acceptedAlgorithms: []string{"bsdiff"},
+			want:               deltaWantBsdiff,
 		},
 		{
-			name:       "same bsdiff again to test repeated requests",
-			from:       tag1Bsdiff,
-			fromDesc:   descriptors["v1-bsdiff"],
-			fromReader: bytes.NewBuffer(fromDataBsdiff),
-			to:         tag2Bsdiff,
-			toReader:   bytes.NewBuffer(toDataBsdiff),
-			want:       deltaWantBsdiff,
+			name:               "bsdiff (gzip compression)",
+			from:               tag1Bsdiff,
+			fromDesc:           descriptors["v1-bsdiff"],
+			fromReader:         bytes.NewBuffer(fromDataBsdiff),
+			to:                 tag2Bsdiff,
+			toReader:           bytes.NewBuffer(toDataBsdiff),
+			want:               deltaWantBsdiff,
+			wantAlgo:           "bsdiff+gzip",
+			acceptedAlgorithms: []string{"bsdiff", "gzip"},
+		},
+		{
+			name:               "bsdiff (zstd compression)",
+			from:               tag1Bsdiff,
+			fromDesc:           descriptors["v1-bsdiff"],
+			fromReader:         bytes.NewBuffer(fromDataBsdiff),
+			to:                 tag2Bsdiff,
+			toReader:           bytes.NewBuffer(toDataBsdiff),
+			want:               deltaWantBsdiff,
+			wantAlgo:           "bsdiff+zstd",
+			acceptedAlgorithms: []string{"bsdiff", "zstd"},
+		},
+		{
+			name:               "tardiff (no compression)",
+			from:               tag1Tardiff,
+			fromDesc:           descriptors["v1-tardiff"],
+			fromReader:         bytes.NewBuffer(fromDataTarDiff),
+			to:                 tag2Tardiff,
+			toReader:           bytes.NewBuffer(toDataTarDiff),
+			want:               deltaWantTarDiff,
+			wantAlgo:           "tardiff",
+			acceptedAlgorithms: []string{"tardiff"},
+		},
+		{
+			name:               "tardiff (gzip compression)",
+			from:               tag1Tardiff,
+			fromDesc:           descriptors["v1-tardiff"],
+			fromReader:         bytes.NewBuffer(fromDataTarDiff),
+			to:                 tag2Tardiff,
+			toReader:           bytes.NewBuffer(toDataTarDiff),
+			want:               deltaWantTarDiff,
+			wantAlgo:           "tardiff+gzip",
+			acceptedAlgorithms: []string{"tardiff", "gzip"},
+		},
+		{
+			name:               "tardiff (zstd compression)",
+			from:               tag1Tardiff,
+			fromDesc:           descriptors["v1-tardiff"],
+			fromReader:         bytes.NewBuffer(fromDataTarDiff),
+			to:                 tag2Tardiff,
+			toReader:           bytes.NewBuffer(toDataTarDiff),
+			want:               deltaWantTarDiff,
+			wantAlgo:           "tardiff+zstd",
+			acceptedAlgorithms: []string{"tardiff", "zstd"},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -193,13 +246,16 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 			imageTo := fmt.Sprintf("%s/%s:%s", regUri, "artifacts", tt.to)
 			imageFromDigest := fmt.Sprintf("%s/%s@%s", regUri, "artifacts", tt.fromDesc.Digest.String())
 			// read delta from sever
-			_, _, _, err := edgeClient.ReadDeltaAsStream(imageFrom, imageTo, nil)
+			_, _, _, err := edgeClient.ReadDeltaAsStream(imageFrom, imageTo, tt.acceptedAlgorithms)
 			if err == nil {
 				t.Fatal(err)
 			}
-			_, algo, rc, err := edgeClient.ReadDeltaAsStream(imageFromDigest, imageTo, nil)
+			_, algo, rc, err := edgeClient.ReadDeltaAsStream(imageFromDigest, imageTo, tt.acceptedAlgorithms)
 			if err != nil {
 				t.Fatal(err)
+			}
+			if algo != tt.wantAlgo {
+				t.Fatalf("got algo = %v, want %v", algo, tt.wantAlgo)
 			}
 			var decompressor compression.Decompressor
 			var patcher delta2.Patcher
@@ -207,9 +263,15 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 			case "tardiff+zstd":
 				patcher = tardiff.NewPatcher()
 				decompressor = zstd.NewDecompressor()
+			case "tardiff+gzip":
+				patcher = tardiff.NewPatcher()
+				decompressor = gzip2.NewDecompressor()
 			case "bsdiff+zstd":
 				patcher = bsdiff2.NewPatcher()
 				decompressor = zstd.NewDecompressor()
+			case "bsdiff+gzip":
+				patcher = bsdiff2.NewPatcher()
+				decompressor = gzip2.NewDecompressor()
 			case "tardiff":
 				patcher = tardiff.NewPatcher()
 				decompressor = compressionutils.NewNopDecompressor()
@@ -217,27 +279,22 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 				patcher = bsdiff2.NewPatcher()
 				decompressor = compressionutils.NewNopDecompressor()
 			default:
-				t.Error("unknown algorithm")
-				return
+				t.Fatalf("unknown algorithm %s", algo)
 			}
 			deltaGot, err := io.ReadAll(rc)
 			if err != nil {
-				t.Error(err)
-				return
+				t.Fatal(err)
 			}
 			decompressedDelta, err := decompressor.Decompress(bytes.NewReader(deltaGot))
 			if err != nil {
-				t.Error(err)
-				return
+				t.Fatal(err)
 			}
 			deltaGot, err = io.ReadAll(decompressedDelta)
 			if err != nil {
-				t.Error(err)
-				return
+				t.Fatal(err)
 			}
 			if !bytes.Equal(deltaGot, tt.want) {
-				t.Errorf("%s: got:\n%x\nwant:\n%x", tt.name, deltaGot, tt.want)
-				return
+				t.Fatalf("%s: got:\n%x\nwant:\n%x", tt.name, deltaGot, tt.want)
 			}
 
 			// apply the requested data
@@ -246,13 +303,11 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 				bytes.NewReader(deltaGot),
 			)
 			if err != nil {
-				t.Error(err)
-				return
+				t.Fatal(err)
 			}
 			patchedData, err := io.ReadAll(patchedReader)
 			if err != nil {
-				t.Error(err)
-				return
+				t.Fatal(err)
 			}
 			toWant, err := io.ReadAll(tt.toReader)
 			if err != nil {
