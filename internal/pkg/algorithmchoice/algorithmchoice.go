@@ -3,6 +3,7 @@ package algorithmchoice
 import (
 	"fmt"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 	"github.com/unbasical/doras/pkg/algorithm/delta"
 	"slices"
@@ -87,5 +88,6 @@ func ChooseAlgorithms(acceptedAlgorithms []string, mfFrom, mfTo *ociutils.Manife
 	if slices.Contains(acceptedAlgorithms, "zstd") {
 		algorithm.Compressor = zstd.NewCompressor()
 	}
+	log.Debugf("chosen algorithms: differ=%s compression=%s", algorithm.Differ.Name(), algorithm.Compressor.Name())
 	return algorithm
 }
