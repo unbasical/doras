@@ -72,7 +72,7 @@ func (e *exponentialBackoffWithJitter) Wait() error {
 	}
 
 	// Sleep for the calculated delay
-	log.Debugf("Waiting for %v (attempt %d)\n", delay, e.currentAttempt)
+	log.Debugf("Waiting for %v (attempt %d/%d)\n", delay, e.currentAttempt, e.maxAttempt)
 	time.Sleep(delay)
 
 	// Increment the attempt number for the next retry

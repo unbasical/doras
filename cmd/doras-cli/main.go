@@ -26,9 +26,10 @@ type cliArgs struct {
 		Output string `help:"Output directory." type:"path" default:"."`
 	} `cmd:"" name:"pull" help:"Pull an artifact from a registry, uses readDelta updates if possible."`
 	ReadDelta struct {
-		From  string `help:"From which image the delta will be built."`
-		To    string `help:"To which image the delta will be built."`
-		Async bool   `help:"Do not block until the delta is created." default:"false"`
+		From              string   `help:"From which image the delta will be built."`
+		To                string   `help:"To which image the delta will be built."`
+		Async             bool     `help:"Do not block until the delta is created." default:"false"`
+		AcceptedAlgorithm []string `help:"Select algorithms which are accepted for deltas."`
 	} `cmd:"" help:"Request a delta image from the Doras server."`
 }
 

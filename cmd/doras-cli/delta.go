@@ -39,7 +39,7 @@ func (args *cliArgs) readDelta(ctx context.Context) error {
 	if args.ReadDelta.Async {
 		log.Info("asynchronously requesting delta")
 		var exists bool
-		res, exists, err = dorasClient.ReadDeltaAsync(args.ReadDelta.From, args.ReadDelta.To, nil)
+		res, exists, err = dorasClient.ReadDeltaAsync(args.ReadDelta.From, args.ReadDelta.To, args.ReadDelta.AcceptedAlgorithm)
 		if err != nil {
 			return err
 		}
@@ -48,7 +48,7 @@ func (args *cliArgs) readDelta(ctx context.Context) error {
 			return nil
 		}
 	} else {
-		res, err = dorasClient.ReadDelta(args.ReadDelta.From, args.ReadDelta.To, nil)
+		res, err = dorasClient.ReadDelta(args.ReadDelta.From, args.ReadDelta.To, args.ReadDelta.AcceptedAlgorithm)
 		if err != nil {
 			return err
 		}
