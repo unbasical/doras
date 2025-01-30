@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	error2 "github.com/unbasical/doras/internal/pkg/error"
+	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 	"io"
 	"os"
@@ -228,9 +229,15 @@ func (t *testAPIDelegate) HandleAccepted() {
 
 func Test_readDelta(t *testing.T) {
 	ctx := context.Background()
+	bsdiffImageV1 := "registry.example.org/foobar:bsdiff-v1"
+	bsdiffImageV2 := "registry.example.org/foobar:bsdiff-v2"
+	tardiffImageV1 := "registry.example.org/foobar:tardiff-v1"
+	tardiffImageV2 := "registry.example.org/foobar:tardiff-v2"
 	files := []testutils.FileDescription{
-		{Name: "foobar", Data: []byte("foo"), Tag: "v1", NeedsUnpack: false},
-		{Name: "foobar", Data: []byte("bar"), Tag: "v2", NeedsUnpack: false},
+		{Name: "foobar", Data: []byte("foo"), Tag: "bsdiff-v1", NeedsUnpack: false},
+		{Name: "foobar", Data: []byte("bar"), Tag: "bsdiff-v2", NeedsUnpack: false},
+		{Name: "foobar", Data: fileutils.ReadOrPanic("../../../../test/test-files/from.tar.gz"), Tag: "tardiff-v1", NeedsUnpack: true},
+		{Name: "foobar", Data: fileutils.ReadOrPanic("../../../../test/test-files/to.tar.gz"), Tag: "tardiff-v2", NeedsUnpack: true},
 	}
 	storage, err := testutils.StorageFromFiles(ctx, t.TempDir(), files)
 	if err != nil {
@@ -243,18 +250,29 @@ func Test_readDelta(t *testing.T) {
 	registryMock := &testRegistryDelegate{
 		storage: storageTarget,
 	}
-	_, image1, d, err := registryMock.Resolve("registry.example.org/foobar:v1", false, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	image1 = strings.ReplaceAll(image1, ":v1", "@"+d.Digest.String())
 
-	_, image2, _, err := registryMock.Resolve("registry.example.org/foobar:v2", false, nil)
+	_, bsdiffImage1, d, err := registryMock.Resolve(bsdiffImageV1, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	bsdiffImage1 = strings.ReplaceAll(bsdiffImage1, ":bsdiff-v1", "@"+d.Digest.String())
+
+	_, tardiffImage1, d, err := registryMock.Resolve(tardiffImageV1, false, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bsdiffImage1 = strings.ReplaceAll(bsdiffImage1, ":tardiff-v1", "@"+d.Digest.String())
+
+	_, bsdiffImage2, _, err := registryMock.Resolve(bsdiffImageV2, false, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, tardiffImage2, _, err := registryMock.Resolve(tardiffImageV2, false, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	delegate := deltadelegate.NewDeltaDelegate()
-
 	type args struct {
 		registry    registrydelegate.RegistryDelegate
 		delegate    deltadelegate.DeltaDelegate
@@ -266,14 +284,79 @@ func Test_readDelta(t *testing.T) {
 		args args
 	}{
 		{
-			name: "success",
+			name: "success (bsdiff)",
 			args: args{
 				registry: registryMock,
 				delegate: delegate,
 				apiDelegate: testAPIDelegate{
-					fromImage:          image1,
-					toImage:            image2,
-					acceptedAlgorithms: []string{"bsdiff", "tardiff", "zstd", "gzip"},
+					fromImage:          bsdiffImage1,
+					toImage:            bsdiffImage2,
+					acceptedAlgorithms: []string{"bsdiff"},
+				},
+				expectErr: false,
+			},
+		},
+		{
+			name: "success (bsdiff+gzip)",
+			args: args{
+				registry: registryMock,
+				delegate: delegate,
+				apiDelegate: testAPIDelegate{
+					fromImage:          bsdiffImage1,
+					toImage:            bsdiffImage2,
+					acceptedAlgorithms: []string{"bsdiff", "gzip"},
+				},
+				expectErr: false,
+			},
+		},
+		{
+			name: "success (bsdiff+zstd)",
+			args: args{
+				registry: registryMock,
+				delegate: delegate,
+				apiDelegate: testAPIDelegate{
+					fromImage:          bsdiffImage1,
+					toImage:            bsdiffImage2,
+					acceptedAlgorithms: []string{"bsdiff", "zstd"},
+				},
+				expectErr: false,
+			},
+		},
+		{
+			name: "success (tardiff)",
+			args: args{
+				registry: registryMock,
+				delegate: delegate,
+				apiDelegate: testAPIDelegate{
+					fromImage:          tardiffImage1,
+					toImage:            tardiffImage2,
+					acceptedAlgorithms: []string{"tardiff"},
+				},
+				expectErr: false,
+			},
+		},
+		{
+			name: "success (tardiff+gzip)",
+			args: args{
+				registry: registryMock,
+				delegate: delegate,
+				apiDelegate: testAPIDelegate{
+					fromImage:          tardiffImage1,
+					toImage:            tardiffImage2,
+					acceptedAlgorithms: []string{"tardiff", "gzip"},
+				},
+				expectErr: false,
+			},
+		},
+		{
+			name: "success (tardiff+zstd)",
+			args: args{
+				registry: registryMock,
+				delegate: delegate,
+				apiDelegate: testAPIDelegate{
+					fromImage:          tardiffImage1,
+					toImage:            tardiffImage2,
+					acceptedAlgorithms: []string{"tardiff", "zstd"},
 				},
 				expectErr: false,
 			},
@@ -284,8 +367,8 @@ func Test_readDelta(t *testing.T) {
 				registry: registryMock,
 				delegate: delegate,
 				apiDelegate: testAPIDelegate{
-					fromImage:          image1,
-					toImage:            "registry.example.org/foobar:v2",
+					fromImage:          bsdiffImage1,
+					toImage:            bsdiffImageV2,
 					acceptedAlgorithms: []string{"bsdiff", "tardiff", "zstd", "gzip"},
 				},
 				expectErr: false,
@@ -297,8 +380,8 @@ func Test_readDelta(t *testing.T) {
 				registry: registryMock,
 				delegate: delegate,
 				apiDelegate: testAPIDelegate{
-					fromImage:          "registry.example.org/foobar:v1",
-					toImage:            "registry.example.org/foobar:v2",
+					fromImage:          bsdiffImageV1,
+					toImage:            bsdiffImageV2,
 					acceptedAlgorithms: []string{"bsdiff", "tardiff", "zstd", "gzip"},
 				},
 				expectErr: true,
@@ -310,8 +393,8 @@ func Test_readDelta(t *testing.T) {
 				registry: registryMock,
 				delegate: delegate,
 				apiDelegate: testAPIDelegate{
-					fromImage:          strings.Replace(image1, "foobar", "barfoo", 1),
-					toImage:            image2,
+					fromImage:          strings.Replace(bsdiffImage1, "foobar", "barfoo", 1),
+					toImage:            bsdiffImage2,
 					acceptedAlgorithms: []string{"bsdiff", "tardiff", "zstd", "gzip"},
 				},
 				expectErr: true,
