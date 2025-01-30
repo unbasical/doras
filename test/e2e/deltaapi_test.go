@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/rand"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	gzip2 "github.com/unbasical/doras/internal/pkg/compression/gzip"
@@ -48,7 +49,20 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 	fromDataTarDiff := fileutils.ReadOrPanic("../test-files/from.tar.gz")
 	toDataTarDiff := fileutils.ReadOrPanic("../test-files/to.tar.gz")
 	deltaWantTarDiff := fileutils.ReadOrPanic("../test-files/delta.patch.tardiff")
-
+	fromDataBsdiffBig := make([]byte, 0xfff)
+	_, err = rand.Read(fromDataBsdiffBig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	toDataBsdiffBig := make([]byte, 0xfff)
+	_, err = rand.Read(toDataBsdiffBig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deltaWantBsdiffBig, err := bsdiff.Bytes(fromDataBsdiffBig, toDataBsdiffBig)
+	if err != nil {
+		t.Fatal(err)
+	}
 	// decompress tar because the ApplyDelta has an uncompressed tar as the output
 	gzr, err := gzip.NewReader(bytes.NewBuffer(toDataTarDiff))
 	if err != nil {
@@ -83,6 +97,8 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 	tempDir := t.TempDir()
 	tag1Bsdiff := "v1-bsdiff"
 	tag2Bsdiff := "v2-bsdiff"
+	tag1BsdiffBig := "v1-bsdiff-big"
+	tag2BsdiffBig := "v2-bsdiff-big"
 	tag1Tardiff := "v1-tardiff"
 	tag2Tardiff := "v2-tardiff"
 	store, err := testutils2.StorageFromFiles(ctx,
@@ -97,6 +113,16 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 				Name: "test-artifact",
 				Data: toDataBsdiff,
 				Tag:  tag2Bsdiff,
+			},
+			{
+				Name: "test-artifact",
+				Data: fromDataBsdiffBig,
+				Tag:  tag1BsdiffBig,
+			},
+			{
+				Name: "test-artifact",
+				Data: toDataBsdiffBig,
+				Tag:  tag2BsdiffBig,
 			},
 			{
 				Name:        "test-artifact",
@@ -115,7 +141,7 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tags := []string{tag1Bsdiff, tag2Bsdiff, tag1Tardiff, tag2Tardiff}
+	tags := []string{tag1Bsdiff, tag2Bsdiff, tag1Tardiff, tag2Tardiff, tag1BsdiffBig, tag2BsdiffBig}
 	descriptors := lo.Reduce(tags, func(agg map[string]v1.Descriptor, tag string, _ int) map[string]v1.Descriptor {
 		rootDescriptor, err := oras.Copy(ctx, store, tag, repoArtifacts, tag, oras.DefaultCopyOptions)
 		if err != nil {
@@ -239,6 +265,39 @@ func Test_ReadAndApplyDelta(t *testing.T) {
 			want:               deltaWantTarDiff,
 			wantAlgo:           "tardiff+zstd",
 			acceptedAlgorithms: []string{"tardiff", "zstd"},
+		},
+		{
+			name:               "bsdiff big (no compression)",
+			from:               tag1BsdiffBig,
+			fromDesc:           descriptors["v1-bsdiff-big"],
+			fromReader:         bytes.NewBuffer(fromDataBsdiffBig),
+			to:                 tag2BsdiffBig,
+			toReader:           bytes.NewBuffer(toDataBsdiffBig),
+			want:               deltaWantBsdiffBig,
+			wantAlgo:           "bsdiff",
+			acceptedAlgorithms: []string{"bsdiff"},
+		},
+		{
+			name:               "bsdiff big (gzip compression)",
+			from:               tag1BsdiffBig,
+			fromDesc:           descriptors["v1-bsdiff-big"],
+			fromReader:         bytes.NewBuffer(fromDataBsdiffBig),
+			to:                 tag2BsdiffBig,
+			toReader:           bytes.NewBuffer(toDataBsdiffBig),
+			want:               deltaWantBsdiffBig,
+			wantAlgo:           "bsdiff+gzip",
+			acceptedAlgorithms: []string{"bsdiff", "gzip"},
+		},
+		{
+			name:               "bsdiff big (zstd compression)",
+			from:               tag1BsdiffBig,
+			fromDesc:           descriptors["v1-bsdiff-big"],
+			fromReader:         bytes.NewBuffer(fromDataBsdiffBig),
+			to:                 tag2BsdiffBig,
+			toReader:           bytes.NewBuffer(toDataBsdiffBig),
+			want:               deltaWantBsdiffBig,
+			wantAlgo:           "bsdiff+zstd",
+			acceptedAlgorithms: []string{"bsdiff", "zstd"},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

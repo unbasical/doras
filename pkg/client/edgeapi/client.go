@@ -88,7 +88,7 @@ type BackoffStrategy interface {
 
 // DefaultBackoff returns a sensible default BackoffStrategy (exponential with an upper bound).
 func DefaultBackoff() BackoffStrategy {
-	const defaultBaseDelay = 100 * time.Millisecond
+	const defaultBaseDelay = 50 * time.Millisecond
 	const defaultMaxDelay = 1 * time.Minute
 	return NewExponentialBackoffWithJitter(defaultBaseDelay, defaultMaxDelay, 10)
 }
