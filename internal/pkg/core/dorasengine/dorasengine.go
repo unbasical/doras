@@ -256,7 +256,6 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 		err := delegate.CreateDelta(ctx, rcFrom, rcTo, manifOpts, registry)
 		if err != nil {
 			log.WithError(err).Error("failed to create delta")
-			apiDelegate.HandleError(error2.ErrInternal, "")
 			return
 		}
 	}()
