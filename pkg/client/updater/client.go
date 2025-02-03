@@ -5,13 +5,14 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 	"hash"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 
 	"github.com/opencontainers/go-digest"
 	"github.com/unbasical/doras/internal/pkg/compression/gzip"
