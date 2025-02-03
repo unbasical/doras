@@ -36,8 +36,8 @@ func releaseLock(f *os.File) error {
 	)
 }
 
-// ReplaceFile atomically replaces the file at oldPath with the file at newPath,
-// using a unique lock file based on newPath.
+// ReplaceFile atomically replaces the file at targetPath with the file at currentPath,
+// using a unique lock file based on targetPath.
 func ReplaceFile(currentPath, targetPath string) error {
 	lockFile := getLockFile(targetPath)
 	lock, err := acquireLock(lockFile)
@@ -53,7 +53,7 @@ func ReplaceFile(currentPath, targetPath string) error {
 // ReplaceDirectory atomically replaces the directory at targetPath with the directory at currentPath.
 // It removes any existing directory at currentPath and uses a unique lock file based on targetPath.
 func ReplaceDirectory(currentPath, targetPath string) error {
-	lockFile := getLockFile(currentPath)
+	lockFile := getLockFile(targetPath)
 	lock, err := acquireLock(lockFile)
 	if err != nil {
 		return err
