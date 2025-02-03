@@ -3,8 +3,12 @@ package tardiff
 import (
 	"bytes"
 	"compress/gzip"
+	"github.com/opencontainers/go-digest"
+	gzip2 "github.com/unbasical/doras/internal/pkg/compression/gzip"
+	"github.com/unbasical/doras/internal/pkg/utils/tarutils"
 	"github.com/unbasical/doras/pkg/algorithm/delta"
 	"io"
+	"os"
 	"testing"
 
 	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
@@ -60,6 +64,97 @@ func TestApplier_Apply(t *testing.T) {
 
 			if !bytes.Equal(data, want) {
 				t.Errorf("Bspatch()\ngot = %v,\n want %v", data, want)
+			}
+		})
+	}
+}
+
+func Test_patcher_PatchFilesystem(t *testing.T) {
+	type args struct {
+		patch    io.Reader
+		expected *digest.Digest
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "success (without digest)", args: args{
+				patch:    bytes.NewReader(fileutils.ReadOrPanic("../../../../test/test-files/delta.patch.tardiff")),
+				expected: nil,
+			},
+			wantErr: false,
+		},
+		{
+			name: "success (with digest)", args: args{
+				patch: bytes.NewReader(fileutils.ReadOrPanic("../../../../test/test-files/delta.patch.tardiff")),
+				expected: func() *digest.Digest {
+					data := fileutils.ReadOrPanic("../../../../test/test-files/to.tar.gz")
+					r, err := gzip2.NewDecompressor().Decompress(bytes.NewReader(data))
+					if err != nil {
+						panic(err)
+					}
+					d, err := digest.FromReader(r)
+					if err != nil {
+						panic(err)
+					}
+					return &d
+				}(),
+			},
+			wantErr: false,
+		},
+		{
+			name: "failure (bad patch)", args: args{
+				patch:    bytes.NewReader(nil),
+				expected: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "failure (bad digest)", args: args{
+				patch:    bytes.NewReader(fileutils.ReadOrPanic("../../../../test/test-files/delta.patch.tardiff")),
+				expected: func() *digest.Digest { d := digest.FromBytes(nil); return &d }(),
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			outDir, err := os.MkdirTemp(t.TempDir(), "output-dir-*")
+			if err != nil {
+				t.Fatal(err)
+			}
+			expectedDir, err := os.MkdirTemp(t.TempDir(), "expected-dir-*")
+			if err != nil {
+				t.Fatal(err)
+			}
+			expectedDirTarPath := func() string {
+				if tt.wantErr {
+					return "../../../../test/test-files/from.tar.gz"
+				}
+				return "../../../../test/test-files/to.tar.gz"
+			}()
+			err = tarutils.ExtractCompressedTar(expectedDir, "", expectedDirTarPath, nil, gzip2.NewDecompressor())
+			if err != nil {
+				t.Fatal(err)
+				return
+			}
+
+			err = tarutils.ExtractCompressedTar(outDir, "", "../../../../test/test-files/from.tar.gz", nil, gzip2.NewDecompressor())
+			if err != nil {
+				t.Fatal(err)
+				return
+			}
+			a := &applier{}
+			err = a.PatchFilesystem(outDir, tt.args.patch, tt.args.expected)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("PatchFilesystem() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			eq, cmpErr := fileutils.CompareDirectories(outDir, expectedDir)
+			if !eq {
+				t.Fatalf("output directory does not match expected directory: %v", cmpErr)
 			}
 		})
 	}

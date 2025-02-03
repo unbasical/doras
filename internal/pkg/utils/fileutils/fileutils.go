@@ -1,12 +1,14 @@
 package fileutils
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/unbasical/doras/internal/pkg/utils/writerutils"
 
@@ -90,4 +92,89 @@ func ExistsAndIsDirectory(path string) (exists, isDir bool, err error) {
 		return false, false, err
 	}
 	return true, info.IsDir(), nil
+}
+
+// CompareDirectories checks if two directories have the same structure and content.
+// Walks both folders and ensures the contents are identical (compares file hashes).
+//
+//nolint:revive // Disable complexity warning, this function should be understandable enough to people familiar with navigating trees.
+func CompareDirectories(dir1, dir2 string) (bool, error) {
+	files1 := make(map[string][32]byte)
+
+	// Walk through dir1 and store file hashes
+	err := filepath.Walk(dir1, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relPath, _ := filepath.Rel(dir1, path)
+		if info.IsDir() {
+			return nil
+		}
+
+		hash, err := hashFile(path)
+		if err != nil {
+			return err
+		}
+		files1[relPath] = hash
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+
+	// Walk through dir2 and compare with files1
+	err = filepath.Walk(dir2, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relPath, _ := filepath.Rel(dir2, path)
+		if info.IsDir() {
+			return nil
+		}
+
+		hash, err := hashFile(path)
+		if err != nil {
+			return err
+		}
+
+		if hash1, exists := files1[relPath]; !exists || hash1 != hash {
+			return fmt.Errorf("file mismatch: %s", relPath)
+		}
+
+		delete(files1, relPath)
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+
+	// If files1 is not empty, it means dir1 had extra files
+	if len(files1) > 0 {
+		return false, fmt.Errorf("directory contains %d extra files", len(files1))
+	}
+
+	return true, nil
+}
+
+// hashFile computes a SHA-256 hash of the file content
+func hashFile(path string) ([32]byte, error) {
+	var hash [32]byte
+	file, err := os.Open(path)
+	if err != nil {
+		return hash, err
+	}
+	defer func() {
+		_ = file.Close()
+	}()
+
+	hasher := sha256.New()
+	_, err = io.Copy(hasher, file)
+	if err != nil {
+		return hash, err
+	}
+
+	copy(hash[:], hasher.Sum(nil))
+	return hash, nil
 }
