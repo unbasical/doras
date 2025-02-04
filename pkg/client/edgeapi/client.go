@@ -25,8 +25,8 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 )
 
-// Client provides the functionality to interact with the Doras server API.
-type Client struct {
+// deltaApiClient provides the functionality to interact with the Doras server API.
+type deltaApiClient struct {
 	base      *client.DorasBaseClient
 	backoff   BackoffStrategy
 	plainHTTP bool
@@ -94,11 +94,11 @@ func DefaultBackoff() BackoffStrategy {
 }
 
 // NewEdgeClient returns a client that can be used to interact with the Doras server API.
-func NewEdgeClient(serverURL string, allowHttp bool, tokenProvider client.AuthProvider) (*Client, error) {
+func NewEdgeClient(serverURL string, allowHttp bool, tokenProvider client.AuthProvider) (DeltaApiClient, error) {
 	//if tokenProvider != nil && allowHttp {
 	//	return nil, errors.New("using a login token while allowing HTTP is not supported to avoid leaking credentials")
 	//}
-	return &Client{
+	return &deltaApiClient{
 		base:      client.NewBaseClient(serverURL, tokenProvider),
 		backoff:   DefaultBackoff(),
 		plainHTTP: allowHttp,
@@ -109,7 +109,7 @@ func NewEdgeClient(serverURL string, allowHttp bool, tokenProvider client.AuthPr
 // The function does not block if the delta is still being created.
 // If the delta has been created exists will be set to true.
 // If `err == nil && exists` is true then the request has been accepted by the server but the delta has not been created.
-func (c *Client) ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (res *apicommon.ReadDeltaResponse, exists bool, err error) {
+func (c *deltaApiClient) ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (res *apicommon.ReadDeltaResponse, exists bool, err error) {
 	url := buildurl.New(
 		buildurl.WithBasePath(c.base.DorasURL),
 		buildurl.WithPathElement(apicommon.ApiBasePathV1),
@@ -172,7 +172,7 @@ func setupAuthHeader(creds auth2.Credential, req *http.Request) {
 // ReadDelta requests a delta between the two provided images and returns the server's response.
 // Blocks until the delta has been created or an error is detected.
 // The server supports non-blocking requests for deltas, to use them use the sibling function ReadDeltaAsync.
-func (c *Client) ReadDelta(from, to string, acceptedAlgorithms []string) (*apicommon.ReadDeltaResponse, error) {
+func (c *deltaApiClient) ReadDelta(from, to string, acceptedAlgorithms []string) (*apicommon.ReadDeltaResponse, error) {
 	for {
 		response, exists, err := c.ReadDeltaAsync(from, to, acceptedAlgorithms)
 		if err != nil {
@@ -190,7 +190,7 @@ func (c *Client) ReadDelta(from, to string, acceptedAlgorithms []string) (*apico
 }
 
 // ReadDeltaAsStream requests a delta between the two provided images and reads it as a stream.
-func (c *Client) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string) (*v1.Descriptor, string, io.ReadCloser, error) {
+func (c *deltaApiClient) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string) (*v1.Descriptor, string, io.ReadCloser, error) {
 	response, err := c.ReadDelta(from, to, acceptedAlgorithms)
 	if err != nil {
 		return nil, "", nil, err
@@ -224,4 +224,10 @@ func (c *Client) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string)
 		return nil, "", nil, err
 	}
 	return &descriptor, algo, rc, nil
+}
+
+type DeltaApiClient interface {
+	ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (res *apicommon.ReadDeltaResponse, exists bool, err error)
+	ReadDelta(from, to string, acceptedAlgorithms []string) (*apicommon.ReadDeltaResponse, error)
+	ReadDeltaAsStream(from, to string, acceptedAlgorithms []string) (*v1.Descriptor, string, io.ReadCloser, error)
 }

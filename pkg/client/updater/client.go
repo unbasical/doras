@@ -21,7 +21,7 @@ import (
 // Client is used to run delta updates in Doras.
 type Client struct {
 	opts       clientOpts
-	edgeClient *edgeapi.Client
+	edgeClient edgeapi.DeltaApiClient
 	reg        fetcher.RegistryDelegate
 	state      *statemanager.Manager[updaterstate.State]
 }
