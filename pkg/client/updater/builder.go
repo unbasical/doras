@@ -1,7 +1,10 @@
 package updater
 
 import (
+	"github.com/unbasical/doras/pkg/client/updater/statemanager"
+	"github.com/unbasical/doras/pkg/client/updater/updaterstate"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/unbasical/doras/pkg/client/edgeapi"
@@ -33,7 +36,16 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 		return nil, err
 	}
 	client.edgeClient = c
-	client.state = &dorasState{fPath: client.opts.InternalDirectory}
+	initialState := updaterstate.State{
+		Version:        "1",
+		ArtifactStates: make(map[string]string),
+	}
+	statePath := path.Join(client.opts.OutputDirectory, "doras-state.json")
+	stateManager, err := statemanager.New(initialState, statePath)
+	if err != nil {
+		return nil, err
+	}
+	client.state = stateManager
 	return client, nil
 }
 

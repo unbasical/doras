@@ -13,7 +13,7 @@ func ExtractPathFromManifest(mf *Manifest) (path string, isArchive bool, err err
 	if unpack, ok := mf.Annotations[constants.OrasContentUnpack]; ok && unpack == "true" {
 		isArchive = true
 	}
-	path, ok := mf.Annotations["org.opencontainers.image.title"]
+	path, ok := mf.Annotations[constants.OciImageTitle]
 	if !ok {
 		return "", isArchive, errors.New("missing file title")
 	}

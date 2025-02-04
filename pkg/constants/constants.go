@@ -34,3 +34,5 @@ func DefaultAlgorithms() []string {
 // OrasContentUnpack is used to extract metadata from an OCI manifest.
 // Indicates whether the given artifact is an archive.
 const OrasContentUnpack = "io.deis.oras.content.unpack"
+
+const OciImageTitle = "org.opencontainers.image.title"
