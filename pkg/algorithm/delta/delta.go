@@ -1,6 +1,7 @@
 package delta
 
 import (
+	"github.com/opencontainers/go-digest"
 	"github.com/unbasical/doras/pkg/algorithm"
 	"io"
 )
@@ -10,6 +11,7 @@ type Patcher interface {
 	algorithm.Algorithm
 	// Patch returns a reader that applies the given patch to the input.
 	Patch(old io.Reader, patch io.Reader) (io.Reader, error)
+	PatchFilesystem(artifactPath string, patch io.Reader, expected *digest.Digest) error
 }
 
 // Differ abstracts over the delta creation aspect of a diffing algorithm.

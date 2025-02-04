@@ -2,17 +2,56 @@ package tardiff
 
 import (
 	"compress/gzip"
-	log "github.com/sirupsen/logrus"
-	"github.com/unbasical/doras/pkg/algorithm/delta"
+	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 	"io"
+	"os"
 
 	tarpatch "github.com/containers/tar-diff/pkg/tar-patch"
+	"github.com/opencontainers/go-digest"
+	log "github.com/sirupsen/logrus"
+	"github.com/unbasical/doras/internal/pkg/utils/compressionutils"
+	"github.com/unbasical/doras/internal/pkg/utils/tarutils"
+	"github.com/unbasical/doras/internal/pkg/utils/writerutils"
+	"github.com/unbasical/doras/pkg/algorithm/delta"
 
 	"github.com/unbasical/doras/internal/pkg/delta/tarfsdatasource"
 	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 )
 
 type applier struct {
+}
+
+func (a *applier) PatchFilesystem(artifactPath string, patch io.Reader, expected *digest.Digest) error {
+	datasource := tarpatch.NewFilesystemDataSource(artifactPath)
+	tempfile, err := os.CreateTemp(os.TempDir(), "tarpatch-temp-*")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		// this removes the temp file if there is an error elsewhere
+		// if there is no error elsewhere this will cause an error on removal (as intended)
+		_ = os.Remove(tempfile.Name())
+	}()
+	writer := writerutils.NewSafeFileWriter(tempfile)
+	defer funcutils.PanicOrLogOnErr(writer.Close, false, "failed to close safe file writer")
+	err = tarpatch.Apply(patch, datasource, writer)
+	if err != nil {
+		return err
+	}
+	extractDir, err := os.MkdirTemp(os.TempDir(), "tar-extract-dir-*")
+	if err != nil {
+		return err
+	}
+	err = tarutils.ExtractCompressedTar(extractDir, "", tempfile.Name(), expected, compressionutils.NewNopDecompressor())
+	if err != nil {
+		return err
+	}
+	// remove old directory so os.Rename works
+	err = fileutils.ReplaceDirectory(extractDir, artifactPath)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // NewPatcher return a tardiff delta.Patcher.
