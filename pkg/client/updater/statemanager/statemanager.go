@@ -8,14 +8,31 @@ import (
 	"github.com/gofrs/flock"
 )
 
+// Manager is a generic wrapper around a state object T which is serialized to the storage as JSON.
+// It provides ways to safely mutate the state, backed by file locks.
 type Manager[T any] struct {
 	state T
 	path  string
 }
 
+// New initializes a state manager with the provided state and overwrites existing state.
 func New[T any](initialState T, path string) (*Manager[T], error) {
 	m := Manager[T]{
 		state: initialState,
+		path:  path,
+	}
+	err := m.Commit()
+	if err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+// NewFromDisk initializes a state manager with the state that is exists on disk,
+// if nothing is found on the disk it uses the provided default.
+func NewFromDisk[T any](defaultState T, path string) (*Manager[T], error) {
+	m := Manager[T]{
+		state: defaultState,
 		path:  path,
 	}
 	_, err := m.Load()

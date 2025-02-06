@@ -35,4 +35,5 @@ func DefaultAlgorithms() []string {
 // Indicates whether the given artifact is an archive.
 const OrasContentUnpack = "io.deis.oras.content.unpack"
 
+// OciImageTitle is used to extract the titles of container layers from annotations.
 const OciImageTitle = "org.opencontainers.image.title"

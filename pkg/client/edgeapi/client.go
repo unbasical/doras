@@ -226,6 +226,7 @@ func (c *deltaApiClient) ReadDeltaAsStream(from, to string, acceptedAlgorithms [
 	return &descriptor, algo, rc, nil
 }
 
+// DeltaApiClient abstracts around a client that can request deltas from Doras servers.
 type DeltaApiClient interface {
 	ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (res *apicommon.ReadDeltaResponse, exists bool, err error)
 	ReadDelta(from, to string, acceptedAlgorithms []string) (*apicommon.ReadDeltaResponse, error)

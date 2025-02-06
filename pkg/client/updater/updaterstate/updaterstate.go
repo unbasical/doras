@@ -7,11 +7,13 @@ import (
 	"strings"
 )
 
+// State represents the state of a doras updater.
 type State struct {
 	Version        string            `json:"version"`
 	ArtifactStates map[string]string `json:"artifact_states"`
 }
 
+// SetArtifactState update the internal state so it knows which version of an image we have in a directory.
 func (s *State) SetArtifactState(artifactDirectory, image string) error {
 	repoName, dig, isDigest, err := ociutils.ParseOciImageString(image)
 	if err != nil {
@@ -25,6 +27,7 @@ func (s *State) SetArtifactState(artifactDirectory, image string) error {
 	return nil
 }
 
+// GetArtifactState returns the digest which is currently rolled out for a specific version.
 func (s *State) GetArtifactState(artifactDirectory, image string) (*digest.Digest, error) {
 	k := fmt.Sprintf("(%s,%s)", artifactDirectory, image)
 	dig, ok := s.ArtifactStates[k]

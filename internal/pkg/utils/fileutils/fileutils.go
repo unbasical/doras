@@ -178,3 +178,19 @@ func hashFile(path string) ([32]byte, error) {
 	copy(hash[:], hasher.Sum(nil))
 	return hash, nil
 }
+
+// CleanDirectory removes all files and subdirectories within dirPath,
+// leaving the directory itself intact.
+func CleanDirectory(dirPath string) error {
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		entryPath := filepath.Join(dirPath, entry.Name())
+		if err := os.RemoveAll(entryPath); err != nil {
+			return err
+		}
+	}
+	return nil
+}

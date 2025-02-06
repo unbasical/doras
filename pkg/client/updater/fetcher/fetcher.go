@@ -15,81 +15,101 @@ import (
 	"github.com/unbasical/doras/pkg/constants"
 	"hash"
 	"io"
+	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
+	"oras.land/oras-go/v2/registry/remote/retry"
 	"os"
 	"path"
+	"strings"
 )
 
-type ArtifactFetcher interface {
-	FetchDelta(currentVersion, image, outDir string) (algo, fPath string, err error)
-	FetchArtifact(image, outDir string) (fPath string, err error)
-}
-
-type fetcher struct {
-	auth.CredentialFunc
-}
-
-func (f *fetcher) FetchDelta(currentVersion, image, outDir string) (algo, fPath string, err error) {
-	//TODO implement me
-	name, _, isDigest, err := ociutils.ParseOciImageString(image)
-	if err != nil {
-		return "", "", err
-	}
-	if !isDigest {
-		return "", "", fmt.Errorf("image %s is identifeid by a digest", image)
-	}
-	_, err = remote.NewRepository(name)
-	if err != nil {
-		return "", "", err
-	}
-	// use ingest here
-	panic("todo")
-}
-
-func (f *fetcher) FetchArtifact(image, outDir string) (fPath string, err error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-// RegistryDelegate is used to load artifacts from a registry.
+// ArtifactLoader is used to load artifacts from a registry.
 // This should handle partial downloads if possible.
-type RegistryDelegate interface {
+type ArtifactLoader interface {
 	ResolveAndLoad(image string) (ociutils.Manifest, io.ReadCloser, error)
-	ResolveAndLoadToPath(image, outputDir string) (ociutils.Manifest, []LoadResult, error)
+	ResolveAndLoadToPath(image, outputDir string) (v1.Descriptor, ociutils.Manifest, []LoadResult, error)
 }
 
 type registryImpl struct {
 	workingDir string
+	StorageSource
 }
 
 var errSeekNotSupported = errors.New("reader does not support seeking")
 
+// LoadResult represents the result of a load. A layer with v1.Descriptor D is stored at Path.
 type LoadResult struct {
 	D    v1.Descriptor
 	Path string
 }
 
-func (r *registryImpl) resolveAndLoad(image string) (ociutils.Manifest, []LoadResult, error) {
+// StorageSource is used to get an oras.ReadOnlyTarget for an image string.
+type StorageSource interface {
+	GetTarget(repoName string) (oras.ReadOnlyTarget, error)
+}
+
+type repoStorageSource struct {
+	auth.CredentialFunc
+	InsecureAllowHttp bool
+}
+
+// NewRepoStorageSource implements StorageSource for remote registries.
+func NewRepoStorageSource(insecureAllowHttp bool, credentialFunc auth.CredentialFunc) StorageSource {
+	return &repoStorageSource{
+		InsecureAllowHttp: insecureAllowHttp,
+		CredentialFunc:    credentialFunc,
+	}
+}
+
+// NewArtifactLoader returns an artifact loader that fetches artifacts via the provided StorageSource.
+// It implements the ability to pick up interrupted fetches.
+func NewArtifactLoader(workingDir string, storageSource StorageSource) ArtifactLoader {
+	return &registryImpl{
+		workingDir:    workingDir,
+		StorageSource: storageSource,
+	}
+}
+
+func (r *repoStorageSource) GetTarget(repoName string) (oras.ReadOnlyTarget, error) {
+	reg, err := remote.NewRepository(repoName)
+	if err != nil {
+		return nil, err
+	}
+	reg.Client = &auth.Client{
+		Client:     retry.DefaultClient,
+		Credential: r.CredentialFunc,
+	}
+	reg.PlainHTTP = r.InsecureAllowHttp
+	return reg, nil
+}
+
+func (r *registryImpl) resolveAndLoad(image string) (v1.Descriptor, ociutils.Manifest, []LoadResult, error) {
+	ctx := context.Background()
 	name, tag, isDigest, err := ociutils.ParseOciImageString(image)
 	if err != nil {
-		return ociutils.Manifest{}, nil, err
+		return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 	}
+	tag = strings.TrimPrefix(tag, "@")
 	if !isDigest {
-		return ociutils.Manifest{}, nil, errors.New("expected image with digest")
+		return v1.Descriptor{}, ociutils.Manifest{}, nil, errors.New("expected image with digest")
 	}
-	reg, err := remote.NewRepository(name)
+	src, err := r.StorageSource.GetTarget(name)
 	if err != nil {
-		return ociutils.Manifest{}, nil, err
+		return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 	}
-	_, mfReader, err := reg.FetchReference(context.Background(), tag)
+	mfD, err := src.Resolve(ctx, tag)
 	if err != nil {
-		return ociutils.Manifest{}, nil, err
+		return v1.Descriptor{}, ociutils.Manifest{}, nil, err
+	}
+	mfReader, err := src.Fetch(ctx, mfD)
+	if err != nil {
+		return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 	}
 	defer funcutils.PanicOrLogOnErr(mfReader.Close, false, "failed to close reader")
 	mf, err := ociutils.ParseManifestJSON(mfReader)
 	if err != nil {
-		return ociutils.Manifest{}, nil, err
+		return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 	}
 	// TODO: also support older manifest versions
 	var artifacts []v1.Descriptor
@@ -99,26 +119,26 @@ func (r *registryImpl) resolveAndLoad(image string) (ociutils.Manifest, []LoadRe
 		artifacts = mf.Blobs
 	}
 
-	res := make([]LoadResult, len(artifacts))
+	res := make([]LoadResult, 0, len(artifacts))
 	for _, d := range artifacts {
-		rc, err := reg.Fetch(context.Background(), d)
+		rc, err := src.Fetch(context.Background(), d)
 		if err != nil {
-			return ociutils.Manifest{}, nil, err
+			return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 		}
 		fPath, err := r.ingest(d, rc)
 		if err != nil {
-			return ociutils.Manifest{}, nil, err
+			return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 		}
 		res = append(res, LoadResult{
 			D:    d,
 			Path: fPath,
 		})
 	}
-	return *mf, res, nil
+	return mfD, *mf, res, nil
 }
 
 func (r *registryImpl) ResolveAndLoad(image string) (ociutils.Manifest, io.ReadCloser, error) {
-	mf, res, err := r.resolveAndLoad(image)
+	_, mf, res, err := r.resolveAndLoad(image)
 	if err != nil {
 		return ociutils.Manifest{}, nil, err
 	}
@@ -129,10 +149,10 @@ func (r *registryImpl) ResolveAndLoad(image string) (ociutils.Manifest, io.ReadC
 	return mf, fp, nil
 }
 
-func (r *registryImpl) ResolveAndLoadToPath(image, outputDir string) (ociutils.Manifest, []LoadResult, error) {
-	mf, res, err := r.resolveAndLoad(image)
+func (r *registryImpl) ResolveAndLoadToPath(image, outputDir string) (v1.Descriptor, ociutils.Manifest, []LoadResult, error) {
+	mfD, mf, res, err := r.resolveAndLoad(image)
 	if err != nil {
-		return ociutils.Manifest{}, res, err
+		return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 	}
 	// make sure we have valid paths before moving any files around
 	err = errors.Join(lo.Map(res, func(a LoadResult, _ int) error {
@@ -146,7 +166,7 @@ func (r *registryImpl) ResolveAndLoadToPath(image, outputDir string) (ociutils.M
 		return nil
 	})...)
 	if err != nil {
-		return ociutils.Manifest{}, nil, err
+		return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 	}
 	// move files to the correct location
 	for i, a := range res {
@@ -154,12 +174,12 @@ func (r *registryImpl) ResolveAndLoadToPath(image, outputDir string) (ociutils.M
 		targetPath := path.Join(outputDir, p)
 		err = fileutils.ReplaceFile(a.Path, targetPath)
 		if err != nil {
-			return ociutils.Manifest{}, nil, err
+			return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 		}
 		// update path in-place within results slice
 		res[i].Path = targetPath
 	}
-	return mf, res, nil
+	return mfD, mf, res, nil
 }
 
 // ensureSubDir makes sure the directory at p exists, relative to the base directory.
