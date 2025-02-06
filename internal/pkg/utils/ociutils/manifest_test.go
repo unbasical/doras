@@ -20,8 +20,8 @@ func TestExtractPathFromManifest(t *testing.T) {
 			name: "Valid manifest with archive",
 			manifest: &Manifest{
 				Annotations: map[string]string{
-					constants.OrasContentUnpack:      "true",
-					"org.opencontainers.image.title": "file.txt",
+					constants.OrasContentUnpack: "true",
+					constants.OciImageTitle:     "file.txt",
 				},
 			},
 			expectedPath:    "file.txt",
@@ -32,7 +32,7 @@ func TestExtractPathFromManifest(t *testing.T) {
 			name: "Valid manifest without archive",
 			manifest: &Manifest{
 				Annotations: map[string]string{
-					"org.opencontainers.image.title": "file.txt",
+					constants.OciImageTitle: "file.txt",
 				},
 			},
 			expectedPath:    "file.txt",

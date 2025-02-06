@@ -1,7 +1,11 @@
 package updater
 
 import (
+	"context"
+	"github.com/unbasical/doras/pkg/client/updater/statemanager"
+	"github.com/unbasical/doras/pkg/client/updater/updaterstate"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/unbasical/doras/pkg/client/edgeapi"
@@ -33,7 +37,16 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 		return nil, err
 	}
 	client.edgeClient = c
-	client.state = &dorasState{fPath: client.opts.InternalDirectory}
+	initialState := updaterstate.State{
+		Version:        "1",
+		ArtifactStates: make(map[string]string),
+	}
+	statePath := path.Join(client.opts.OutputDirectory, "doras-state.json")
+	stateManager, err := statemanager.New(initialState, statePath)
+	if err != nil {
+		return nil, err
+	}
+	client.state = stateManager
 	return client, nil
 }
 
@@ -71,5 +84,12 @@ func WithDockerConfigPath(dockerConfigPath string) func(*Client) {
 func WithAcceptedAlgorithms(acceptedAlgorithms []string) func(*Client) {
 	return func(c *Client) {
 		c.opts.AcceptedAlgorithms = acceptedAlgorithms
+	}
+}
+
+// WithContext adds a ctx to the client (e.g. for cancellation).
+func WithContext(ctx context.Context) func(*Client) {
+	return func(c *Client) {
+		c.ctx = ctx
 	}
 }

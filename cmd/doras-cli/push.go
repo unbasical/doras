@@ -16,6 +16,7 @@ import (
 	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 	"github.com/unbasical/doras/pkg/algorithm/compression"
+	"github.com/unbasical/doras/pkg/constants"
 	"io"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
@@ -115,7 +116,7 @@ func pushFile(ctx context.Context, args *cliArgs, target oras.Target, tag string
 		Digest:    dgst,
 		Size:      stat.Size(),
 		Annotations: map[string]string{
-			"org.opencontainers.image.title": fName,
+			constants.OciImageTitle: fName,
 		},
 	}
 	log.Debugf("artifact descriptor: %v", d)
