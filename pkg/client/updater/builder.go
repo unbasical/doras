@@ -1,6 +1,7 @@
 package updater
 
 import (
+	"context"
 	"github.com/unbasical/doras/pkg/client/updater/statemanager"
 	"github.com/unbasical/doras/pkg/client/updater/updaterstate"
 	"os"
@@ -83,5 +84,12 @@ func WithDockerConfigPath(dockerConfigPath string) func(*Client) {
 func WithAcceptedAlgorithms(acceptedAlgorithms []string) func(*Client) {
 	return func(c *Client) {
 		c.opts.AcceptedAlgorithms = acceptedAlgorithms
+	}
+}
+
+// WithContext adds a ctx to the client (e.g. for cancellation).
+func WithContext(ctx context.Context) func(*Client) {
+	return func(c *Client) {
+		c.ctx = ctx
 	}
 }

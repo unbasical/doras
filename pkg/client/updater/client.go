@@ -1,6 +1,7 @@
 package updater
 
 import (
+	"context"
 	"fmt"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -31,6 +32,7 @@ type Client struct {
 	edgeClient edgeapi.DeltaApiClient
 	reg        fetcher.ArtifactLoader
 	state      *statemanager.Manager[updaterstate.State]
+	ctx        context.Context
 }
 
 // Pull an image from the registry.
