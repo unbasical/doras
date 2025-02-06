@@ -27,7 +27,6 @@ import (
 // ArtifactLoader is used to load artifacts from a registry.
 // This should handle partial downloads if possible.
 type ArtifactLoader interface {
-	ResolveAndLoad(image string) (ociutils.Manifest, io.ReadCloser, error)
 	ResolveAndLoadToPath(image, outputDir string) (v1.Descriptor, ociutils.Manifest, []LoadResult, error)
 }
 
@@ -135,18 +134,6 @@ func (r *registryImpl) resolveAndLoad(image string) (v1.Descriptor, ociutils.Man
 		})
 	}
 	return mfD, *mf, res, nil
-}
-
-func (r *registryImpl) ResolveAndLoad(image string) (ociutils.Manifest, io.ReadCloser, error) {
-	_, mf, res, err := r.resolveAndLoad(image)
-	if err != nil {
-		return ociutils.Manifest{}, nil, err
-	}
-	fp, err := os.Open(res[0].Path)
-	if err != nil {
-		return ociutils.Manifest{}, nil, err
-	}
-	return mf, fp, nil
 }
 
 func (r *registryImpl) ResolveAndLoadToPath(image, outputDir string) (v1.Descriptor, ociutils.Manifest, []LoadResult, error) {
