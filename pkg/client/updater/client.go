@@ -2,10 +2,16 @@ package updater
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
+	"path"
+	"strings"
+
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	log "github.com/sirupsen/logrus"
+	"github.com/unbasical/doras/internal/pkg/api/apicommon"
 	"github.com/unbasical/doras/internal/pkg/utils/compressionutils"
 	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 	"github.com/unbasical/doras/internal/pkg/utils/tarutils"
@@ -14,9 +20,6 @@ import (
 	"github.com/unbasical/doras/pkg/client/updater/statemanager"
 	"github.com/unbasical/doras/pkg/client/updater/updaterstate"
 	"github.com/unbasical/doras/pkg/constants"
-	"os"
-	"path"
-	"strings"
 
 	"github.com/unbasical/doras/internal/pkg/algorithmchoice"
 	"github.com/unbasical/doras/internal/pkg/compression/gzip"
@@ -114,6 +117,10 @@ func (c *Client) pullDeltaImageAsync(target string, repoName string, currentVers
 	// request delta from server asynchronously
 	res, exists, err := c.edgeClient.ReadDeltaAsync(currentImage, target, c.opts.AcceptedAlgorithms)
 	if err != nil {
+		if errors.Is(err, apicommon.ErrImagesIdentical) {
+			log.Info("already up-to-date")
+			return true, nil
+		}
 		return false, err
 	}
 	if !exists {

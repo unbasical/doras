@@ -3,16 +3,16 @@ package edgeapi
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras/internal/pkg/auth"
 	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 	backoff2 "github.com/unbasical/doras/pkg/backoff"
-	"io"
-	"net/http"
 	auth2 "oras.land/oras-go/v2/registry/remote/auth"
-	"strings"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/unbasical/doras/internal/pkg/api/apicommon"
@@ -94,7 +94,14 @@ func (c *deltaApiClient) ReadDeltaAsync(from, to string, acceptedAlgorithms []st
 	case http.StatusAccepted:
 		return nil, false, nil
 	default:
-		return nil, false, errors.New(resp.Status)
+		var errBody apicommon.APIError
+		decoder := json.NewDecoder(resp.Body)
+		decoder.DisallowUnknownFields()
+		err = decoder.Decode(&errBody)
+		if err != nil {
+			return nil, false, fmt.Errorf("unknown error %v, %v", resp.Status, err)
+		}
+		return nil, false, errBody
 	}
 }
 

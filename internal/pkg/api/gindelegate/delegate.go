@@ -149,7 +149,7 @@ func (g *ginDorasContext) HandleAccepted() {
 // RespondWithError sends an error reply to the client.
 func RespondWithError(c *gin.Context, statusCode int, err error, errorContext string) {
 	c.JSON(statusCode, apicommon.APIError{
-		Error: apicommon.APIErrorInner{
+		InnerError: apicommon.APIErrorInner{
 			Code:         statusCode,
 			Message:      err.Error(),
 			ErrorContext: errorContext,

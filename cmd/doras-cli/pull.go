@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras/pkg/client/updater"
 )
@@ -28,7 +29,7 @@ func (args *cliArgs) pull(ctx context.Context) error {
 		}
 		// print this to allow users to parse the results when there is no error
 		if exists {
-			log.Info("successfully applied delta")
+			log.Info("update successful")
 			return nil
 		}
 		log.Info("delta request pending, exiting")
@@ -40,6 +41,6 @@ func (args *cliArgs) pull(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	log.Info("successfully pulled delta")
+	log.Info("update successful")
 	return nil
 }
