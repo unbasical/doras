@@ -102,6 +102,9 @@ func (g *ginDorasContext) HandleError(err error, msg string) {
 	if errors.Is(err, error2.ErrFailedToResolve) {
 		statusCode = http.StatusNotFound
 	}
+	if errors.Is(err, error2.ErrIncompatibleArtifacts) {
+		statusCode = http.StatusBadRequest
+	}
 	RespondWithError(g.c, statusCode, err, msg)
 }
 

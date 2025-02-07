@@ -84,7 +84,9 @@ func (c *deltaApiClient) ReadDeltaAsync(from, to string, acceptedAlgorithms []st
 	switch resp.StatusCode {
 	case http.StatusOK:
 		var resBody apicommon.ReadDeltaResponse
-		err = json.NewDecoder(resp.Body).Decode(&resBody)
+		decoder := json.NewDecoder(resp.Body)
+		decoder.DisallowUnknownFields()
+		err = decoder.Decode(&resBody)
 		if err != nil {
 			return nil, false, err
 		}
