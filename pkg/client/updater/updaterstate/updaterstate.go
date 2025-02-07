@@ -3,6 +3,7 @@ package updaterstate
 import (
 	"fmt"
 	"github.com/opencontainers/go-digest"
+	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 	"strings"
 )
@@ -30,6 +31,7 @@ func (s *State) SetArtifactState(artifactDirectory, image string) error {
 // GetArtifactState returns the digest which is currently rolled out for a specific version.
 func (s *State) GetArtifactState(artifactDirectory, image string) (*digest.Digest, error) {
 	k := fmt.Sprintf("(%s,%s)", artifactDirectory, image)
+	log.Debugf("looking for version with key:%q", k)
 	dig, ok := s.ArtifactStates[k]
 	if !ok {
 		return nil, fmt.Errorf("artifact state not found for %s", image)

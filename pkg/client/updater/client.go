@@ -9,6 +9,7 @@ import (
 	"github.com/unbasical/doras/internal/pkg/utils/compressionutils"
 	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 	"github.com/unbasical/doras/internal/pkg/utils/tarutils"
+	"github.com/unbasical/doras/pkg/backoff"
 	"github.com/unbasical/doras/pkg/client/updater/fetcher"
 	"github.com/unbasical/doras/pkg/client/updater/statemanager"
 	"github.com/unbasical/doras/pkg/client/updater/updaterstate"
@@ -33,6 +34,7 @@ type Client struct {
 	reg        fetcher.ArtifactLoader
 	state      *statemanager.Manager[updaterstate.State]
 	ctx        context.Context
+	backoff    backoff.BackoffStrategy
 }
 
 // Pull an image from the registry.
@@ -46,6 +48,10 @@ func (c *Client) Pull(image string) error {
 		}
 		if exists {
 			return nil
+		}
+		err = c.backoff.Wait()
+		if err != nil {
+			return err
 		}
 	}
 }
@@ -204,7 +210,9 @@ func (c *Client) pullFullImage(targetImage string) (bool, error) {
 			continue
 		}
 		// TODO: also handle compressed artifacts that are not archives
-		err = fileutils.ReplaceFile(r.Path, path.Join(extractDir, path.Base(r.Path)))
+		targetPath := path.Join(extractDir, path.Base(r.Path))
+		log.Debugf("attempted to move to %q", targetPath)
+		err = fileutils.ReplaceFile(r.Path, targetPath)
 		if err != nil {
 			return false, err
 		}

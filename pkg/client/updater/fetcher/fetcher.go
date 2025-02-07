@@ -8,6 +8,7 @@ import (
 	"github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/samber/lo"
+	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
@@ -85,14 +86,11 @@ func (r *repoStorageSource) GetTarget(repoName string) (oras.ReadOnlyTarget, err
 
 func (r *registryImpl) resolveAndLoad(image string) (v1.Descriptor, ociutils.Manifest, []LoadResult, error) {
 	ctx := context.Background()
-	name, tag, isDigest, err := ociutils.ParseOciImageString(image)
+	name, tag, _, err := ociutils.ParseOciImageString(image)
 	if err != nil {
 		return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 	}
 	tag = strings.TrimPrefix(tag, "@")
-	if !isDigest {
-		return v1.Descriptor{}, ociutils.Manifest{}, nil, errors.New("expected image with digest")
-	}
 	src, err := r.StorageSource.GetTarget(name)
 	if err != nil {
 		return v1.Descriptor{}, ociutils.Manifest{}, nil, err
@@ -158,7 +156,13 @@ func (r *registryImpl) ResolveAndLoadToPath(image, outputDir string) (v1.Descrip
 	// move files to the correct location
 	for i, a := range res {
 		p := a.D.Annotations[constants.OciImageTitle]
+
+		log.Debugf("%q", p)
 		targetPath := path.Join(outputDir, p)
+		if targetPath == outputDir {
+			targetPath = path.Join(targetPath, "archive")
+		}
+		log.Debugf("attempting to move to %q", targetPath)
 		err = fileutils.ReplaceFile(a.Path, targetPath)
 		if err != nil {
 			return v1.Descriptor{}, ociutils.Manifest{}, nil, err

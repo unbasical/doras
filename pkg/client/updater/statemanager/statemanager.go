@@ -3,9 +3,9 @@ package statemanager
 import (
 	"encoding/json"
 	"errors"
-	"os"
-
 	"github.com/gofrs/flock"
+	log "github.com/sirupsen/logrus"
+	"os"
 )
 
 // Manager is a generic wrapper around a state object T which is serialized to the storage as JSON.
@@ -16,13 +16,14 @@ type Manager[T any] struct {
 }
 
 // New initializes a state manager with the provided state and overwrites existing state.
-func New[T any](initialState T, path string) (*Manager[T], error) {
+func New[T any](initialState T, p string) (*Manager[T], error) {
 	m := Manager[T]{
 		state: initialState,
-		path:  path,
+		path:  p,
 	}
 	err := m.Commit()
 	if err != nil {
+		log.WithError(err).Debug("failed to initialize state")
 		return nil, err
 	}
 	return &m, nil

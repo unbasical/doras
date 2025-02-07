@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"github.com/gofrs/flock"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 )
@@ -60,7 +61,9 @@ func ReplaceDirectory(currentPath, targetPath string) error {
 		_ = releaseLock(lock)
 	}()
 	if _, err := os.Stat(targetPath); err == nil {
+		log.Debugf("removing %q", targetPath)
 		if err := os.RemoveAll(targetPath); err != nil {
+			log.WithError(err).Debug("failed to remove old directory")
 			return err
 		}
 	} else if !os.IsNotExist(err) {
