@@ -164,6 +164,54 @@ func TestClient_PullAsync(t *testing.T) {
 			},
 		},
 		{
+			name: "success (initialized, but delta not possible)",
+			fields: fields{
+				opts: func() clientOpts {
+					return clientOpts{
+						OutputDirectory:   outDir,
+						InternalDirectory: internalDir,
+					}
+				}(),
+				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
+					return nil, false, apicommon.ErrImagesIncompatible
+				}},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s})},
+			args: args{
+				target: targetImage,
+			},
+			wantExists:     true,
+			wantErr:        false,
+			expectedDir:    expectedDir,
+			expectedDigest: &targetDescriptor.Digest,
+			initialState: initialState{
+				version: &currentDescriptor,
+			},
+		},
+		{
+			name: "success (images are identical)",
+			fields: fields{
+				opts: func() clientOpts {
+					return clientOpts{
+						OutputDirectory:   outDir,
+						InternalDirectory: internalDir,
+					}
+				}(),
+				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
+					return nil, false, apicommon.ErrImagesIdentical
+				}},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s})},
+			args: args{
+				target: targetImage,
+			},
+			wantExists:     true,
+			wantErr:        false,
+			expectedDir:    expectedDir,
+			expectedDigest: &targetDescriptor.Digest,
+			initialState: initialState{
+				version: &targetDescriptor,
+			},
+		},
+		{
 			name: "error (initialized)",
 			fields: fields{
 				opts: func() clientOpts {

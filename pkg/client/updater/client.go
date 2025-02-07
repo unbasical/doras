@@ -111,9 +111,6 @@ func (c *Client) PullAsync(target string) (exists bool, err error) {
 
 func (c *Client) pullDeltaImageAsync(target string, repoName string, currentVersion *digest.Digest) (bool, error) {
 	currentImage := fmt.Sprintf("%s@%s", repoName, currentVersion.String())
-	if currentImage == target {
-		return true, nil
-	}
 	// request delta from server asynchronously
 	res, exists, err := c.edgeClient.ReadDeltaAsync(currentImage, target, c.opts.AcceptedAlgorithms)
 	if err != nil {
