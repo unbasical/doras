@@ -152,9 +152,9 @@ func Test_patcher_PatchFilesystem(t *testing.T) {
 				t.Fatalf("PatchFilesystem() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			eq, cmpErr := fileutils.CompareDirectories(outDir, expectedDir)
+			eq, _ := fileutils.CompareDirectories(outDir, expectedDir)
 			if !eq {
-				t.Fatalf("output directory does not match expected directory: %v", cmpErr)
+				t.Fatalf("output directory does not match expected directory")
 			}
 		})
 	}

@@ -123,7 +123,7 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 	err = checkRepoCompatability(fromDigest, toTarget)
 	if err != nil {
 		log.WithError(err).Error("Error checking repo compatibility")
-		apiDelegate.HandleError(error2.ErrInternal, err.Error())
+		apiDelegate.HandleError(error2.ErrBadRequest, "images are not in the same repository")
 		return
 	}
 
@@ -174,7 +174,8 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 		return
 	}
 	if err := checkCompatability(&mfFrom, &mfTo); err != nil {
-		apiDelegate.HandleError(error2.ErrIncompatibleArtifacts, err.Error())
+		log.WithError(err).Debug("received request for incompatible artifacts")
+		apiDelegate.HandleError(error2.ErrIncompatibleArtifacts, "cannot build a delta from images")
 		return
 	}
 	manifOpts := registrydelegate.DeltaManifestOptions{

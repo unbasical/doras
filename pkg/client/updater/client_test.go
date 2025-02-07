@@ -257,8 +257,11 @@ func TestClient_PullAsync(t *testing.T) {
 				t.Errorf("PullAsync() gotExists = %v, want %v", gotExists, tt.wantExists)
 			}
 			eq, err := fileutils.CompareDirectories(outDir, tt.expectedDir)
-			if err != nil || !eq {
-				t.Fatalf("directories not equal: %q", err)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !eq {
+				t.Fatal("directories not equal")
 			}
 			st, err := s.Load()
 			if err != nil {

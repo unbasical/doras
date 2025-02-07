@@ -1,6 +1,7 @@
 package fileutils
 
 import (
+	"crypto/sha256"
 	"os"
 	"path/filepath"
 	"testing"
@@ -47,7 +48,7 @@ func TestCompareDirectories(t *testing.T) {
 			_ = os.RemoveAll(dir2)
 		}()
 
-		equal, err := CompareDirectories(dir1, dir2)
+		equal, err := CompareDirectoriesHasher(dir1, dir2, sha256.New())
 		if err != nil || !equal {
 			t.Errorf("Expected directories to be identical, got unequal: %v", err)
 		}
@@ -69,8 +70,11 @@ func TestCompareDirectories(t *testing.T) {
 			_ = os.RemoveAll(dir2)
 		}()
 
-		equal, err := CompareDirectories(dir1, dir2)
-		if equal || err == nil {
+		equal, err := CompareDirectoriesHasher(dir1, dir2, sha256.New())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if equal {
 			t.Errorf("Expected directories to be different, but they were reported as equal")
 		}
 	})
@@ -92,8 +96,11 @@ func TestCompareDirectories(t *testing.T) {
 			_ = os.RemoveAll(dir2)
 		}()
 
-		equal, err := CompareDirectories(dir1, dir2)
-		if equal || err == nil {
+		equal, err := CompareDirectoriesHasher(dir1, dir2, sha256.New())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if equal {
 			t.Errorf("Expected directories to be different due to missing file, but they were reported as equal")
 		}
 	})
@@ -115,8 +122,11 @@ func TestCompareDirectories(t *testing.T) {
 			_ = os.RemoveAll(dir2)
 		}()
 
-		equal, err := CompareDirectories(dir1, dir2)
-		if equal || err == nil {
+		equal, err := CompareDirectoriesHasher(dir1, dir2, sha256.New())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if equal {
 			t.Errorf("Expected directories to be different due to extra file, but they were reported as equal")
 		}
 	})

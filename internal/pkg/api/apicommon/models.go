@@ -56,3 +56,9 @@ var ErrImagesIdentical = APIError{InnerError: APIErrorInner{
 	Message:      "artifacts are not compatible",
 	ErrorContext: "from and to image are identical",
 }}
+
+// ErrImagesIncompatible is returned by the API when the delta would have to be created from identical images.
+var ErrImagesIncompatible = APIError{InnerError: APIErrorInner{
+	Message:      "artifacts are not compatible",
+	ErrorContext: "cannot build a delta from images",
+}}

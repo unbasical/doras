@@ -2,11 +2,17 @@ package fileutils
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/rogpeppe/go-internal/dirhash"
+	"hash"
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -62,87 +68,33 @@ func ExistsAndIsDirectory(path string) (exists, isDir bool, err error) {
 
 // CompareDirectories checks if two directories have the same structure and content.
 // Walks both folders and ensures the contents are identical (compares file hashes).
-//
-//nolint:revive // Disable complexity warning, this function should be understandable enough to people familiar with navigating trees.
 func CompareDirectories(dir1, dir2 string) (bool, error) {
-	files1 := make(map[string][32]byte)
-
-	// Walk through dir1 and store file hashes
-	err := filepath.Walk(dir1, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		relPath, _ := filepath.Rel(dir1, path)
-		if info.IsDir() {
-			return nil
-		}
-
-		hash, err := hashFile(path)
-		if err != nil {
-			return err
-		}
-		files1[relPath] = hash
-		return nil
-	})
-	if err != nil {
-		return false, err
-	}
-
-	// Walk through dir2 and compare with files1
-	err = filepath.Walk(dir2, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		relPath, _ := filepath.Rel(dir2, path)
-		if info.IsDir() {
-			return nil
-		}
-
-		hash, err := hashFile(path)
-		if err != nil {
-			return err
-		}
-
-		if hash1, exists := files1[relPath]; !exists || hash1 != hash {
-			return fmt.Errorf("file mismatch: %s", relPath)
-		}
-
-		delete(files1, relPath)
-		return nil
-	})
-	if err != nil {
-		return false, err
-	}
-
-	// If files1 is not empty, it means dir1 had extra files
-	if len(files1) > 0 {
-		return false, fmt.Errorf("directory contains %d extra files", len(files1))
-	}
-
-	return true, nil
+	return CompareDirectoriesHasher(dir1, dir2, sha256.New())
 }
 
-// hashFile computes a SHA-256 hash of the file content
-func hashFile(path string) ([32]byte, error) {
-	var hash [32]byte
-	file, err := os.Open(path)
+// CompareDirectoriesHasher checks if two directories have the same structure and content.
+// Walks both folders and ensures the contents are identical (compares file hashes).
+func CompareDirectoriesHasher(dir1, dir2 string, h hash.Hash) (bool, error) {
+	dirHash, err := dirhash.HashDir(dir1, "", getDirHasher(cloneHash(h)))
 	if err != nil {
-		return hash, err
+		return false, err
 	}
-	defer func() {
-		_ = file.Close()
-	}()
-
-	hasher := sha256.New()
-	_, err = io.Copy(hasher, file)
+	dirHash2, err := dirhash.HashDir(dir2, "", getDirHasher(cloneHash(h)))
 	if err != nil {
-		return hash, err
+		return false, err
 	}
+	return dirHash == dirHash2, nil
+}
 
-	copy(hash[:], hasher.Sum(nil))
-	return hash, nil
+// cloneHash creates a new instance of the underlying hash type by using reflection.
+// It assumes that proto is a pointer to a struct.
+func cloneHash(h hash.Hash) hash.Hash {
+	v := reflect.ValueOf(h)
+	if v.Kind() != reflect.Ptr {
+		panic("provided hash is not a pointer")
+	}
+	newInstance := reflect.New(v.Elem().Type()).Interface().(hash.Hash)
+	return newInstance
 }
 
 // CleanDirectory removes all files and subdirectories within dirPath,
@@ -159,4 +111,28 @@ func CleanDirectory(dirPath string) error {
 		}
 	}
 	return nil
+}
+
+func getDirHasher(h hash.Hash) func([]string, func(string) (io.ReadCloser, error)) (string, error) {
+	return func(files []string, open func(string) (io.ReadCloser, error)) (string, error) {
+		files = append([]string(nil), files...)
+		sort.Strings(files)
+		for _, file := range files {
+			if strings.Contains(file, "\n") {
+				return "", errors.New("dirhash: filenames with newlines are not supported")
+			}
+			r, err := open(file)
+			if err != nil {
+				return "", err
+			}
+			hf := sha256.New()
+			_, err = io.Copy(hf, r)
+			_ = r.Close()
+			if err != nil {
+				return "", err
+			}
+			_, _ = fmt.Fprintf(h, "%x  %s\n", hf.Sum(nil), file)
+		}
+		return "h1:" + base64.StdEncoding.EncodeToString(h.Sum(nil)), nil
+	}
 }

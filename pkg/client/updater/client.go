@@ -121,6 +121,9 @@ func (c *Client) pullDeltaImageAsync(target string, repoName string, currentVers
 			log.Info("already up-to-date")
 			return true, nil
 		}
+		if errors.Is(err, apicommon.ErrImagesIncompatible) {
+			return c.pullFullImage(target)
+		}
 		return false, err
 	}
 	if !exists {
