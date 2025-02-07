@@ -3,37 +3,36 @@ package fileutils
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
+	"github.com/gofrs/flock"
+	log "github.com/sirupsen/logrus"
 	"os"
-	"path"
-	"syscall"
+	"path/filepath"
 )
 
-// getLockFile computes a unique lock file path based on newPath.
+// getLockFile computes a unique lock file path based on the canonical absolute path of newPath.
 func getLockFile(newPath string) string {
-	hash := sha256.Sum256([]byte(newPath))
-	return path.Join(os.TempDir(), "update_lock_"+hex.EncodeToString(hash[:]))
-}
-
-// acquireLock opens (or creates) the specified lock file and acquires an exclusive lock.
-func acquireLock(lockPath string) (*os.File, error) {
-	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0600)
+	abs, err := filepath.Abs(newPath)
 	if err != nil {
-		return nil, err
+		abs = newPath // Fallback to the provided path if an error occurs.
 	}
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
-		_ = f.Close()
-		return nil, err
-	}
-	return f, nil
+	abs = filepath.Clean(abs)
+	hash := sha256.Sum256([]byte(abs))
+	return filepath.Join(os.TempDir(), "update_lock_"+hex.EncodeToString(hash[:]))
 }
 
-// releaseLock releases the file lock and closes the file.
-func releaseLock(f *os.File) error {
-	return errors.Join(
-		syscall.Flock(int(f.Fd()), syscall.LOCK_UN),
-		f.Close(),
-	)
+// acquireLock creates a new flock based on lockPath and acquires an exclusive lock.
+func acquireLock(lockPath string) (*flock.Flock, error) {
+	lock := flock.New(lockPath)
+	// Block until the lock is acquired
+	if err := lock.Lock(); err != nil {
+		return nil, err
+	}
+	return lock, nil
+}
+
+// releaseLock releases the lock held by the flock.
+func releaseLock(lock *flock.Flock) error {
+	return lock.Unlock()
 }
 
 // ReplaceFile atomically replaces the file at targetPath with the file at currentPath,
@@ -62,7 +61,9 @@ func ReplaceDirectory(currentPath, targetPath string) error {
 		_ = releaseLock(lock)
 	}()
 	if _, err := os.Stat(targetPath); err == nil {
+		log.Debugf("removing %q", targetPath)
 		if err := os.RemoveAll(targetPath); err != nil {
+			log.WithError(err).Debug("failed to remove old directory")
 			return err
 		}
 	} else if !os.IsNotExist(err) {

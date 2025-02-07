@@ -154,6 +154,10 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 		apiDelegate.HandleError(error2.ErrInvalidOciImage, toTarget)
 		return
 	}
+	if toDescriptor.Digest == fromDescriptor.Digest {
+		apiDelegate.HandleError(error2.ErrIncompatibleArtifacts, "from and to image are identical")
+		return
+	}
 
 	// load manifests to check for compatability and algorithm selection
 	mfFrom, err := registry.LoadManifest(fromDescriptor, srcFrom)

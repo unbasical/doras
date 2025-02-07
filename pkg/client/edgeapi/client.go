@@ -5,16 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras/internal/pkg/auth"
+	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
+	backoff2 "github.com/unbasical/doras/pkg/backoff"
 	"io"
-	"math/rand"
 	"net/http"
 	auth2 "oras.land/oras-go/v2/registry/remote/auth"
 	"strings"
-	"time"
-
-	log "github.com/sirupsen/logrus"
-	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/unbasical/doras/internal/pkg/api/apicommon"
@@ -25,82 +23,21 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 )
 
-// Client provides the functionality to interact with the Doras server API.
-type Client struct {
+// deltaApiClient provides the functionality to interact with the Doras server API.
+type deltaApiClient struct {
 	base      *client.DorasBaseClient
-	backoff   BackoffStrategy
+	backoff   backoff2.Strategy
 	plainHTTP bool
 }
 
-// exponentialBackoffWithJitter implements the BackoffStrategy interface
-type exponentialBackoffWithJitter struct {
-	baseDelay      time.Duration // Base delay between retries (e.g., 100ms)
-	maxDelay       time.Duration // Maximum delay before giving up
-	currentAttempt uint          // Track the current attempt number
-	maxAttempt     uint          // Track the current attempt number
-	randSource     *rand.Rand    // Random source for jittering
-}
-
-// NewExponentialBackoffWithJitter creates a new instance of exponentialBackoffWithJitter
-func NewExponentialBackoffWithJitter(baseDelay, maxDelay time.Duration, maxAttempts uint) BackoffStrategy {
-	// Seed the random number generator for jitter
-	source := rand.NewSource(time.Now().UnixNano())
-	return &exponentialBackoffWithJitter{
-		baseDelay:      baseDelay,
-		maxDelay:       maxDelay,
-		currentAttempt: 0,
-		maxAttempt:     maxAttempts,
-		randSource:     rand.New(source),
-	}
-}
-
-// Wait calculates the next backoff time with exponential backoff and jitter
-func (e *exponentialBackoffWithJitter) Wait() error {
-	if e.currentAttempt >= e.maxAttempt {
-		return errors.New("maximum retries exceeded")
-	}
-	// Calculate the exponential backoff delay
-	delay := e.baseDelay * time.Duration(1<<e.currentAttempt) // 2^attempt * baseDelay
-
-	// Apply jitter by adding a random factor to the delay (between 0 and 1x the delay)
-	jitter := time.Duration(e.randSource.Int63n(int64(delay)))
-	delay = delay + jitter - (delay / 2) // Apply jitter in both directions
-
-	// Ensure that delay does not exceed the maximum delay
-	if delay > e.maxDelay {
-		delay = e.maxDelay
-	}
-
-	// Sleep for the calculated delay
-	log.Debugf("Waiting for %v (attempt %d/%d)\n", delay, e.currentAttempt, e.maxAttempt)
-	time.Sleep(delay)
-
-	// Increment the attempt number for the next retry
-	e.currentAttempt++
-	return nil
-}
-
-// BackoffStrategy is used to avoid flooding the server with requests
-// when clients are waiting for the delta request to be completed.
-type BackoffStrategy interface {
-	Wait() error
-}
-
-// DefaultBackoff returns a sensible default BackoffStrategy (exponential with an upper bound).
-func DefaultBackoff() BackoffStrategy {
-	const defaultBaseDelay = 50 * time.Millisecond
-	const defaultMaxDelay = 1 * time.Minute
-	return NewExponentialBackoffWithJitter(defaultBaseDelay, defaultMaxDelay, 10)
-}
-
 // NewEdgeClient returns a client that can be used to interact with the Doras server API.
-func NewEdgeClient(serverURL string, allowHttp bool, tokenProvider client.AuthProvider) (*Client, error) {
+func NewEdgeClient(serverURL string, allowHttp bool, credentialFunc auth2.CredentialFunc) (DeltaApiClient, error) {
 	//if tokenProvider != nil && allowHttp {
 	//	return nil, errors.New("using a login token while allowing HTTP is not supported to avoid leaking credentials")
 	//}
-	return &Client{
-		base:      client.NewBaseClient(serverURL, tokenProvider),
-		backoff:   DefaultBackoff(),
+	return &deltaApiClient{
+		base:      client.NewBaseClient(serverURL, credentialFunc),
+		backoff:   backoff2.DefaultBackoff(),
 		plainHTTP: allowHttp,
 	}, nil
 }
@@ -109,7 +46,7 @@ func NewEdgeClient(serverURL string, allowHttp bool, tokenProvider client.AuthPr
 // The function does not block if the delta is still being created.
 // If the delta has been created exists will be set to true.
 // If `err == nil && exists` is true then the request has been accepted by the server but the delta has not been created.
-func (c *Client) ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (res *apicommon.ReadDeltaResponse, exists bool, err error) {
+func (c *deltaApiClient) ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (res *apicommon.ReadDeltaResponse, exists bool, err error) {
 	url := buildurl.New(
 		buildurl.WithBasePath(c.base.DorasURL),
 		buildurl.WithPathElement(apicommon.ApiBasePathV1),
@@ -125,9 +62,13 @@ func (c *Client) ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (r
 		return nil, false, err
 	}
 
-	if c.base.TokenProvider != nil {
+	if c.base.CredentialFunc != nil {
 		log.Debug("attempting to load token")
-		creds, err := c.base.TokenProvider.GetAuth()
+		ociUrl, err := ociutils.ParseOciUrl(from)
+		if err != nil {
+			return nil, false, err
+		}
+		creds, err := c.base.CredentialFunc(context.Background(), ociUrl.Host)
 		if err != nil {
 			log.WithError(err).Debug("could not load auth token, using no authentication")
 		} else {
@@ -172,7 +113,7 @@ func setupAuthHeader(creds auth2.Credential, req *http.Request) {
 // ReadDelta requests a delta between the two provided images and returns the server's response.
 // Blocks until the delta has been created or an error is detected.
 // The server supports non-blocking requests for deltas, to use them use the sibling function ReadDeltaAsync.
-func (c *Client) ReadDelta(from, to string, acceptedAlgorithms []string) (*apicommon.ReadDeltaResponse, error) {
+func (c *deltaApiClient) ReadDelta(from, to string, acceptedAlgorithms []string) (*apicommon.ReadDeltaResponse, error) {
 	for {
 		response, exists, err := c.ReadDeltaAsync(from, to, acceptedAlgorithms)
 		if err != nil {
@@ -190,7 +131,7 @@ func (c *Client) ReadDelta(from, to string, acceptedAlgorithms []string) (*apico
 }
 
 // ReadDeltaAsStream requests a delta between the two provided images and reads it as a stream.
-func (c *Client) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string) (*v1.Descriptor, string, io.ReadCloser, error) {
+func (c *deltaApiClient) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string) (*v1.Descriptor, string, io.ReadCloser, error) {
 	response, err := c.ReadDelta(from, to, acceptedAlgorithms)
 	if err != nil {
 		return nil, "", nil, err
@@ -224,4 +165,11 @@ func (c *Client) ReadDeltaAsStream(from, to string, acceptedAlgorithms []string)
 		return nil, "", nil, err
 	}
 	return &descriptor, algo, rc, nil
+}
+
+// DeltaApiClient abstracts around a client that can request deltas from Doras servers.
+type DeltaApiClient interface {
+	ReadDeltaAsync(from, to string, acceptedAlgorithms []string) (res *apicommon.ReadDeltaResponse, exists bool, err error)
+	ReadDelta(from, to string, acceptedAlgorithms []string) (*apicommon.ReadDeltaResponse, error)
+	ReadDeltaAsStream(from, to string, acceptedAlgorithms []string) (*v1.Descriptor, string, io.ReadCloser, error)
 }

@@ -2,33 +2,15 @@ package fileutils
 
 import (
 	"crypto/sha256"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 	"io"
 	"os"
 	"path/filepath"
 
-	"github.com/unbasical/doras/internal/pkg/utils/writerutils"
-
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
-
-// SafeReadJSON reads the JSON file at the path into the targetPointer.
-// Returns true if the file exists or an error if an error occurred.
-func SafeReadJSON(filePath string, targetPointer any, perm os.FileMode) (jsonAvailable bool, err error) {
-	fileBytes, err := SafeReadFile(filePath, perm)
-	if err != nil {
-		return false, fmt.Errorf("unable to open file: %s, %w", filePath, err)
-	}
-
-	if len(fileBytes) == 0 {
-		return false, nil
-	}
-	return true, json.Unmarshal(fileBytes, targetPointer)
-}
 
 // SafeReadYAML reads the YAML file at the path into the targetPointer.
 // Returns true if the file exists or an error if an error occurred.
@@ -56,22 +38,6 @@ func SafeReadFile(filePath string, perm os.FileMode) ([]byte, error) {
 		logrus.Errorf("Failed to close file: %s", filePath)
 	}
 	return bytes, readErr
-}
-
-// SafeWriteJson writes the provided object to a JSON file at the provided path.
-// The function makes sure any changes are flushed to the disk before returning.
-func SafeWriteJson[T any](filePath string, targetPointer *T) error {
-	fp, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return err
-	}
-	w := writerutils.NewSafeFileWriter(fp)
-	defer funcutils.PanicOrLogOnErr(w.Close, true, "failed to close writer")
-	err = json.NewEncoder(w).Encode(*targetPointer)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // ReadOrPanic reads the entire file at the provided path or panics if it is not possible.
@@ -177,4 +143,20 @@ func hashFile(path string) ([32]byte, error) {
 
 	copy(hash[:], hasher.Sum(nil))
 	return hash, nil
+}
+
+// CleanDirectory removes all files and subdirectories within dirPath,
+// leaving the directory itself intact.
+func CleanDirectory(dirPath string) error {
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		entryPath := filepath.Join(dirPath, entry.Name())
+		if err := os.RemoveAll(entryPath); err != nil {
+			return err
+		}
+	}
+	return nil
 }

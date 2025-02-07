@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/unbasical/doras/pkg/constants"
 
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -45,8 +46,8 @@ func StorageFromFiles(ctx context.Context, rootDir string, files []FileDescripti
 			Digest:    dgst,
 			Size:      int64(len(f.Data)),
 			Annotations: map[string]string{
-				"org.opencontainers.image.title": f.Name,
-				"io.deis.oras.content.unpack":    fmt.Sprintf("%v", f.NeedsUnpack),
+				constants.OciImageTitle:       f.Name,
+				"io.deis.oras.content.unpack": fmt.Sprintf("%v", f.NeedsUnpack),
 			},
 		}
 

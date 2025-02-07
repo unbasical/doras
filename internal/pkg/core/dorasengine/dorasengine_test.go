@@ -135,7 +135,7 @@ func (t *testRegistryDelegate) PushDelta(ctx context.Context, image string, mani
 		Size:      n,
 		URLs:      nil,
 		Annotations: map[string]string{
-			"org.opencontainers.image.title": "delta" + manifOpts.GetFileExt(),
+			constants.OciImageTitle: "delta" + manifOpts.GetFileExt(),
 		},
 	}
 	_, err = fp.Seek(0, io.SeekStart)
