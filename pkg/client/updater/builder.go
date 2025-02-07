@@ -121,7 +121,7 @@ func WithContext(ctx context.Context) func(*Client) {
 }
 
 // WithBackoffStrategy adds ...
-func WithBackoffStrategy(b backoff.BackoffStrategy) func(*Client) {
+func WithBackoffStrategy(b backoff.Strategy) func(*Client) {
 	return func(c *Client) {
 		c.backoff = b
 	}

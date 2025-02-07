@@ -26,7 +26,7 @@ import (
 // deltaApiClient provides the functionality to interact with the Doras server API.
 type deltaApiClient struct {
 	base      *client.DorasBaseClient
-	backoff   backoff2.BackoffStrategy
+	backoff   backoff2.Strategy
 	plainHTTP bool
 }
 

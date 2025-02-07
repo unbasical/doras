@@ -34,7 +34,7 @@ type Client struct {
 	reg        fetcher.ArtifactLoader
 	state      *statemanager.Manager[updaterstate.State]
 	ctx        context.Context
-	backoff    backoff.BackoffStrategy
+	backoff    backoff.Strategy
 }
 
 // Pull an image from the registry.

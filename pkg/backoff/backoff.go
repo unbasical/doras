@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// exponentialBackoffWithJitter implements the BackoffStrategy interface
+// exponentialBackoffWithJitter implements the Strategy interface
 type exponentialBackoffWithJitter struct {
 	baseDelay      time.Duration // Base delay between retries (e.g., 100ms)
 	maxDelay       time.Duration // Maximum delay before giving up
@@ -17,7 +17,7 @@ type exponentialBackoffWithJitter struct {
 }
 
 // NewExponentialBackoffWithJitter creates a new instance of exponentialBackoffWithJitter
-func NewExponentialBackoffWithJitter(baseDelay, maxDelay time.Duration, maxAttempts uint) BackoffStrategy {
+func NewExponentialBackoffWithJitter(baseDelay, maxDelay time.Duration, maxAttempts uint) Strategy {
 	// Seed the random number generator for jitter
 	source := rand.NewSource(time.Now().UnixNano())
 	return &exponentialBackoffWithJitter{
@@ -55,14 +55,14 @@ func (e *exponentialBackoffWithJitter) Wait() error {
 	return nil
 }
 
-// BackoffStrategy is used to avoid flooding the server with requests
+// Strategy is used to avoid flooding the server with requests by adding a backoff
 // when clients are waiting for the delta request to be completed.
-type BackoffStrategy interface {
+type Strategy interface {
 	Wait() error
 }
 
-// DefaultBackoff returns a sensible default BackoffStrategy (exponential with an upper bound).
-func DefaultBackoff() BackoffStrategy {
+// DefaultBackoff returns a sensible default Strategy (exponential with an upper bound).
+func DefaultBackoff() Strategy {
 	const defaultBaseDelay = 50 * time.Millisecond
 	const defaultMaxDelay = 1 * time.Minute
 	return NewExponentialBackoffWithJitter(defaultBaseDelay, defaultMaxDelay, 10)
