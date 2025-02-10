@@ -32,12 +32,13 @@ import (
 
 // Client is used to run delta updates in Doras.
 type Client struct {
-	opts       clientOpts
-	edgeClient edgeapi.DeltaApiClient
-	reg        fetcher.ArtifactLoader
-	state      *statemanager.Manager[updaterstate.State]
-	ctx        context.Context
-	backoff    backoff.Strategy
+	opts          clientOpts
+	edgeClient    edgeapi.DeltaApiClient
+	reg           fetcher.ArtifactLoader
+	state         *statemanager.Manager[updaterstate.State]
+	ctx           context.Context
+	backoff       backoff.Strategy
+	patcherTmpDir string
 }
 
 // Pull an image from the registry.
@@ -60,7 +61,7 @@ func (c *Client) Pull(image string) error {
 }
 
 // getPatcherChoice extracts the algorithms that were used to create the delta from the provided v1.Descriptor.
-func getPatcherChoice(d *v1.Descriptor) (algorithmchoice.PatcherChoice, error) {
+func getPatcherChoice(d *v1.Descriptor, patcherTmpDir string) (algorithmchoice.PatcherChoice, error) {
 	choice := algorithmchoice.PatcherChoice{
 		// initialize with default
 		Decompressor: compressionutils.NewNopDecompressor(),
@@ -79,9 +80,9 @@ func getPatcherChoice(d *v1.Descriptor) (algorithmchoice.PatcherChoice, error) {
 	}
 	switch split[0] {
 	case "bsdiff":
-		choice.Patcher = bsdiff.NewPatcher()
+		choice.Patcher = bsdiff.NewPatcherWithTempDir(patcherTmpDir)
 	case "tardiff":
-		choice.Patcher = tardiff.NewPatcher()
+		choice.Patcher = tardiff.NewPatcherWithTempDir(patcherTmpDir)
 	default:
 		return algorithmchoice.PatcherChoice{}, fmt.Errorf("unsupported patcher: %s", split[0])
 	}
@@ -154,7 +155,7 @@ func (c *Client) pullDeltaImageAsync(target string, repoName string, currentVers
 }
 
 func (c *Client) patchArtifact(d fetcher.LoadResult) error {
-	p, err := getPatcherChoice(&d.D)
+	p, err := getPatcherChoice(&d.D, c.patcherTmpDir)
 	if err != nil {
 		return err
 	}

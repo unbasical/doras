@@ -29,6 +29,7 @@ func bspatch(old io.Reader, patch io.Reader) (io.ReadCloser, error) {
 }
 
 type patcher struct {
+	tmpDir string
 }
 
 func (a *patcher) PatchFilesystem(artifactPath string, patch io.Reader, expected *digest.Digest) error {
@@ -42,7 +43,7 @@ func (a *patcher) PatchFilesystem(artifactPath string, patch io.Reader, expected
 	}
 	defer funcutils.PanicOrLogOnErr(fpOld.Close, false, "failed to close file")
 
-	fpTemp, err := os.CreateTemp(os.TempDir(), "bsdiff-temp-*")
+	fpTemp, err := os.CreateTemp(a.tmpDir, "bsdiff-temp-*")
 	if err != nil {
 		return err
 	}
@@ -86,7 +87,16 @@ func (a *patcher) PatchFilesystem(artifactPath string, patch io.Reader, expected
 
 // NewPatcher return a bsdiff delta.Patcher.
 func NewPatcher() delta.Patcher {
-	return &patcher{}
+	return &patcher{
+		tmpDir: os.TempDir(),
+	}
+}
+
+// NewPatcherWithTempDir return a bsdiff delta.Patcher.
+func NewPatcherWithTempDir(tmpDir string) delta.Patcher {
+	return &patcher{
+		tmpDir: tmpDir,
+	}
 }
 
 func (a *patcher) Patch(oldfile io.Reader, newfile io.Reader) (io.Reader, error) {

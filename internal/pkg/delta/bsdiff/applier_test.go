@@ -17,7 +17,7 @@ func TestPatcher_Patch(t *testing.T) {
 	from := []byte("Hello")
 	to := []byte("Hello World")
 	bsDiffPatch, err := bsdiff2.Bytes(from, to)
-	patcher := &patcher{}
+	patcher := NewPatcher()
 	if err != nil {
 		t.Error(err)
 	}
@@ -62,7 +62,7 @@ func TestPatcher_PatchFilesystem(t *testing.T) {
 	from := []byte("Hello")
 	to := []byte("Hello World")
 	bsDiffPatch, err := bsdiff2.Bytes(from, to)
-	patcher := &patcher{}
+
 	if err != nil {
 		t.Error(err)
 	}
@@ -114,7 +114,7 @@ func TestPatcher_PatchFilesystem(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			oldFile, err := os.CreateTemp(os.TempDir(), "bsdiff-test-*")
+			oldFile, err := os.CreateTemp(t.TempDir(), "bsdiff-test-*")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -126,6 +126,8 @@ func TestPatcher_PatchFilesystem(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			workingDir := t.TempDir()
+			patcher := NewPatcherWithTempDir(workingDir)
 			err = patcher.PatchFilesystem(oldFile.Name(), tt.args.patch, tt.args.expected)
 			got := fileutils.ReadOrPanic(oldFile.Name())
 			if err != nil {
@@ -136,6 +138,13 @@ func TestPatcher_PatchFilesystem(t *testing.T) {
 					t.Fatal("old file was modified despite error")
 				}
 				return
+			}
+			readDir, err := os.ReadDir(workingDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(readDir) != 0 {
+				t.Fatal("expected no files to exist in temp dir")
 			}
 			if !bytes.Equal(tt.want, got) {
 				t.Fatalf("wanted %v, got %v", tt.want, got)

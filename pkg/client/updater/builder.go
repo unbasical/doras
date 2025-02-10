@@ -62,6 +62,11 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create internal directory: %w", err)
 	}
+	client.patcherTmpDir = path.Join(client.opts.InternalDirectory, "patcher-dir")
+	err = os.MkdirAll(client.patcherTmpDir, 0755)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create patcher working directory: %w", err)
+	}
 	statePath := path.Join(client.opts.InternalDirectory, "doras-state.json")
 	stateManager, err := statemanager.NewFromDisk(initialState, statePath)
 	if err != nil {

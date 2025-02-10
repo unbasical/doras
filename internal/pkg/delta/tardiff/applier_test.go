@@ -15,7 +15,7 @@ import (
 )
 
 func TestApplier_Apply(t *testing.T) {
-	applier := &applier{}
+	applier := NewPatcher()
 
 	diff := fileutils.ReadOrPanic("../../../../test/test-files/delta.patch.tardiff")
 	from := fileutils.ReadOrPanic("../../../../test/test-files/from.tar.gz")
@@ -146,11 +146,19 @@ func Test_patcher_PatchFilesystem(t *testing.T) {
 				t.Fatal(err)
 				return
 			}
-			a := &applier{}
+			patcherDir := t.TempDir()
+			a := NewPatcherWithTempDir(patcherDir)
 			err = a.PatchFilesystem(outDir, tt.args.patch, tt.args.expected)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("PatchFilesystem() error = %v, wantErr %v", err, tt.wantErr)
 				return
+			}
+			readDir, err := os.ReadDir(patcherDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(readDir) != 0 {
+				t.Fatal("patcher did not clean up temp dir")
 			}
 			eq, _ := fileutils.CompareDirectories(outDir, expectedDir)
 			if !eq {

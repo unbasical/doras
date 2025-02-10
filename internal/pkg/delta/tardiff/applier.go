@@ -19,11 +19,12 @@ import (
 )
 
 type applier struct {
+	tmpDir string
 }
 
 func (a *applier) PatchFilesystem(artifactPath string, patch io.Reader, expected *digest.Digest) error {
 	datasource := tarpatch.NewFilesystemDataSource(artifactPath)
-	tempfile, err := os.CreateTemp(os.TempDir(), "tarpatch-temp-*")
+	tempfile, err := os.CreateTemp(a.tmpDir, "tarpatch-temp-*")
 	if err != nil {
 		return err
 	}
@@ -38,10 +39,15 @@ func (a *applier) PatchFilesystem(artifactPath string, patch io.Reader, expected
 	if err != nil {
 		return err
 	}
-	extractDir, err := os.MkdirTemp(os.TempDir(), "tar-extract-dir-*")
+	extractDir, err := os.MkdirTemp(a.tmpDir, "tar-extract-dir-*")
 	if err != nil {
 		return err
 	}
+	defer func() {
+		// this removes the temp dir if there is an error elsewhere
+		// if there is no error elsewhere this will cause an error on removal (as intended)
+		_ = os.RemoveAll(extractDir)
+	}()
 	err = tarutils.ExtractCompressedTar(extractDir, "", tempfile.Name(), expected, compressionutils.NewNopDecompressor())
 	if err != nil {
 		return err
@@ -56,7 +62,16 @@ func (a *applier) PatchFilesystem(artifactPath string, patch io.Reader, expected
 
 // NewPatcher return a tardiff delta.Patcher.
 func NewPatcher() delta.Patcher {
-	return &applier{}
+	return &applier{
+		tmpDir: os.TempDir(),
+	}
+}
+
+// NewPatcherWithTempDir return a tardiff delta.Patcher.
+func NewPatcherWithTempDir(tmpDir string) delta.Patcher {
+	return &applier{
+		tmpDir: tmpDir,
+	}
 }
 
 func (a *applier) Patch(old io.Reader, patch io.Reader) (io.Reader, error) {
