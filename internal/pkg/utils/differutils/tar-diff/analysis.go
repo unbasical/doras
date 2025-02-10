@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"io"
 	"os"
 	"path"
@@ -122,7 +123,7 @@ func analyzeTar(tarMaybeCompressed io.Reader) (*tarInfo, error) {
 		var hdr *tar.Header
 		hdr, err = rdr.Next()
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break // Expected error
 			}
 			return nil, err
@@ -215,7 +216,7 @@ func extractDeltaData(tarMaybeCompressed io.Reader, sourceByIndex map[int]*sourc
 		var hdr *tar.Header
 		hdr, err = rdr.Next()
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break // Expected error
 			}
 			return err

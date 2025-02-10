@@ -31,6 +31,7 @@ linters:
     - dupl # Tool for code clone detection.
     - bodyclose # Checks whether HTTP response body is closed successfully.
     - exhaustive # Check exhaustiveness of enum switch statements.
+    - errorlint
 
 issues:
   fix: true
@@ -134,3 +135,6 @@ linters-settings:
           - "**/internal/**/*.go"
       - name: comments-density
         arguments: 10
+  errorlint:
+    errorf: true # make sure original errors get preserved when using fmt.Errorf
+

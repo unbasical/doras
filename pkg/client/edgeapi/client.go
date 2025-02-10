@@ -99,7 +99,7 @@ func (c *deltaApiClient) ReadDeltaAsync(from, to string, acceptedAlgorithms []st
 		decoder.DisallowUnknownFields()
 		err = decoder.Decode(&errBody)
 		if err != nil {
-			return nil, false, fmt.Errorf("unknown error %v, %v", resp.Status, err)
+			return nil, false, fmt.Errorf("unknown error %v, %w", resp.Status, err)
 		}
 		return nil, false, errBody
 	}

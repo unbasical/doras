@@ -57,7 +57,7 @@ func StorageFromFiles(ctx context.Context, rootDir string, files []FileDescripti
 
 		err = store.Push(ctx, d, bytes.NewReader(f.Data))
 		if err != nil {
-			return nil, fmt.Errorf("failed to add file to storage: %v", err)
+			return nil, fmt.Errorf("failed to add file to storage: %w", err)
 		}
 		fileDescriptors = append(fileDescriptors, d)
 		// 2. Pack the files and tag the packed manifest
@@ -67,11 +67,11 @@ func StorageFromFiles(ctx context.Context, rootDir string, files []FileDescripti
 		}
 		manifestDescriptor, err := oras.PackManifest(ctx, store, oras.PackManifestVersion1_1, artifactType, opts)
 		if err != nil {
-			return nil, fmt.Errorf("failed to pack manifest: %v", err)
+			return nil, fmt.Errorf("failed to pack manifest: %w", err)
 		}
 
 		if err = store.Tag(ctx, manifestDescriptor, f.Tag); err != nil {
-			return nil, fmt.Errorf("failed to tag manifest: %v", err)
+			return nil, fmt.Errorf("failed to tag manifest: %w", err)
 		}
 	}
 

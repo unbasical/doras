@@ -53,7 +53,7 @@ func extractTarDirectory(dir, prefix string, r io.Reader) error {
 	for {
 		header, err := tr.Next()
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil
 			}
 			return err

@@ -220,11 +220,11 @@ func (r *registryImpl) PushDummy(image string, manifOpts DeltaManifestOptions) e
 	}
 	mfDescriptor, err := oras.PackManifest(ctx, repository, oras.PackManifestVersion1_1, "application/vnd.example+type", opts)
 	if err != nil {
-		return fmt.Errorf("failed to pack manifest: %v", err)
+		return fmt.Errorf("failed to pack manifest: %w", err)
 	}
 	err = repository.Tag(ctx, mfDescriptor, tag)
 	if err != nil {
-		return fmt.Errorf("failed to tag manifest: %v", err)
+		return fmt.Errorf("failed to tag manifest: %w", err)
 	}
 	delete(r.activeDummies, image)
 	log.Infof("created dummy at %s", image)

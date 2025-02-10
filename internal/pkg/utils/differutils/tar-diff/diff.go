@@ -306,7 +306,7 @@ func Diff(oldTarFile io.ReadSeeker, newTarFile io.ReadSeeker, diffFile io.Writer
 	// Compare new and old for delta information
 	analysis, err := analyzeForDelta(oldInfo, newInfo, oldTarFile)
 	if err != nil {
-		return fmt.Errorf("tardiff analysis failed: %v", err)
+		return fmt.Errorf("tardiff analysis failed: %w", err)
 	}
 	defer analysis.Close()
 

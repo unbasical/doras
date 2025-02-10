@@ -183,11 +183,11 @@ func (t *testRegistryDelegate) PushDummy(image string, manifOpts registrydelegat
 	}
 	mfDescriptor, err := oras.PackManifest(ctx, t.storage, oras.PackManifestVersion1_1, "application/vnd.example+type", opts)
 	if err != nil {
-		return fmt.Errorf("failed to pack manifest: %v", err)
+		return fmt.Errorf("failed to pack manifest: %w", err)
 	}
 	err = t.storage.Tag(ctx, mfDescriptor, tag)
 	if err != nil {
-		return fmt.Errorf("failed to tag manifest: %v", err)
+		return fmt.Errorf("failed to tag manifest: %w", err)
 	}
 	logrus.Infof("created dummy at %s", image)
 	return nil
