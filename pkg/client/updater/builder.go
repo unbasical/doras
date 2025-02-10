@@ -3,7 +3,7 @@ package updater
 import (
 	"context"
 	"errors"
-	log "github.com/sirupsen/logrus"
+	"fmt"
 	"github.com/unbasical/doras/pkg/backoff"
 	"github.com/unbasical/doras/pkg/client/updater/fetcher"
 	"github.com/unbasical/doras/pkg/client/updater/statemanager"
@@ -29,7 +29,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	client := &Client{
 		opts: clientOpts{
 			OutputDirectory:   ".",
-			InternalDirectory: os.TempDir(),
+			InternalDirectory: "~/.local/share/doras",
 			DockerConfigPath:  filepath.Join(os.Getenv("HOME"), ".docker", "config.json"),
 		},
 		backoff: backoff.DefaultBackoff(),
@@ -54,10 +54,13 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 		Version:        "1",
 		ArtifactStates: make(map[string]string),
 	}
+	err = os.MkdirAll(client.opts.OutputDirectory, 0755)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create output directory: %w", err)
+	}
 	err = os.MkdirAll(client.opts.InternalDirectory, 0755)
 	if err != nil {
-		log.WithError(err).Error("Failed to create output directory")
-		return nil, err
+		return nil, fmt.Errorf("failed to create internal directory: %w", err)
 	}
 	statePath := path.Join(client.opts.InternalDirectory, "doras-state.json")
 	stateManager, err := statemanager.NewFromDisk(initialState, statePath)
