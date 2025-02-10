@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/rogpeppe/go-internal/dirhash"
+	"golang.org/x/mod/sumdb/dirhash"
 	"hash"
 	"io"
 	"os"

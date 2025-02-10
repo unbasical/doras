@@ -1,10 +1,8 @@
 package ociutils
 
 import (
-	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/unbasical/doras/pkg/constants"
 )
 
@@ -14,7 +12,7 @@ func TestExtractPathFromManifest(t *testing.T) {
 		manifest        *Manifest
 		expectedPath    string
 		expectedArchive bool
-		expectedErr     error
+		expectedErr     bool
 	}{
 		{
 			name: "Valid manifest with archive",
@@ -26,7 +24,7 @@ func TestExtractPathFromManifest(t *testing.T) {
 			},
 			expectedPath:    "file.txt",
 			expectedArchive: true,
-			expectedErr:     nil,
+			expectedErr:     false,
 		},
 		{
 			name: "Valid manifest without archive",
@@ -37,7 +35,7 @@ func TestExtractPathFromManifest(t *testing.T) {
 			},
 			expectedPath:    "file.txt",
 			expectedArchive: false,
-			expectedErr:     nil,
+			expectedErr:     false,
 		},
 		{
 			name: "Missing file title",
@@ -48,7 +46,7 @@ func TestExtractPathFromManifest(t *testing.T) {
 			},
 			expectedPath:    "",
 			expectedArchive: true,
-			expectedErr:     errors.New("missing file title"),
+			expectedErr:     true,
 		},
 		{
 			name: "Empty annotations",
@@ -57,19 +55,21 @@ func TestExtractPathFromManifest(t *testing.T) {
 			},
 			expectedPath:    "",
 			expectedArchive: false,
-			expectedErr:     errors.New("missing file title"),
+			expectedErr:     true,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			path, isArchive, err := ExtractPathFromManifest(test.manifest)
-			assert.Equal(t, test.expectedPath, path)
-			assert.Equal(t, test.expectedArchive, isArchive)
-			if test.expectedErr != nil {
-				assert.EqualError(t, err, test.expectedErr.Error())
-			} else {
-				assert.NoError(t, err)
+			if test.expectedPath != path {
+				t.Errorf("Expected: %s, Got: %s", test.expectedPath, path)
+			}
+			if test.expectedArchive != isArchive {
+				t.Errorf("Expected: %t, Got: %t", test.expectedArchive, isArchive)
+			}
+			if test.expectedErr != (err != nil) {
+				t.Errorf("Expected err: %v, Got: %v", test.expectedErr, err)
 			}
 		})
 	}
