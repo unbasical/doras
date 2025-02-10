@@ -125,6 +125,7 @@ func (t *testRegistryDelegate) PushDelta(ctx context.Context, image string, mani
 	// hash file while writing it to the disk
 	hasher := sha256.New()
 	teeReader := io.NopCloser(io.TeeReader(content, hasher))
+	defer funcutils.PanicOrLogOnErr(content.Close, false, "failed to close reader")
 	n, err := io.Copy(fp, teeReader)
 	if err != nil {
 		return err
