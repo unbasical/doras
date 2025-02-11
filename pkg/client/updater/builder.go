@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/samber/lo"
+	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 	"github.com/unbasical/doras/pkg/backoff"
 	"github.com/unbasical/doras/pkg/client/updater/fetcher"
 	"github.com/unbasical/doras/pkg/client/updater/statemanager"
 	"github.com/unbasical/doras/pkg/client/updater/updaterstate"
+	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/credentials"
 	"os"
 	"path"
@@ -22,10 +25,12 @@ type clientOpts struct {
 	InternalDirectory  string
 	DockerConfigPath   string
 	AcceptedAlgorithms []string
+	CredFuncs          []auth.CredentialFunc
 }
 
 // NewClient creates a new Doras update client with the provided options.
 func NewClient(options ...func(*Client)) (*Client, error) {
+	// init defaults
 	client := &Client{
 		opts: clientOpts{
 			OutputDirectory:   ".",
@@ -34,10 +39,17 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 		},
 		backoff: backoff.DefaultBackoff(),
 	}
-
+	// apply provided opts
 	for _, option := range options {
 		option(client)
 	}
+
+	opts := lo.Map(client.opts.CredFuncs, func(item auth.CredentialFunc, _ int) func(aggregate *ociutils.CredFuncAggregate) {
+		return ociutils.WithCredFunc(item)
+	})
+
+	// load credentials from local docker cred store
+	// this is done last so it does not shadow explicitly provided credentials
 	store, err := credentials.NewStore(client.opts.DockerConfigPath, credentials.StoreOptions{
 		DetectDefaultNativeStore: true,
 	})
@@ -45,7 +57,11 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 		return nil, err
 	}
 	credentialFunc := credentials.Credential(store)
-	c, err := edgeapi.NewEdgeClient(client.opts.RemoteURL, true, credentialFunc)
+	opts = append(opts, ociutils.WithCredFunc(credentialFunc))
+
+	// construct cred func that unifies all credential funcs
+	credFunc := ociutils.NewCredentialsAggregate(opts...)
+	c, err := edgeapi.NewEdgeClient(client.opts.RemoteURL, true, credFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -132,5 +148,12 @@ func WithContext(ctx context.Context) func(*Client) {
 func WithBackoffStrategy(b backoff.Strategy) func(*Client) {
 	return func(c *Client) {
 		c.backoff = b
+	}
+}
+
+// WithCredential adds registry scoped credentials to the client.
+func WithCredential(registry string, credential auth.Credential) func(*Client) {
+	return func(c *Client) {
+		c.opts.CredFuncs = append(c.opts.CredFuncs, auth.StaticCredential(registry, credential))
 	}
 }
