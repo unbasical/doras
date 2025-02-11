@@ -91,6 +91,9 @@ func (c *deltaApiClient) ReadDeltaAsync(from, to string, acceptedAlgorithms []st
 			return nil, false, err
 		}
 		return &resBody, true, nil
+	case http.StatusNoContent:
+		// Map non-error HTTP status code into error so it can be handled by clients.
+		return nil, false, apicommon.ErrImagesIdentical
 	case http.StatusAccepted:
 		return nil, false, nil
 	default:

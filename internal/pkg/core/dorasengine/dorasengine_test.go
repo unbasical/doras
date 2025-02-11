@@ -10,6 +10,7 @@ import (
 	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 	"github.com/unbasical/doras/internal/pkg/utils/readerutils"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -203,6 +204,12 @@ type testAPIDelegate struct {
 	lastErrMsg         string
 	response           apicommon.ReadDeltaResponse
 	hasHandledCallback bool
+	lastStatusCode     int
+}
+
+func (t *testAPIDelegate) HandleNoNewVersion() {
+	t.lastStatusCode = http.StatusNoContent
+	t.hasHandledCallback = true
 }
 
 func (t *testAPIDelegate) RequestContext() (context.Context, error) {
@@ -230,16 +237,18 @@ func (t *testAPIDelegate) HandleError(err error, msg string) {
 	t.lastErrMsg = msg
 	t.lastErr = err
 	t.hasHandledCallback = true
+	t.lastStatusCode = http.StatusBadRequest
 }
 
 func (t *testAPIDelegate) HandleSuccess(response any) {
+	t.lastStatusCode = http.StatusOK
 	deltaResponse := response.(apicommon.ReadDeltaResponse)
 	t.response = deltaResponse
 	t.hasHandledCallback = true
 }
 
 func (t *testAPIDelegate) HandleAccepted() {
-
+	t.lastStatusCode = http.StatusAccepted
 }
 
 func Test_readDelta(t *testing.T) {
@@ -289,11 +298,12 @@ func Test_readDelta(t *testing.T) {
 
 	delegate := deltadelegate.NewDeltaDelegate()
 	type args struct {
-		registry    registrydelegate.RegistryDelegate
-		delegate    deltadelegate.DeltaDelegate
-		apiDelegate testAPIDelegate
-		expectErr   bool
-		latency     *time.Duration
+		registry         registrydelegate.RegistryDelegate
+		delegate         deltadelegate.DeltaDelegate
+		apiDelegate      testAPIDelegate
+		expectErr        bool
+		expectStatusCode int
+		latency          *time.Duration
 	}
 	latency := time.Millisecond * 100
 	tests := []struct {
@@ -310,7 +320,8 @@ func Test_readDelta(t *testing.T) {
 					toImage:            bsdiffImage2,
 					acceptedAlgorithms: []string{"bsdiff"},
 				},
-				expectErr: false,
+				expectErr:        false,
+				expectStatusCode: http.StatusOK,
 			},
 		},
 		{
@@ -323,8 +334,9 @@ func Test_readDelta(t *testing.T) {
 					toImage:            bsdiffImage2,
 					acceptedAlgorithms: []string{"bsdiff"},
 				},
-				expectErr: false,
-				latency:   &latency,
+				expectErr:        false,
+				expectStatusCode: http.StatusOK,
+				latency:          &latency,
 			},
 		},
 		{
@@ -337,7 +349,8 @@ func Test_readDelta(t *testing.T) {
 					toImage:            bsdiffImage2,
 					acceptedAlgorithms: []string{"bsdiff", "gzip"},
 				},
-				expectErr: false,
+				expectErr:        false,
+				expectStatusCode: http.StatusOK,
 			},
 		},
 		{
@@ -350,7 +363,8 @@ func Test_readDelta(t *testing.T) {
 					toImage:            bsdiffImage2,
 					acceptedAlgorithms: []string{"bsdiff", "zstd"},
 				},
-				expectErr: false,
+				expectErr:        false,
+				expectStatusCode: http.StatusOK,
 			},
 		},
 		{
@@ -363,7 +377,8 @@ func Test_readDelta(t *testing.T) {
 					toImage:            tardiffImage2,
 					acceptedAlgorithms: []string{"tardiff"},
 				},
-				expectErr: false,
+				expectErr:        false,
+				expectStatusCode: http.StatusOK,
 			},
 		},
 		{
@@ -376,7 +391,8 @@ func Test_readDelta(t *testing.T) {
 					toImage:            tardiffImage2,
 					acceptedAlgorithms: []string{"tardiff", "gzip"},
 				},
-				expectErr: false,
+				expectErr:        false,
+				expectStatusCode: http.StatusOK,
 			},
 		},
 		{
@@ -389,7 +405,8 @@ func Test_readDelta(t *testing.T) {
 					toImage:            tardiffImage2,
 					acceptedAlgorithms: []string{"tardiff", "zstd"},
 				},
-				expectErr: false,
+				expectErr:        false,
+				expectStatusCode: http.StatusOK,
 			},
 		},
 		{
@@ -402,7 +419,22 @@ func Test_readDelta(t *testing.T) {
 					toImage:            bsdiffImageV2,
 					acceptedAlgorithms: []string{"bsdiff", "tardiff", "zstd", "gzip"},
 				},
-				expectErr: false,
+				expectErr:        false,
+				expectStatusCode: http.StatusOK,
+			},
+		},
+		{
+			name: "no content on identical images",
+			args: args{
+				registry: registryMock,
+				delegate: delegate,
+				apiDelegate: testAPIDelegate{
+					fromImage:          bsdiffImage1,
+					toImage:            bsdiffImage1,
+					acceptedAlgorithms: []string{"bsdiff", "tardiff", "zstd", "gzip"},
+				},
+				expectErr:        false,
+				expectStatusCode: http.StatusNoContent,
 			},
 		},
 		{
@@ -415,7 +447,8 @@ func Test_readDelta(t *testing.T) {
 					toImage:            bsdiffImageV2,
 					acceptedAlgorithms: []string{"bsdiff", "tardiff", "zstd", "gzip"},
 				},
-				expectErr: true,
+				expectErr:        true,
+				expectStatusCode: http.StatusBadRequest,
 			},
 		},
 		{
@@ -428,7 +461,8 @@ func Test_readDelta(t *testing.T) {
 					toImage:            bsdiffImage2,
 					acceptedAlgorithms: []string{"bsdiff", "tardiff", "zstd", "gzip"},
 				},
-				expectErr: true,
+				expectErr:        true,
+				expectStatusCode: http.StatusBadRequest,
 			},
 		},
 		{
@@ -441,8 +475,9 @@ func Test_readDelta(t *testing.T) {
 					toImage:            tardiffImage2,
 					acceptedAlgorithms: []string{"tardiff"},
 				},
-				expectErr: false,
-				latency:   &latency,
+				expectErr:        false,
+				latency:          &latency,
+				expectStatusCode: http.StatusOK,
 			},
 		},
 	}
@@ -466,8 +501,9 @@ func Test_readDelta(t *testing.T) {
 				t.Fatalf("readDelta() error = %v, wantErr %v", err, tt.args.expectErr)
 				return
 			}
-			response := tt.args.apiDelegate.response
-			fmt.Printf("%v\n", response)
+			if tt.args.expectStatusCode != tt.args.apiDelegate.lastStatusCode {
+				t.Fatalf("readDelta() error = %v, wantErr %v", err, tt.args.apiDelegate.lastStatusCode)
+			}
 		})
 	}
 }

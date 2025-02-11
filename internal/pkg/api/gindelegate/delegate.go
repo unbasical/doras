@@ -21,6 +21,10 @@ type ginDorasContext struct {
 	c *gin.Context
 }
 
+func (g *ginDorasContext) HandleNoNewVersion() {
+	g.c.Status(http.StatusNoContent)
+}
+
 func (g *ginDorasContext) ExtractClientAuth() (auth.RegistryAuth, error) {
 	// Extract the Bearer token from the Auth Header.
 	authHeader := g.c.GetHeader("Authorization")

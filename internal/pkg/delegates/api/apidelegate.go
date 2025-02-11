@@ -10,4 +10,5 @@ type APIDelegate interface {
 	HandleError(err error, msg string)
 	HandleSuccess(response any)
 	HandleAccepted()
+	HandleNoNewVersion()
 }

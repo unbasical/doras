@@ -156,7 +156,7 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 	}
 	if toDescriptor.Digest == fromDescriptor.Digest {
 		log.Debugf("got request for images with identical digests %v, %v", fromDescriptor.Digest, toDescriptor.Digest)
-		apiDelegate.HandleError(error2.ErrIncompatibleArtifacts, "from and to image are identical")
+		apiDelegate.HandleNoNewVersion()
 		return
 	}
 
