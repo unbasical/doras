@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/samber/lo"
+	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 	"github.com/unbasical/doras/pkg/backoff"
 	"github.com/unbasical/doras/pkg/client/updater/fetcher"
@@ -26,6 +27,7 @@ type clientOpts struct {
 	DockerConfigPath   string
 	AcceptedAlgorithms []string
 	CredFuncs          []auth.CredentialFunc
+	InsecureAllowHTTP  bool
 }
 
 // NewClient creates a new Doras update client with the provided options.
@@ -44,7 +46,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 		option(client)
 	}
 
-	opts := lo.Map(client.opts.CredFuncs, func(item auth.CredentialFunc, _ int) func(aggregate *ociutils.CredFuncAggregate) {
+	credFuncOpts := lo.Map(client.opts.CredFuncs, func(item auth.CredentialFunc, _ int) func(aggregate *ociutils.CredFuncAggregate) {
 		return ociutils.WithCredFunc(item)
 	})
 
@@ -54,14 +56,15 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 		DetectDefaultNativeStore: true,
 	})
 	if err != nil {
-		return nil, err
+		log.Infof("failed to load credential store from %q", client.opts.DockerConfigPath)
+	} else {
+		credentialFunc := credentials.Credential(store)
+		credFuncOpts = append(credFuncOpts, ociutils.WithCredFunc(credentialFunc))
 	}
-	credentialFunc := credentials.Credential(store)
-	opts = append(opts, ociutils.WithCredFunc(credentialFunc))
 
 	// construct cred func that unifies all credential funcs
-	credFunc := ociutils.NewCredentialsAggregate(opts...)
-	c, err := edgeapi.NewEdgeClient(client.opts.RemoteURL, true, credFunc)
+	credFunc := ociutils.NewCredentialsAggregate(credFuncOpts...)
+	c, err := edgeapi.NewEdgeClient(client.opts.RemoteURL, client.opts.InsecureAllowHTTP, credFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +98,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 		return nil, err
 	}
 
-	storageSource := fetcher.NewRepoStorageSource(false, credentialFunc)
+	storageSource := fetcher.NewRepoStorageSource(false, credFunc)
 	client.reg = fetcher.NewArtifactLoader(fetcherDir, storageSource)
 	return client, nil
 }
@@ -155,5 +158,12 @@ func WithBackoffStrategy(b backoff.Strategy) func(*Client) {
 func WithCredential(registry string, credential auth.Credential) func(*Client) {
 	return func(c *Client) {
 		c.opts.CredFuncs = append(c.opts.CredFuncs, auth.StaticCredential(registry, credential))
+	}
+}
+
+// WithInsecureAllowHTTP configures the clients to allow HTTP requests.
+func WithInsecureAllowHTTP(insecureAllowHTTP bool) func(*Client) {
+	return func(c *Client) {
+		c.opts.InsecureAllowHTTP = insecureAllowHTTP
 	}
 }

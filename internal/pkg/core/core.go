@@ -59,7 +59,7 @@ func (d *Doras) init(config configs.ServerConfig) *Doras {
 		}
 	}
 	// Load credentials configured via the docker config file.
-	// This is done seconds so it does not shadow credentials loaded from the config file.
+	// This is done second so it does not shadow credentials loaded from the config file.
 	if config.CliOpts.DockerConfigFilePath != "" {
 		credentialStore, err := credentials.NewStore(config.CliOpts.DockerConfigFilePath, credentials.StoreOptions{
 			AllowPlaintextPut:        false,

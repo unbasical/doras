@@ -127,6 +127,7 @@ func (c *Client) pullDeltaImageAsync(target string, repoName string, currentVers
 	if !exists {
 		return false, nil
 	}
+	log.Info("attempting delta update")
 	deltaDir, err := os.MkdirTemp(c.opts.InternalDirectory, "deltas-*")
 	if err != nil {
 		return false, err
@@ -182,6 +183,7 @@ func (c *Client) patchArtifact(d fetcher.LoadResult) error {
 }
 
 func (c *Client) pullFullImage(targetImage string) (bool, error) {
+	log.Info("attempting to load full artifact")
 	repoName, _, _, err := ociutils.ParseOciImageString(targetImage)
 	if err != nil {
 		return false, err

@@ -22,6 +22,7 @@ func NewCredentialsAggregate(opts ...func(aggregate *CredFuncAggregate)) auth.Cr
 		for _, credFunc := range aggregate.credFuncs {
 			cred, err := credFunc(ctx, hostport)
 			if err == nil {
+				logrus.Infof("found credential for %s:", hostport)
 				return cred, nil
 			}
 			logrus.WithError(err).Debugf("failed to load credentials for %v", hostport)
