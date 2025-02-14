@@ -22,8 +22,8 @@ type applier struct {
 	tmpDir string
 }
 
-func (a *applier) PatchFilesystem(artifactPath string, patch io.Reader, expected *digest.Digest) error {
-	datasource := tarpatch.NewFilesystemDataSource(artifactPath)
+func (a *applier) PatchFilesystem(artifactDir string, patch io.Reader, expected *digest.Digest) error {
+	datasource := tarpatch.NewFilesystemDataSource(artifactDir)
 	tempfile, err := os.CreateTemp(a.tmpDir, "tarpatch-temp-*")
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func (a *applier) PatchFilesystem(artifactPath string, patch io.Reader, expected
 		return err
 	}
 	// remove old directory so os.Rename works
-	err = fileutils.ReplaceDirectory(extractDir, artifactPath)
+	err = fileutils.ReplaceDirectory(extractDir, artifactDir)
 	if err != nil {
 		return err
 	}

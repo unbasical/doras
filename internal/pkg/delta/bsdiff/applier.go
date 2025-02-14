@@ -3,9 +3,11 @@ package bsdiff
 import (
 	"crypto/sha256"
 	"fmt"
+	"github.com/samber/lo"
 	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 	"io"
 	"os"
+	"path"
 
 	"github.com/opencontainers/go-digest"
 	"github.com/unbasical/doras/pkg/algorithm/delta"
@@ -32,12 +34,25 @@ type patcher struct {
 	tmpDir string
 }
 
-func (a *patcher) PatchFilesystem(artifactPath string, patch io.Reader, expected *digest.Digest) error {
-	fstat, err := os.Stat(artifactPath)
+func (a *patcher) PatchFilesystem(artifactDir string, patch io.Reader, expected *digest.Digest) error {
+	fstat, err := os.Stat(artifactDir)
 	if err != nil {
 		return err
 	}
-	fpOld, err := os.Open(artifactPath)
+	if !fstat.IsDir() {
+		return fmt.Errorf("%s is not a directory", artifactDir)
+	}
+	files, err := os.ReadDir(artifactDir)
+	if err != nil {
+		return err
+	}
+	files = lo.Filter(files, func(item os.DirEntry, _ int) bool {
+		return !item.IsDir()
+	})
+	if len(files) != 1 {
+		return fmt.Errorf("expected a single file, got %d", len(files))
+	}
+	fpOld, err := os.Open(path.Join(artifactDir, files[0].Name()))
 	if err != nil {
 		return err
 	}
@@ -73,12 +88,12 @@ func (a *patcher) PatchFilesystem(artifactPath string, patch io.Reader, expected
 	if err != nil {
 		return err
 	}
-	err = fileutils.ReplaceFile(fpTemp.Name(), artifactPath)
+	err = fileutils.ReplaceFile(fpTemp.Name(), fpOld.Name())
 	if err != nil {
 		return err
 	}
 	// maintain permissions
-	err = os.Chmod(artifactPath, fstat.Mode())
+	err = os.Chmod(artifactDir, fstat.Mode())
 	if err != nil {
 		return err
 	}

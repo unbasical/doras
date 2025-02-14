@@ -160,9 +160,6 @@ func (c *Client) patchArtifact(d fetcher.LoadResult) error {
 	if err != nil {
 		return err
 	}
-	if p.Patcher.Name() == "bsdiff" {
-		panic("not yet implemented")
-	}
 	fp, err := os.Open(d.Path)
 	if err != nil {
 		return err

@@ -114,7 +114,11 @@ func TestPatcher_PatchFilesystem(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			oldFile, err := os.CreateTemp(t.TempDir(), "bsdiff-test-*")
+			tempDir, err := os.MkdirTemp(t.TempDir(), "bsdiff-test-*")
+			if err != nil {
+				t.Fatal(err)
+			}
+			oldFile, err := os.CreateTemp(tempDir, "bsdiff-test-*")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -128,7 +132,7 @@ func TestPatcher_PatchFilesystem(t *testing.T) {
 			}
 			workingDir := t.TempDir()
 			patcher := NewPatcherWithTempDir(workingDir)
-			err = patcher.PatchFilesystem(oldFile.Name(), tt.args.patch, tt.args.expected)
+			err = patcher.PatchFilesystem(tempDir, tt.args.patch, tt.args.expected)
 			got := fileutils.ReadOrPanic(oldFile.Name())
 			if err != nil {
 				if !tt.wantErr {
