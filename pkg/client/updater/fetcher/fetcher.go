@@ -5,8 +5,14 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"hash"
+	"io"
+	"os"
+	"path"
+	"strings"
+
 	"github.com/opencontainers/go-digest"
-	"github.com/opencontainers/image-spec/specs-go/v1"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/samber/lo"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
@@ -14,15 +20,10 @@ import (
 	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 	"github.com/unbasical/doras/internal/pkg/utils/writerutils"
 	"github.com/unbasical/doras/pkg/constants"
-	"hash"
-	"io"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
-	"os"
-	"path"
-	"strings"
 )
 
 // ArtifactLoader is used to load artifacts from a registry.
@@ -176,7 +177,7 @@ func (r *registryImpl) ResolveAndLoadToPath(image, outputDir string) (v1.Descrip
 // ensureSubDir makes sure the directory at p exists, relative to the base directory.
 func (r *registryImpl) ensureSubDir(p string) (string, error) {
 	dir := path.Join(r.workingDir, p)
-	err := os.MkdirAll(dir, 0750)
+	err := os.MkdirAll(dir, 0755)
 	if err != nil {
 		return "", err
 	}
@@ -259,7 +260,7 @@ func hashOldContents(content io.ReadCloser, bytesExpected int64, h hash.Hash, fp
 }
 
 func openFileAndGetSize(fPath string) (*os.File, int64, error) {
-	fp, err := os.OpenFile(fPath, os.O_RDWR|os.O_CREATE, 0600)
+	fp, err := os.OpenFile(fPath, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return nil, 0, err
 	}
