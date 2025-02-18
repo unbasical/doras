@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"strings"
 	"sync"
@@ -269,11 +270,29 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 	apiDelegate.HandleAccepted()
 }
 
+func extractArtifacts(mf *ociutils.Manifest) ([]v1.Descriptor, error) {
+	if len(mf.Layers) > 0 {
+		return mf.Layers, nil
+	}
+	if len(mf.Blobs) > 0 {
+		return mf.Blobs, nil
+	}
+	return nil, fmt.Errorf("no artifacts found in manifest")
+}
+
 func checkCompatability(from *ociutils.Manifest, to *ociutils.Manifest) error {
-	if len(from.Layers) != len(to.Layers) {
+	artifactsFrom, err := extractArtifacts(from)
+	if err != nil {
+		return err
+	}
+	artifactsTo, err := extractArtifacts(to)
+	if err != nil {
+		return err
+	}
+	if len(artifactsFrom) != len(artifactsTo) {
 		return errors.New("incompatible amount of layers")
 	}
-	if from.Annotations[constants.OrasContentUnpack] != to.Annotations[constants.OrasContentUnpack] {
+	if artifactsFrom[0].Annotations[constants.OrasContentUnpack] != artifactsTo[0].Annotations[constants.OrasContentUnpack] {
 		return errors.New("incompatible artifacts")
 	}
 	return nil
