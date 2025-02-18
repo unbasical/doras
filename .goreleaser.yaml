@@ -126,7 +126,7 @@ changelog:
       - "^test:"
 
 release:
-  draft: true
+  draft: false
   github:
     owner: unbasical
     name: doras
