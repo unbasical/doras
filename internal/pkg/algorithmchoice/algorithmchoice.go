@@ -72,11 +72,11 @@ func ChooseAlgorithms(acceptedAlgorithms []string, mfFrom, mfTo *ociutils.Manife
 		Compressor: compressionutils.NewNopCompressor(),
 	}
 	var artifacts []v1.Descriptor
-	if len(mfFrom.Layers) == 1 {
+	if len(mfFrom.Layers) > 0 {
 		artifacts = mfFrom.Layers
 	}
-	if len(mfTo.Blobs) == 1 {
-		artifacts = mfTo.Blobs
+	if len(mfFrom.Blobs) > 0 {
+		artifacts = mfFrom.Blobs
 	}
 	if artifacts[0].Annotations[constants.OrasContentUnpack] == "true" && slices.Contains(acceptedAlgorithms, "tardiff") {
 		algorithm.Differ = tardiff.NewCreator()
