@@ -147,8 +147,5 @@ func (m *Manager[T]) ModifyState(cb func(*T) error) error {
 		return err
 	}
 	// call sync to make sure it is written to the disk
-	if err = errors.Join(fp.Sync(), fp.Close()); err != nil {
-		return err
-	}
-	return nil
+	return errors.Join(fp.Sync(), fp.Close())
 }
