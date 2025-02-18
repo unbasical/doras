@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/gofrs/flock"
 	log "github.com/sirupsen/logrus"
+	"io"
 	"os"
 )
 
@@ -84,8 +85,8 @@ func (m *Manager[T]) Load() (*T, error) {
 
 	fp, err := os.Open(m.path)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			// Return current state if file does not exist.
+		if errors.Is(err, os.ErrNotExist) || errors.Is(err, io.EOF) {
+			// Return current state if file does not exist or is empty.
 			return &m.state, nil
 		}
 		return nil, err
@@ -95,7 +96,10 @@ func (m *Manager[T]) Load() (*T, error) {
 		_ = fp.Close()
 		return nil, err
 	}
-	_ = fp.Close()
+	// call sync to make sure it is written to the disk
+	if err = errors.Join(fp.Sync(), fp.Close()); err != nil {
+		return nil, err
+	}
 	return &m.state, nil
 }
 
@@ -117,10 +121,15 @@ func (m *Manager[T]) ModifyState(cb func(*T) error) error {
 			return err
 		}
 	} else {
+		oldState := m.state
 		err = json.NewDecoder(fp).Decode(&m.state)
 		if err != nil {
-			_ = fp.Close()
-			return err
+			// cover cases where state file is empty
+			if !errors.Is(err, io.EOF) {
+				_ = fp.Close()
+				return err
+			}
+			m.state = oldState
 		}
 	}
 	err = cb(&m.state)
@@ -137,6 +146,9 @@ func (m *Manager[T]) ModifyState(cb func(*T) error) error {
 		_ = fp.Close()
 		return err
 	}
-	_ = fp.Close()
+	// call sync to make sure it is written to the disk
+	if err = errors.Join(fp.Sync(), fp.Close()); err != nil {
+		return err
+	}
 	return nil
 }
