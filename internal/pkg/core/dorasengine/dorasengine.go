@@ -223,6 +223,9 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 			})
 			return
 		}
+		if expired {
+			log.Errorf("delta image %s is expired", deltaImage)
+		}
 		// dummy exists and has not expired -> someone else is working on creating this delta
 		if !expired {
 			apiDelegate.HandleAccepted()

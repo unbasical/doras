@@ -41,7 +41,7 @@ func (d *delegate) IsDummy(mf ociutils.Manifest) (isDummy bool, expired bool) {
 	if err != nil {
 		return false, false
 	}
-	expiration := t.Add(5 * time.Minute)
+	expiration := t.Add(30 * time.Minute)
 	now := time.Now()
 	expired = now.After(expiration)
 	return
