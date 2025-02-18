@@ -270,6 +270,8 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 	apiDelegate.HandleAccepted()
 }
 
+// extractArtifacts extracts the v1.Descriptors slice from the Manifest.
+// This is used to handle oras legacy manifest formats.
 func extractArtifacts(mf *ociutils.Manifest) ([]v1.Descriptor, error) {
 	if len(mf.Layers) > 0 {
 		return mf.Layers, nil
