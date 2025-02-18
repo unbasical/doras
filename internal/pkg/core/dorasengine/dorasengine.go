@@ -132,7 +132,7 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 	if err != nil {
 		log.WithError(err).Errorf("Error resolving target %q", fromDigest)
 		// assume there is the string "unauthorized" in the error message when there is an auth failure
-		if strings.Contains(err.Error(), "unauthorized") {
+		if strings.Contains(strings.ToLower(err.Error()), "unauthorized") {
 			apiDelegate.HandleError(error2.ErrUnauthorized, "")
 			return
 		}
