@@ -2,6 +2,7 @@ package statemanager
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -46,6 +47,26 @@ func TestLoadNonExistent(t *testing.T) {
 	tmpDir := t.TempDir()
 	stateFile := filepath.Join(tmpDir, "nonexistent.json")
 
+	defaultState := TestState{Value: 100}
+	mgr := &Manager[TestState]{
+		state: defaultState,
+		path:  stateFile,
+	}
+	loadedState, err := mgr.Load()
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if loadedState.Value != defaultState.Value {
+		t.Errorf("Expected default state value %d, got %d", defaultState.Value, loadedState.Value)
+	}
+}
+
+// TestLoadNonExistent verifies that if the state file does not exist,
+// Load returns the current in-memory state.
+func TestLoadEmptyFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	stateFile := filepath.Join(tmpDir, "empty.json")
+	_ = os.WriteFile(stateFile, []byte(""), 0644)
 	defaultState := TestState{Value: 100}
 	mgr := &Manager[TestState]{
 		state: defaultState,

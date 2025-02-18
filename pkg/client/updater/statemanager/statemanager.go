@@ -85,8 +85,8 @@ func (m *Manager[T]) Load() (*T, error) {
 
 	fp, err := os.Open(m.path)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) || errors.Is(err, io.EOF) {
-			// Return current state if file does not exist or is empty.
+		if errors.Is(err, os.ErrNotExist) {
+			// Return current state if file does not exist.
 			return &m.state, nil
 		}
 		return nil, err
@@ -94,6 +94,10 @@ func (m *Manager[T]) Load() (*T, error) {
 	err = json.NewDecoder(fp).Decode(&m.state)
 	if err != nil {
 		_ = fp.Close()
+		if errors.Is(err, io.EOF) {
+			// Return current state if file is empty.
+			return &m.state, nil
+		}
 		return nil, err
 	}
 	// call sync to make sure it is written to the disk
