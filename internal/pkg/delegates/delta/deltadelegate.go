@@ -19,15 +19,17 @@ import (
 )
 
 type delegate struct {
-	activeRequests map[string]any
-	m              sync.Mutex
+	activeRequests          map[string]any
+	m                       sync.Mutex
+	dummyExpirationDuration time.Duration
 }
 
 // NewDeltaDelegate construct a DeltaDelegate that is used to handle delta creation operations.
-func NewDeltaDelegate() DeltaDelegate {
+func NewDeltaDelegate(dummyExpirationDuration time.Duration) DeltaDelegate {
 	return &delegate{
-		activeRequests: make(map[string]any),
-		m:              sync.Mutex{},
+		activeRequests:          make(map[string]any),
+		m:                       sync.Mutex{},
+		dummyExpirationDuration: dummyExpirationDuration,
 	}
 }
 
@@ -41,7 +43,7 @@ func (d *delegate) IsDummy(mf ociutils.Manifest) (isDummy bool, expired bool) {
 	if err != nil {
 		return false, false
 	}
-	expiration := t.Add(30 * time.Minute)
+	expiration := t.Add(d.dummyExpirationDuration)
 	now := time.Now()
 	expired = now.After(expiration)
 	return
@@ -92,6 +94,9 @@ func (d *delegate) CreateDelta(ctx context.Context, from, to io.ReadCloser, mani
 	if err != nil {
 		return err
 	}
+	deltaId := digest.FromBytes([]byte(deltaLocationWithTag))
+	startTime := time.Now()
+	log.WithField("delta-id", deltaId).Info("delta creation started")
 	d.m.Lock()
 	if _, ok := d.activeRequests[deltaLocationWithTag]; ok {
 		return nil
@@ -106,6 +111,8 @@ func (d *delegate) CreateDelta(ctx context.Context, from, to io.ReadCloser, mani
 	if err != nil {
 		return err
 	}
+	elapsed := time.Since(startTime)
+	log.WithField("delta-id", deltaId).Infof("delta creation took %v", elapsed)
 	return nil
 }
 

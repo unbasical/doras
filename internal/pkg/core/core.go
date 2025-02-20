@@ -16,6 +16,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/credentials"
 	"os"
+	"time"
 )
 
 type Doras struct {
@@ -73,7 +74,7 @@ func (d *Doras) init(config configs.ServerConfig) *Doras {
 	creds := ociutils.NewCredentialsAggregate(opts...)
 
 	registryDelegate := registrydelegate.NewRegistryDelegate(creds, config.CliOpts.InsecureAllowHTTP)
-	deltaDelegate := deltadelegate.NewDeltaDelegate()
+	deltaDelegate := deltadelegate.NewDeltaDelegate(time.Duration(config.CliOpts.DummyExpirationDurationMins) * time.Minute)
 
 	dorasEngine := dorasengine.NewEngine(registryDelegate, deltaDelegate, config.CliOpts.RequireClientAuth)
 	r := api.BuildApp(dorasEngine)
