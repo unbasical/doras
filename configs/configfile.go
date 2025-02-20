@@ -16,6 +16,7 @@ type CLI struct {
 	ShutdownTimout              uint   `help:"Graceful shutdown timeout (in seconds)." default:"20" env:"DORAS_SHUTDOWN_TIMEOUT"`
 	InsecureAllowHTTP           bool   `help:"Allow INSECURE HTTP connections." default:"false" env:"DORAS_INSECURE_ALLOW_HTTP"`
 	RequireClientAuth           bool   `help:"Always require clients to provide an authentication token, regardless of repo access rights." default:"true" env:"DORAS_REQUIRE_CLIENT_AUTH"`
+	ExposeMetrics               bool   `help:"Expose prometheus metrics." default:"false" env:"DORAS_EXPOSE_METRICS"`
 	DummyExpirationDurationMins int    `help:"Duration until a dummy is considered to be expired." default:"30" env:"DORAS_DUMMY_EXPIRATION_DURATION_MINS"`
 	ExampleConfig               struct {
 		Output string `help:"Write example config to this location instead of printing to stdout." type:"path"`

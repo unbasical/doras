@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"net/url"
 	"time"
@@ -8,10 +9,24 @@ import (
 	"github.com/unbasical/doras/internal/pkg/api/gindelegate"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras/internal/pkg/api/apicommon"
 	"github.com/unbasical/doras/internal/pkg/core/dorasengine"
 )
+
+var (
+	deltaRequestCounter = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "delta_requests_total",
+			Help: "Total number of inbound delta requests",
+		},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(deltaRequestCounter)
+}
 
 // logger creates gin.HandlerFunc that uses logrus for logging.
 func logger() gin.HandlerFunc {
@@ -36,13 +51,16 @@ func logger() gin.HandlerFunc {
 
 // BuildApp return an engine that when ran servers the Doras API.
 // Uses the provided configuration to set up logging, storage and other things.
-func BuildApp(engine dorasengine.Engine) *gin.Engine {
+func BuildApp(engine dorasengine.Engine, exposeMetrics bool) *gin.Engine {
 	log.Debug("Building app")
 	gin.DisableConsoleColor()
 	r := gin.New()
 	r.Use(
 		logger(),
 	)
+	if exposeMetrics {
+		r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	}
 	r = buildEdgeAPI(r, engine)
 	r.GET("/api/v1/ping", ping)
 
@@ -67,6 +85,7 @@ func buildEdgeAPI(r *gin.Engine, engine dorasengine.Engine) *gin.Engine {
 	edgeAPI := r.Group(edgeApiPath)
 	edgeAPI.GET("/", func(c *gin.Context) {
 		apiDelegate := gindelegate.NewDelegate(c)
+		deltaRequestCounter.Inc()
 		engine.HandleReadDelta(apiDelegate)
 	})
 	return r
