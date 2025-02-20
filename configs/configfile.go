@@ -8,15 +8,16 @@ type ServerConfig struct {
 
 // CLI is the struct to parse the command line parameters or environment variables.
 type CLI struct {
-	HTTPPort             uint16 `help:"HTTP port to listen on." default:"8080" env:"DORAS_HTTP_PORT"`
-	Host                 string `help:"Hostname to listen on." default:"127.0.0.1" env:"DORAS_HOST"`
-	ConfigFilePath       string `help:"Path to the Doras server config file." env:"DORAS_CONFIG_FILE_PATH"`
-	DockerConfigFilePath string `help:"Path to the docker config file which is used to access registry credentials." default:"~/.docker/config.json" env:"DOCKER_CONFIG_FILE_PATH"`
-	LogLevel             string `help:"Server log level." default:"info" enum:"debug,info,warn,error" env:"DORAS_LOG_LEVEL"`
-	ShutdownTimout       uint   `help:"Graceful shutdown timeout (in seconds)." default:"20" env:"DORAS_SHUTDOWN_TIMEOUT"`
-	InsecureAllowHTTP    bool   `help:"Allow INSECURE HTTP connections." default:"false" env:"DORAS_INSECURE_ALLOW_HTTP"`
-	RequireClientAuth    bool   `help:"Always require clients to provide an authentication token, regardless of repo access rights." default:"true" env:"DORAS_REQUIRE_CLIENT_AUTH"`
-	ExampleConfig        struct {
+	HTTPPort                    uint16 `help:"HTTP port to listen on." default:"8080" env:"DORAS_HTTP_PORT"`
+	Host                        string `help:"Hostname to listen on." default:"127.0.0.1" env:"DORAS_HOST"`
+	ConfigFilePath              string `help:"Path to the Doras server config file." env:"DORAS_CONFIG_FILE_PATH"`
+	DockerConfigFilePath        string `help:"Path to the docker config file which is used to access registry credentials." default:"~/.docker/config.json" env:"DOCKER_CONFIG_FILE_PATH"`
+	LogLevel                    string `help:"Server log level." default:"info" enum:"debug,info,warn,error" env:"DORAS_LOG_LEVEL"`
+	ShutdownTimout              uint   `help:"Graceful shutdown timeout (in seconds)." default:"20" env:"DORAS_SHUTDOWN_TIMEOUT"`
+	InsecureAllowHTTP           bool   `help:"Allow INSECURE HTTP connections." default:"false" env:"DORAS_INSECURE_ALLOW_HTTP"`
+	RequireClientAuth           bool   `help:"Always require clients to provide an authentication token, regardless of repo access rights." default:"true" env:"DORAS_REQUIRE_CLIENT_AUTH"`
+	DummyExpirationDurationMins int    `help:"Duration until a dummy is considered to be expired." default:"30" env:"DORAS_DUMMY_EXPIRATION_DURATION_MINS"`
+	ExampleConfig               struct {
 		Output string `help:"Write example config to this location instead of printing to stdout." type:"path"`
 	} `cmd:"" help:"Print or store example config."`
 	Run struct {

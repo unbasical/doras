@@ -19,15 +19,17 @@ import (
 )
 
 type delegate struct {
-	activeRequests map[string]any
-	m              sync.Mutex
+	activeRequests          map[string]any
+	m                       sync.Mutex
+	dummyExpirationDuration time.Duration
 }
 
 // NewDeltaDelegate construct a DeltaDelegate that is used to handle delta creation operations.
-func NewDeltaDelegate() DeltaDelegate {
+func NewDeltaDelegate(dummyExpirationDuration time.Duration) DeltaDelegate {
 	return &delegate{
-		activeRequests: make(map[string]any),
-		m:              sync.Mutex{},
+		activeRequests:          make(map[string]any),
+		m:                       sync.Mutex{},
+		dummyExpirationDuration: dummyExpirationDuration,
 	}
 }
 
@@ -41,7 +43,7 @@ func (d *delegate) IsDummy(mf ociutils.Manifest) (isDummy bool, expired bool) {
 	if err != nil {
 		return false, false
 	}
-	expiration := t.Add(30 * time.Minute)
+	expiration := t.Add(d.dummyExpirationDuration)
 	now := time.Now()
 	expired = now.After(expiration)
 	return
