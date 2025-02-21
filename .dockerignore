@@ -24,3 +24,4 @@ go.work
 # avoid leaking secrets into containers etc.
 .env
 
+dist
