@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"net/url"
@@ -16,6 +17,7 @@ import (
 )
 
 var (
+	registry            = prometheus.NewRegistry()
 	deltaRequestCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "delta_requests_total",
@@ -25,7 +27,10 @@ var (
 )
 
 func init() {
-	prometheus.MustRegister(deltaRequestCounter)
+	prefixedRegisterer := prometheus.WrapRegistererWithPrefix("doras_", registry)
+	prefixedRegisterer.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	prefixedRegisterer.MustRegister(collectors.NewGoCollector())
+	prefixedRegisterer.MustRegister(deltaRequestCounter)
 }
 
 // logger creates gin.HandlerFunc that uses logrus for logging.
@@ -59,7 +64,7 @@ func BuildApp(engine dorasengine.Engine, exposeMetrics bool) *gin.Engine {
 		logger(),
 	)
 	if exposeMetrics {
-		r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+		r.GET("/metrics", gin.WrapH(promhttp.HandlerFor(registry, promhttp.HandlerOpts{})))
 	}
 	r = buildEdgeAPI(r, engine)
 	r.GET("/api/v1/ping", ping)
