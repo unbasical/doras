@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/unbasical/doras/internal/pkg/core/metrics"
 	"io"
 	"strings"
 	"sync"
@@ -94,12 +96,11 @@ func (d *delegate) CreateDelta(ctx context.Context, from, to io.ReadCloser, mani
 	if err != nil {
 		return err
 	}
-	deltaId := digest.FromBytes([]byte(deltaLocationWithTag))
-	log.WithField("delta-id", deltaId).Info("delta creation started")
 	d.m.Lock()
 	if _, ok := d.activeRequests[deltaLocationWithTag]; ok {
 		return nil
 	}
+	start := time.Now()
 	d.activeRequests[deltaLocationWithTag] = nil
 	d.m.Unlock()
 	log.Debugf("handling request for %q", deltaLocationWithTag)
@@ -107,6 +108,11 @@ func (d *delegate) CreateDelta(ctx context.Context, from, to io.ReadCloser, mani
 	d.m.Lock()
 	delete(d.activeRequests, deltaLocationWithTag)
 	d.m.Unlock()
+	metrics.DeltaCreationDuration.With(prometheus.Labels{
+		"diff_algo": manifOpts.Differ.Name(),
+		"comp_algo": manifOpts.Compressor.Name(),
+		"success":   fmt.Sprintf("%v", err == nil),
+	}).Observe(float64(time.Since(start)))
 	if err != nil {
 		return err
 	}

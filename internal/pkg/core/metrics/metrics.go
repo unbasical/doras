@@ -17,6 +17,12 @@ var (
 			Help: "Total number of inbound delta requests",
 		},
 	)
+	ExpiredDummiesCounter = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "expired_dummies_total",
+			Help: "Total number of expired dummies",
+		},
+	)
 	DeltaCreationDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "delta_creation_duration_seconds",
@@ -48,6 +54,7 @@ func init() {
 	DorasRegisterer.MustRegister(collectors.NewGoCollector())
 	// register universal metrics
 	DorasRegisterer.MustRegister(DeltaRequestCounter)
+	DorasRegisterer.MustRegister(ExpiredDummiesCounter)
 	DorasRegisterer.MustRegister(DeltaCreationDuration)
 }
 
