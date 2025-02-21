@@ -95,7 +95,6 @@ func (d *delegate) CreateDelta(ctx context.Context, from, to io.ReadCloser, mani
 		return err
 	}
 	deltaId := digest.FromBytes([]byte(deltaLocationWithTag))
-	startTime := time.Now()
 	log.WithField("delta-id", deltaId).Info("delta creation started")
 	d.m.Lock()
 	if _, ok := d.activeRequests[deltaLocationWithTag]; ok {
@@ -111,8 +110,6 @@ func (d *delegate) CreateDelta(ctx context.Context, from, to io.ReadCloser, mani
 	if err != nil {
 		return err
 	}
-	elapsed := time.Since(startTime)
-	log.WithField("delta-id", deltaId).Infof("delta creation took %v", elapsed)
 	return nil
 }
 

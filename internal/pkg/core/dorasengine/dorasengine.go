@@ -5,9 +5,12 @@ import (
 	"errors"
 	"fmt"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/unbasical/doras/internal/pkg/core/metrics"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"strings"
 	"sync"
+	"time"
 
 	apidelegate "github.com/unbasical/doras/internal/pkg/delegates/api"
 	deltadelegate "github.com/unbasical/doras/internal/pkg/delegates/delta"
@@ -263,11 +266,17 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 		defer wg.Done()
 		defer funcutils.PanicOrLogOnErr(rcTo.Close, false, "failed to close reader")
 		defer funcutils.PanicOrLogOnErr(rcFrom.Close, false, "failed to close reader")
+		start := time.Now()
 		err := delegate.CreateDelta(ctx, rcFrom, rcTo, manifOpts, registry)
 		if err != nil {
 			log.WithError(err).Error("failed to create delta")
-			return
 		}
+		elapsed := time.Since(start)
+		metrics.DeltaCreationDuration.With(prometheus.Labels{
+			"diff_algo": manifOpts.Differ.Name(),
+			"comp_algo": manifOpts.Compressor.Name(),
+			"success":   fmt.Sprintf("%v", err == nil),
+		}).Observe(elapsed.Seconds())
 	}()
 	// tell client has the delta has been accepted
 	apiDelegate.HandleAccepted()

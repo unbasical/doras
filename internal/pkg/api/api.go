@@ -1,83 +1,23 @@
 package api
 
 import (
-	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/unbasical/doras/internal/pkg/core/metrics"
 	"net/http"
 	"net/url"
-	"strconv"
 	"time"
 
 	"github.com/unbasical/doras/internal/pkg/api/gindelegate"
 
 	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras/internal/pkg/api/apicommon"
 	"github.com/unbasical/doras/internal/pkg/core/dorasengine"
 )
 
-var (
-	registry            = prometheus.NewRegistry()
-	deltaRequestCounter = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "delta_requests_total",
-			Help: "Total number of inbound delta requests",
-		},
-	)
-	httpRequestsTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "http_requests_total",
-			Help: "Total number of HTTP requests processed.",
-		},
-		[]string{"code", "method", "path"},
-	)
-	httpRequestDuration = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "http_request_duration_seconds",
-			Help:    "Duration of HTTP requests in seconds.",
-			Buckets: prometheus.DefBuckets,
-		},
-		[]string{"code", "method", "path"},
-	)
-)
-
 func init() {
-	prefixedRegisterer := prometheus.WrapRegistererWithPrefix("doras_", registry)
-	prefixedRegisterer.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
-	prefixedRegisterer.MustRegister(collectors.NewGoCollector())
-	prefixedRegisterer.MustRegister(deltaRequestCounter)
-	prefixedRegisterer.MustRegister(httpRequestsTotal)
-	prefixedRegisterer.MustRegister(httpRequestDuration)
-}
-
-// PrometheusMiddleware is a Gin middleware that instruments HTTP requests.
-func PrometheusMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		startTime := time.Now()
-		c.Next()
-
-		statusCode := c.Writer.Status()
-		method := c.Request.Method
-		path := c.FullPath()
-		if path == "" {
-			path = c.Request.URL.Path
-		}
-
-		duration := time.Since(startTime).Seconds()
-
-		httpRequestsTotal.With(prometheus.Labels{
-			"code":   strconv.Itoa(statusCode),
-			"method": method,
-			"path":   path,
-		}).Inc()
-
-		httpRequestDuration.With(prometheus.Labels{
-			"code":   strconv.Itoa(statusCode),
-			"method": method,
-			"path":   path,
-		}).Observe(duration)
-	}
+	metrics.DorasRegisterer.MustRegister(metrics.HttpRequestsTotal)
+	metrics.DorasRegisterer.MustRegister(metrics.HttpRequestDuration)
 }
 
 // logger creates gin.HandlerFunc that uses logrus for logging.
@@ -111,8 +51,8 @@ func BuildApp(engine dorasengine.Engine, exposeMetrics bool) *gin.Engine {
 		logger(),
 	)
 	if exposeMetrics {
-		r.Use(PrometheusMiddleware())
-		r.GET("/metrics", gin.WrapH(promhttp.HandlerFor(registry, promhttp.HandlerOpts{})))
+		r.Use(metrics.PrometheusMiddleware())
+		r.GET("/metrics", gin.WrapH(promhttp.HandlerFor(metrics.PromRegistry, promhttp.HandlerOpts{})))
 	}
 	r = buildEdgeAPI(r, engine)
 	r.GET("/api/v1/ping", ping)
@@ -138,7 +78,7 @@ func buildEdgeAPI(r *gin.Engine, engine dorasengine.Engine) *gin.Engine {
 	edgeAPI := r.Group(edgeApiPath)
 	edgeAPI.GET("/", func(c *gin.Context) {
 		apiDelegate := gindelegate.NewDelegate(c)
-		deltaRequestCounter.Inc()
+		metrics.DeltaRequestCounter.Inc()
 		engine.HandleReadDelta(apiDelegate)
 	})
 	return r
