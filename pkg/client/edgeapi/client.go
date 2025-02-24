@@ -102,12 +102,13 @@ func (c *deltaApiClient) ReadDeltaAsync(from, to string, acceptedAlgorithms []st
 	case http.StatusAccepted:
 		return nil, false, nil
 	default:
+		// try parsing an API error from the body, if not return an error
 		var errBody apicommon.APIError
 		decoder := json.NewDecoder(resp.Body)
 		decoder.DisallowUnknownFields()
-		err = decoder.Decode(&errBody)
-		if err != nil {
-			return nil, false, fmt.Errorf("unknown error for request to %q StatusCode: %q, %w", url, resp.Status, err)
+		decodeErr := decoder.Decode(&errBody)
+		if decodeErr != nil {
+			return nil, false, fmt.Errorf("unexpected StatusCode: %q for request to %q", url, resp.Status)
 		}
 		return nil, false, errBody
 	}
