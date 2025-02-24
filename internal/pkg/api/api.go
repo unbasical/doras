@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/gin-contrib/pprof"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/unbasical/doras/internal/pkg/core/metrics"
 	"net/http"
@@ -43,7 +44,7 @@ func logger() gin.HandlerFunc {
 
 // BuildApp return an engine that when ran servers the Doras API.
 // Uses the provided configuration to set up logging, storage and other things.
-func BuildApp(engine dorasengine.Engine, exposeMetrics bool) *gin.Engine {
+func BuildApp(engine dorasengine.Engine, exposeMetrics bool, enableProfiling bool) *gin.Engine {
 	log.Debug("Building app")
 	gin.DisableConsoleColor()
 	r := gin.New()
@@ -51,8 +52,13 @@ func BuildApp(engine dorasengine.Engine, exposeMetrics bool) *gin.Engine {
 		logger(),
 	)
 	if exposeMetrics {
+		log.Info("Exposing metrics at /metrics")
 		r.Use(metrics.PrometheusMiddleware())
 		r.GET("/metrics", gin.WrapH(promhttp.HandlerFor(metrics.PromRegistry, promhttp.HandlerOpts{})))
+	}
+	if enableProfiling {
+		log.Info("Enabling pprof at /debug/pprof")
+		pprof.Register(r)
 	}
 	r = buildEdgeAPI(r, engine)
 	r.GET("/api/v1/ping", ping)
