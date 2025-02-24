@@ -11,6 +11,7 @@ services:
       DORAS_LOG_LEVEL: debug
       DORAS_REQUIRE_CLIENT_AUTH: 0
       DORAS_EXPOSE_METRICS: 1
+      DORAS_ENABLE_PROFILING: 1
   registry:
     image: registry:2.8
     environment:

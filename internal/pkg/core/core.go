@@ -77,7 +77,7 @@ func (d *Doras) init(config configs.ServerConfig) *Doras {
 	deltaDelegate := deltadelegate.NewDeltaDelegate(time.Duration(config.CliOpts.DummyExpirationDurationMins) * time.Minute)
 
 	dorasEngine := dorasengine.NewEngine(registryDelegate, deltaDelegate, config.CliOpts.RequireClientAuth)
-	r := api.BuildApp(dorasEngine, config.CliOpts.ExposeMetrics)
+	r := api.BuildApp(dorasEngine, config.CliOpts.ExposeMetrics, config.CliOpts.EnableProfiling)
 	err := r.SetTrustedProxies(config.ConfigFile.TrustedProxies)
 	if err != nil {
 		log.WithError(err).Fatal("failed to set trusted proxies")
