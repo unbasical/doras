@@ -71,7 +71,7 @@ func TestApplier_Apply(t *testing.T) {
 
 func Test_patcher_PatchFilesystem(t *testing.T) {
 	type args struct {
-		patch    io.Reader
+		patch    []byte
 		expected *digest.Digest
 	}
 	tests := []struct {
@@ -81,14 +81,14 @@ func Test_patcher_PatchFilesystem(t *testing.T) {
 	}{
 		{
 			name: "success (without digest)", args: args{
-				patch:    bytes.NewReader(fileutils.ReadOrPanic("../../../../test/test-files/delta.patch.tardiff")),
+				patch:    fileutils.ReadOrPanic("../../../../test/test-files/delta.patch.tardiff"),
 				expected: nil,
 			},
 			wantErr: false,
 		},
 		{
 			name: "success (with digest)", args: args{
-				patch: bytes.NewReader(fileutils.ReadOrPanic("../../../../test/test-files/delta.patch.tardiff")),
+				patch: fileutils.ReadOrPanic("../../../../test/test-files/delta.patch.tardiff"),
 				expected: func() *digest.Digest {
 					data := fileutils.ReadOrPanic("../../../../test/test-files/to.tar.gz")
 					r, err := gzip2.NewDecompressor().Decompress(bytes.NewReader(data))
@@ -106,14 +106,14 @@ func Test_patcher_PatchFilesystem(t *testing.T) {
 		},
 		{
 			name: "failure (bad patch)", args: args{
-				patch:    bytes.NewReader(nil),
+				patch:    nil,
 				expected: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "failure (bad digest)", args: args{
-				patch:    bytes.NewReader(fileutils.ReadOrPanic("../../../../test/test-files/delta.patch.tardiff")),
+				patch:    fileutils.ReadOrPanic("../../../../test/test-files/delta.patch.tardiff"),
 				expected: func() *digest.Digest { d := digest.FromBytes(nil); return &d }(),
 			},
 			wantErr: true,
@@ -121,48 +121,50 @@ func Test_patcher_PatchFilesystem(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			outDir, err := os.MkdirTemp(t.TempDir(), "output-dir-*")
-			if err != nil {
-				t.Fatal(err)
-			}
-			expectedDir, err := os.MkdirTemp(t.TempDir(), "expected-dir-*")
-			if err != nil {
-				t.Fatal(err)
-			}
-			expectedDirTarPath := func() string {
-				if tt.wantErr {
-					return "../../../../test/test-files/from.tar.gz"
+			for _, keepOldDir := range []bool{true, false} {
+				outDir, err := os.MkdirTemp(t.TempDir(), "output-dir-*")
+				if err != nil {
+					t.Fatal(err)
 				}
-				return "../../../../test/test-files/to.tar.gz"
-			}()
-			err = tarutils.ExtractCompressedTar(expectedDir, "", expectedDirTarPath, nil, gzip2.NewDecompressor())
-			if err != nil {
-				t.Fatal(err)
-				return
-			}
+				expectedDir, err := os.MkdirTemp(t.TempDir(), "expected-dir-*")
+				if err != nil {
+					t.Fatal(err)
+				}
+				expectedDirTarPath := func() string {
+					if tt.wantErr {
+						return "../../../../test/test-files/from.tar.gz"
+					}
+					return "../../../../test/test-files/to.tar.gz"
+				}()
+				err = tarutils.ExtractCompressedTar(expectedDir, "", expectedDirTarPath, nil, gzip2.NewDecompressor())
+				if err != nil {
+					t.Fatal(err)
+					return
+				}
 
-			err = tarutils.ExtractCompressedTar(outDir, "", "../../../../test/test-files/from.tar.gz", nil, gzip2.NewDecompressor())
-			if err != nil {
-				t.Fatal(err)
-				return
-			}
-			patcherDir := t.TempDir()
-			a := NewPatcherWithTempDir(patcherDir)
-			err = a.PatchFilesystem(outDir, tt.args.patch, tt.args.expected)
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("PatchFilesystem() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			readDir, err := os.ReadDir(patcherDir)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(readDir) != 0 {
-				t.Fatal("patcher did not clean up temp dir")
-			}
-			eq, _ := fileutils.CompareDirectories(outDir, expectedDir)
-			if !eq {
-				t.Fatalf("output directory does not match expected directory")
+				err = tarutils.ExtractCompressedTar(outDir, "", "../../../../test/test-files/from.tar.gz", nil, gzip2.NewDecompressor())
+				if err != nil {
+					t.Fatal(err)
+					return
+				}
+				patcherDir := t.TempDir()
+				a := NewPatcherWithTempDir(patcherDir, keepOldDir)
+				err = a.PatchFilesystem(outDir, bytes.NewReader(tt.args.patch), tt.args.expected)
+				if (err != nil) != tt.wantErr {
+					t.Fatalf("PatchFilesystem() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+				readDir, err := os.ReadDir(patcherDir)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(readDir) != 0 {
+					t.Fatal("patcher did not clean up temp dir")
+				}
+				eq, _ := fileutils.CompareDirectories(outDir, expectedDir)
+				if !eq {
+					t.Fatalf("output directory does not match expected directory")
+				}
 			}
 		})
 	}
