@@ -263,67 +263,70 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := fileutils.CleanDirectory(outDir)
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = fileutils.CleanDirectory(internalDir)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if tt.initialState.version != nil {
-				p := descriptorsToPaths[tt.initialState.version.Digest]
-				err := tarutils.ExtractCompressedTar(outDir, "", p, nil, gzip2.NewDecompressor())
+		for _, keepOldDir := range []bool{true, false} {
+			t.Run(fmt.Sprintf("%s_%v", tt.name, keepOldDir), func(t *testing.T) {
+				err := fileutils.CleanDirectory(outDir)
 				if err != nil {
 					t.Fatal(err)
 				}
-			}
-			s, err := statemanager.New(updaterstate.State{
-				Version: "1",
-				ArtifactStates: func() map[string]string {
-					if tt.initialState.version == nil {
-						return map[string]string{}
+				err = fileutils.CleanDirectory(internalDir)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if tt.initialState.version != nil {
+					p := descriptorsToPaths[tt.initialState.version.Digest]
+					err := tarutils.ExtractCompressedTar(outDir, "", p, nil, gzip2.NewDecompressor())
+					if err != nil {
+						t.Fatal(err)
 					}
-					return map[string]string{
-						fmt.Sprintf("(%s,%s)", outDir, repoName): tt.initialState.version.Digest.Encoded(),
-					}
-				}(),
-			}, path.Join(internalDir, "state.json"))
-			funcutils.PanicOrLogOnErr(funcutils.IdentityFunc(err), true, "failed init state")
-			c := &Client{
-				opts:       tt.fields.opts,
-				edgeClient: tt.fields.edgeClient,
-				reg:        tt.fields.reg,
-				state:      s,
-			}
-			gotExists, err := c.PullAsync(tt.args.target)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("PullAsync() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if gotExists != tt.wantExists {
-				t.Errorf("PullAsync() gotExists = %v, want %v", gotExists, tt.wantExists)
-			}
-			eq, err := fileutils.CompareDirectories(outDir, tt.expectedDir)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !eq {
-				t.Fatal("directories not equal")
-			}
-			st, err := s.Load()
-			if err != nil {
-				t.Fatal(err)
-			}
-			appliedVersion, err := st.GetArtifactState(outDir, repoName)
-			if err != nil && tt.expectedDigest != nil {
-				t.Fatal(err)
-			}
-			if tt.expectedDigest != nil && *appliedVersion != *tt.expectedDigest {
-				t.Errorf("state does not contain correct version: got: %v ,expected: %v", *appliedVersion, tt.expectedDigest)
-			}
-		})
+				}
+				s, err := statemanager.New(updaterstate.State{
+					Version: "1",
+					ArtifactStates: func() map[string]string {
+						if tt.initialState.version == nil {
+							return map[string]string{}
+						}
+						return map[string]string{
+							fmt.Sprintf("(%s,%s)", outDir, repoName): tt.initialState.version.Digest.Encoded(),
+						}
+					}(),
+				}, path.Join(internalDir, "state.json"))
+				funcutils.PanicOrLogOnErr(funcutils.IdentityFunc(err), true, "failed init state")
+				tt.fields.opts.KeepOldDir = keepOldDir
+				c := &Client{
+					opts:       tt.fields.opts,
+					edgeClient: tt.fields.edgeClient,
+					reg:        tt.fields.reg,
+					state:      s,
+				}
+				gotExists, err := c.PullAsync(tt.args.target)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("PullAsync() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+				if gotExists != tt.wantExists {
+					t.Errorf("PullAsync() gotExists = %v, want %v", gotExists, tt.wantExists)
+				}
+				eq, err := fileutils.CompareDirectories(outDir, tt.expectedDir)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !eq {
+					t.Fatal("directories not equal")
+				}
+				st, err := s.Load()
+				if err != nil {
+					t.Fatal(err)
+				}
+				appliedVersion, err := st.GetArtifactState(outDir, repoName)
+				if err != nil && tt.expectedDigest != nil {
+					t.Fatal(err)
+				}
+				if tt.expectedDigest != nil && *appliedVersion != *tt.expectedDigest {
+					t.Errorf("state does not contain correct version: got: %v ,expected: %v", *appliedVersion, tt.expectedDigest)
+				}
+			})
+		}
 	}
 }
 

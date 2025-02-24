@@ -28,6 +28,7 @@ type clientOpts struct {
 	AcceptedAlgorithms []string
 	CredFuncs          []auth.CredentialFunc
 	InsecureAllowHTTP  bool
+	KeepOldDir         bool
 }
 
 // NewClient creates a new Doras update client with the provided options.
@@ -165,5 +166,12 @@ func WithCredential(registry string, credential auth.Credential) func(*Client) {
 func WithInsecureAllowHTTP(insecureAllowHTTP bool) func(*Client) {
 	return func(c *Client) {
 		c.opts.InsecureAllowHTTP = insecureAllowHTTP
+	}
+}
+
+// WithKeepOldDir if set to true directories are not replaced, this is less robust.
+func WithKeepOldDir(keepOldDir bool) func(*Client) {
+	return func(c *Client) {
+		c.opts.KeepOldDir = keepOldDir
 	}
 }

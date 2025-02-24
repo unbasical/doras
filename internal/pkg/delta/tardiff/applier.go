@@ -5,6 +5,8 @@ import (
 	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 	"io"
 	"os"
+	"path"
+	"path/filepath"
 
 	tarpatch "github.com/containers/tar-diff/pkg/tar-patch"
 	"github.com/opencontainers/go-digest"
@@ -19,7 +21,8 @@ import (
 )
 
 type applier struct {
-	tmpDir string
+	tmpDir     string
+	keepOldDir bool
 }
 
 func (a *applier) PatchFilesystem(artifactDir string, patch io.Reader, expected *digest.Digest) error {
@@ -52,10 +55,45 @@ func (a *applier) PatchFilesystem(artifactDir string, patch io.Reader, expected 
 	if err != nil {
 		return err
 	}
-	// remove old directory so os.Rename works
+	if a.keepOldDir {
+		return a.replaceInPlace(artifactDir, extractDir)
+	}
 	err = fileutils.ReplaceDirectory(extractDir, artifactDir)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (a *applier) replaceInPlace(artifactDir string, extractDir string) error {
+	artifactNames := make(map[string]any)
+	entriesArtifactDir, err := os.ReadDir(artifactDir)
+	if err != nil {
+		return err
+	}
+	entriesExtractDir, err := os.ReadDir(extractDir)
+	if err != nil {
+		return err
+	}
+	// replace files in the target dir with the ones from the extraction dir
+	for _, entry := range entriesExtractDir {
+		if entry.IsDir() {
+			panic("keepOldDir is not currently not supported with nested directories")
+		}
+		err := fileutils.ReplaceFile(path.Join(extractDir, entry.Name()), filepath.Join(artifactDir, entry.Name()))
+		if err != nil {
+			return err
+		}
+		artifactNames[entry.Name()] = nil
+	}
+	// remove files that are not present in the new artifact
+	for _, entry := range entriesArtifactDir {
+		if _, ok := artifactNames[entry.Name()]; !ok {
+			err = os.Remove(filepath.Join(extractDir, entry.Name()))
+			if err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -68,9 +106,10 @@ func NewPatcher() delta.Patcher {
 }
 
 // NewPatcherWithTempDir return a tardiff delta.Patcher.
-func NewPatcherWithTempDir(tmpDir string) delta.Patcher {
+func NewPatcherWithTempDir(tmpDir string, keepOldDir bool) delta.Patcher {
 	return &applier{
-		tmpDir: tmpDir,
+		tmpDir:     tmpDir,
+		keepOldDir: keepOldDir,
 	}
 }
 

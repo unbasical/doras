@@ -61,7 +61,7 @@ func (c *Client) Pull(image string) error {
 }
 
 // getPatcherChoice extracts the algorithms that were used to create the delta from the provided v1.Descriptor.
-func getPatcherChoice(d *v1.Descriptor, patcherTmpDir string) (algorithmchoice.PatcherChoice, error) {
+func (c *Client) getPatcherChoice(d *v1.Descriptor, patcherTmpDir string) (algorithmchoice.PatcherChoice, error) {
 	choice := algorithmchoice.PatcherChoice{
 		// initialize with default
 		Decompressor: compressionutils.NewNopDecompressor(),
@@ -82,7 +82,7 @@ func getPatcherChoice(d *v1.Descriptor, patcherTmpDir string) (algorithmchoice.P
 	case "bsdiff":
 		choice.Patcher = bsdiff.NewPatcherWithTempDir(patcherTmpDir)
 	case "tardiff":
-		choice.Patcher = tardiff.NewPatcherWithTempDir(patcherTmpDir)
+		choice.Patcher = tardiff.NewPatcherWithTempDir(patcherTmpDir, c.opts.KeepOldDir)
 	default:
 		return algorithmchoice.PatcherChoice{}, fmt.Errorf("unsupported patcher: %s", split[0])
 	}
@@ -156,7 +156,7 @@ func (c *Client) pullDeltaImageAsync(target string, repoName string, currentVers
 }
 
 func (c *Client) patchArtifact(d fetcher.LoadResult) error {
-	p, err := getPatcherChoice(&d.D, c.patcherTmpDir)
+	p, err := c.getPatcherChoice(&d.D, c.patcherTmpDir)
 	if err != nil {
 		return err
 	}
