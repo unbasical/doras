@@ -71,8 +71,10 @@ func TestApplier_Apply(t *testing.T) {
 
 func Test_patcher_PatchFilesystem(t *testing.T) {
 	type args struct {
-		patch    []byte
-		expected *digest.Digest
+		from            string
+		patch           []byte
+		expectedDirPath string
+		expected        *digest.Digest
 	}
 	tests := []struct {
 		name    string
@@ -80,15 +82,19 @@ func Test_patcher_PatchFilesystem(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "success (without digest)", args: args{
-				patch:    fileutils.ReadOrPanic("../../../../test/test-files/delta.patch.tardiff"),
-				expected: nil,
+			name: "success (without digest, overlapping archives)", args: args{
+				from:            "../../../../test/test-files/to.tar.gz",
+				patch:           fileutils.ReadOrPanic("../../../../test/test-files/delta.patch.tardiff"),
+				expectedDirPath: "../../../../test/test-files/to.tar.gz",
+				expected:        nil,
 			},
 			wantErr: false,
 		},
 		{
-			name: "success (with digest)", args: args{
-				patch: fileutils.ReadOrPanic("../../../../test/test-files/delta.patch.tardiff"),
+			name: "success (with digest, overlapping archives)", args: args{
+				from:            "../../../../test/test-files/to.tar.gz",
+				patch:           fileutils.ReadOrPanic("../../../../test/test-files/delta.patch.tardiff"),
+				expectedDirPath: "../../../../test/test-files/to.tar.gz",
 				expected: func() *digest.Digest {
 					data := fileutils.ReadOrPanic("../../../../test/test-files/to.tar.gz")
 					r, err := gzip2.NewDecompressor().Decompress(bytes.NewReader(data))
@@ -105,16 +111,49 @@ func Test_patcher_PatchFilesystem(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "success (without digest, non-overlapping archives)", args: args{
+				from:            "../../../../test/test-files/01-from.tar.gz",
+				patch:           fileutils.ReadOrPanic("../../../../test/test-files/01-delta.patch.tardiff"),
+				expectedDirPath: "../../../../test/test-files/01-to.tar.gz",
+				expected:        nil,
+			},
+			wantErr: false,
+		},
+		{
+			name: "success (with digest, non-overlapping archives)", args: args{
+				from:            "../../../../test/test-files/01-from.tar.gz",
+				patch:           fileutils.ReadOrPanic("../../../../test/test-files/01-delta.patch.tardiff"),
+				expectedDirPath: "../../../../test/test-files/01-to.tar.gz",
+				expected: func() *digest.Digest {
+					data := fileutils.ReadOrPanic("../../../../test/test-files/01-to.tar.gz")
+					r, err := gzip2.NewDecompressor().Decompress(bytes.NewReader(data))
+					if err != nil {
+						panic(err)
+					}
+					d, err := digest.FromReader(r)
+					if err != nil {
+						panic(err)
+					}
+					return &d
+				}(),
+			},
+			wantErr: false,
+		},
+		{
 			name: "failure (bad patch)", args: args{
-				patch:    nil,
-				expected: nil,
+				from:            "../../../../test/test-files/from.tar.gz",
+				patch:           nil,
+				expected:        nil,
+				expectedDirPath: "../../../../test/test-files/from.tar.gz",
 			},
 			wantErr: true,
 		},
 		{
 			name: "failure (bad digest)", args: args{
-				patch:    fileutils.ReadOrPanic("../../../../test/test-files/delta.patch.tardiff"),
-				expected: func() *digest.Digest { d := digest.FromBytes(nil); return &d }(),
+				from:            "../../../../test/test-files/from.tar.gz",
+				patch:           fileutils.ReadOrPanic("../../../../test/test-files/delta.patch.tardiff"),
+				expected:        func() *digest.Digest { d := digest.FromBytes(nil); return &d }(),
+				expectedDirPath: "../../../../test/test-files/from.tar.gz",
 			},
 			wantErr: true,
 		},
@@ -130,19 +169,14 @@ func Test_patcher_PatchFilesystem(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				expectedDirTarPath := func() string {
-					if tt.wantErr {
-						return "../../../../test/test-files/from.tar.gz"
-					}
-					return "../../../../test/test-files/to.tar.gz"
-				}()
+				expectedDirTarPath := tt.args.expectedDirPath
 				err = tarutils.ExtractCompressedTar(expectedDir, "", expectedDirTarPath, nil, gzip2.NewDecompressor())
 				if err != nil {
 					t.Fatal(err)
 					return
 				}
 
-				err = tarutils.ExtractCompressedTar(outDir, "", "../../../../test/test-files/from.tar.gz", nil, gzip2.NewDecompressor())
+				err = tarutils.ExtractCompressedTar(outDir, "", tt.args.from, nil, gzip2.NewDecompressor())
 				if err != nil {
 					t.Fatal(err)
 					return

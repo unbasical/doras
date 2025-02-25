@@ -89,7 +89,7 @@ func (a *applier) replaceInPlace(artifactDir string, extractDir string) error {
 	// remove files that are not present in the new artifact
 	for _, entry := range entriesArtifactDir {
 		if _, ok := artifactNames[entry.Name()]; !ok {
-			err = os.Remove(filepath.Join(extractDir, entry.Name()))
+			err = os.Remove(filepath.Join(artifactDir, entry.Name()))
 			if err != nil {
 				return err
 			}
