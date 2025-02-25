@@ -112,7 +112,7 @@ func (d *delegate) CreateDelta(ctx context.Context, from, to io.ReadCloser, mani
 		"diff_algo": manifOpts.Differ.Name(),
 		"comp_algo": manifOpts.Compressor.Name(),
 		"success":   fmt.Sprintf("%v", err == nil),
-	}).Observe(float64(time.Since(start)))
+	}).Observe(time.Since(start).Seconds())
 	if err != nil {
 		return err
 	}
