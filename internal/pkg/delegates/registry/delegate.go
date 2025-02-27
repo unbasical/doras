@@ -32,19 +32,19 @@ type DeltaManifestOptions struct {
 }
 
 type registryImpl struct {
-	m             sync.Mutex
-	activeDummies map[string]any
-	credentials   auth.CredentialFunc
-	allowHttp     bool
+	m                     sync.Mutex
+	activeDummiesCreation map[string]any
+	credentials           auth.CredentialFunc
+	allowHttp             bool
 }
 
 // NewRegistryDelegate constructs a RegistryDelegate for a given registry that is located at the provided registryUrl.
 func NewRegistryDelegate(creds auth.CredentialFunc, allowHttp bool) RegistryDelegate {
 	return &registryImpl{
-		m:             sync.Mutex{},
-		activeDummies: make(map[string]any),
-		credentials:   creds,
-		allowHttp:     allowHttp,
+		m:                     sync.Mutex{},
+		activeDummiesCreation: make(map[string]any),
+		credentials:           creds,
+		allowHttp:             allowHttp,
 	}
 }
 
@@ -192,9 +192,11 @@ func (r *registryImpl) PushDelta(ctx context.Context, image string, manifOpts De
 func (r *registryImpl) PushDummy(image string, manifOpts DeltaManifestOptions) error {
 	r.m.Lock()
 	defer r.m.Unlock()
-	if _, ok := r.activeDummies[image]; ok {
+	// exit early if we're already creating a dummy in parallel
+	if _, ok := r.activeDummiesCreation[image]; ok {
 		return nil
 	}
+	r.activeDummiesCreation[image] = nil
 	ctx := context.Background()
 	repoName, tag, _, err := ociutils.ParseOciImageString(image)
 	if err != nil {
@@ -226,7 +228,7 @@ func (r *registryImpl) PushDummy(image string, manifOpts DeltaManifestOptions) e
 	if err != nil {
 		return fmt.Errorf("failed to tag manifest: %w", err)
 	}
-	delete(r.activeDummies, image)
+	delete(r.activeDummiesCreation, image)
 	log.Infof("created dummy at %s", image)
 	return nil
 }

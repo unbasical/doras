@@ -14,6 +14,7 @@ type exponentialBackoffWithJitter struct {
 	currentAttempt uint          // Track the current attempt number
 	maxAttempt     uint          // Track the current attempt number
 	randSource     *rand.Rand    // Random source for jittering
+	lastDelay      *time.Duration
 }
 
 // NewExponentialBackoffWithJitter creates a new instance of exponentialBackoffWithJitter
@@ -35,7 +36,12 @@ func (e *exponentialBackoffWithJitter) Wait() error {
 		return errors.New("maximum retries exceeded")
 	}
 	// Calculate the exponential backoff delay
-	delay := e.baseDelay * time.Duration(1<<e.currentAttempt) // 2^attempt * baseDelay
+	var delay time.Duration
+	if e.lastDelay != nil && e.baseDelay >= e.maxDelay {
+		delay = *e.lastDelay
+	} else {
+		delay = e.baseDelay * time.Duration(1<<e.currentAttempt) // 2^attempt * baseDelay
+	}
 
 	// Apply jitter by adding a random factor to the delay (between 0 and 1x the delay)
 	jitter := time.Duration(e.randSource.Int63n(int64(delay)))
@@ -49,7 +55,7 @@ func (e *exponentialBackoffWithJitter) Wait() error {
 	// Sleep for the calculated delay
 	logrus.Debugf("Waiting for %v (attempt %d/%d)\n", delay, e.currentAttempt, e.maxAttempt)
 	time.Sleep(delay)
-
+	e.lastDelay = &delay
 	// Increment the attempt number for the next retry
 	e.currentAttempt++
 	return nil
@@ -63,7 +69,7 @@ type Strategy interface {
 
 // DefaultBackoff returns a sensible default Strategy (exponential with an upper bound).
 func DefaultBackoff() Strategy {
-	const defaultBaseDelay = 50 * time.Millisecond
-	const defaultMaxDelay = 1 * time.Minute
-	return NewExponentialBackoffWithJitter(defaultBaseDelay, defaultMaxDelay, 10)
+	const defaultBaseDelay = 100 * time.Millisecond
+	const defaultMaxDelay = 30 * time.Second
+	return NewExponentialBackoffWithJitter(defaultBaseDelay, defaultMaxDelay, 40)
 }

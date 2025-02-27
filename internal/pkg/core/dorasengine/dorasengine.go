@@ -225,7 +225,7 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 		}
 		if expired {
 			metrics.ExpiredDummiesCounter.Inc()
-			log.Infof("delta image %s is expired", deltaImage)
+			log.Errorf("delta image %s is expired", deltaImage)
 		}
 		// dummy exists and has not expired -> someone else is working on creating this delta
 		if !expired {

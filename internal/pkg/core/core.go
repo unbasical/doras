@@ -29,6 +29,9 @@ type Doras struct {
 
 // New returns an instance of a Doras server.
 func New(config configs.ServerConfig) *Doras {
+	if config.CliOpts.DummyExpirationDurationMins == 0 {
+		config.CliOpts.DummyExpirationDurationMins = 5
+	}
 	doras := Doras{}
 	return doras.init(config)
 }

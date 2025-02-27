@@ -21,7 +21,7 @@ import (
 )
 
 type delegate struct {
-	activeRequests          map[string]any
+	activeDeltaCreations    map[string]any
 	m                       sync.Mutex
 	dummyExpirationDuration time.Duration
 }
@@ -29,7 +29,7 @@ type delegate struct {
 // NewDeltaDelegate construct a DeltaDelegate that is used to handle delta creation operations.
 func NewDeltaDelegate(dummyExpirationDuration time.Duration) DeltaDelegate {
 	return &delegate{
-		activeRequests:          make(map[string]any),
+		activeDeltaCreations:    make(map[string]any),
 		m:                       sync.Mutex{},
 		dummyExpirationDuration: dummyExpirationDuration,
 	}
@@ -45,8 +45,8 @@ func (d *delegate) IsDummy(mf ociutils.Manifest) (isDummy bool, expired bool) {
 	if err != nil {
 		return false, false
 	}
-	expiration := t.Add(d.dummyExpirationDuration)
-	now := time.Now()
+	expiration := t.UTC().Add(d.dummyExpirationDuration)
+	now := time.Now().UTC()
 	expired = now.After(expiration)
 	return
 }
@@ -97,16 +97,17 @@ func (d *delegate) CreateDelta(ctx context.Context, from, to io.ReadCloser, mani
 		return err
 	}
 	d.m.Lock()
-	if _, ok := d.activeRequests[deltaLocationWithTag]; ok {
+	if _, ok := d.activeDeltaCreations[deltaLocationWithTag]; ok {
+		d.m.Unlock()
 		return nil
 	}
 	start := time.Now()
-	d.activeRequests[deltaLocationWithTag] = nil
+	d.activeDeltaCreations[deltaLocationWithTag] = nil
 	d.m.Unlock()
 	log.Debugf("handling request for %q", deltaLocationWithTag)
 	err = dst.PushDelta(ctx, deltaLocationWithTag, manifOpts, compressedDelta)
 	d.m.Lock()
-	delete(d.activeRequests, deltaLocationWithTag)
+	delete(d.activeDeltaCreations, deltaLocationWithTag)
 	d.m.Unlock()
 	metrics.DeltaCreationDuration.With(prometheus.Labels{
 		"diff_algo": manifOpts.Differ.Name(),
