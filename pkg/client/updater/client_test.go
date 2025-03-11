@@ -2,6 +2,7 @@ package updater
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/opencontainers/go-digest"
@@ -17,6 +18,7 @@ import (
 	"github.com/unbasical/doras/pkg/client/updater/fetcher"
 	"github.com/unbasical/doras/pkg/client/updater/statemanager"
 	"github.com/unbasical/doras/pkg/client/updater/updaterstate"
+	"golang.org/x/mod/sumdb/dirhash"
 	"io"
 	"oras.land/oras-go/v2"
 	"os"
@@ -280,14 +282,22 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 						t.Fatal(err)
 					}
 				}
+				dirHash, err := dirhash.HashDir(outDir, "", dirhash.Hash1)
+				if err != nil {
+					t.Fatal(err)
+				}
+				dirHashDigest := digest.Digest(dirHash)
 				s, err := statemanager.New(updaterstate.State{
-					Version: "1",
-					ArtifactStates: func() map[string]string {
+					Version: "2",
+					ArtifactStates: func() map[string]updaterstate.ArtifactState {
 						if tt.initialState.version == nil {
-							return map[string]string{}
+							return map[string]updaterstate.ArtifactState{}
 						}
-						return map[string]string{
-							fmt.Sprintf("(%s,%s)", outDir, repoName): tt.initialState.version.Digest.Encoded(),
+						return map[string]updaterstate.ArtifactState{
+							fmt.Sprintf("(%s,%s)", outDir, repoName): updaterstate.ArtifactState{
+								ImageDigest:     tt.initialState.version.Digest,
+								DirectoryDigest: dirHashDigest,
+							},
 						}
 					}(),
 				}, path.Join(internalDir, "state.json"))
@@ -318,12 +328,22 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				appliedVersion, err := st.GetArtifactState(outDir, repoName)
+				artifactState, err := st.GetArtifactState(outDir, repoName)
 				if err != nil && tt.expectedDigest != nil {
 					t.Fatal(err)
 				}
-				if tt.expectedDigest != nil && *appliedVersion != *tt.expectedDigest {
-					t.Errorf("state does not contain correct version: got: %v ,expected: %v", *appliedVersion, tt.expectedDigest)
+				if tt.expectedDigest != nil && artifactState.ImageDigest != *tt.expectedDigest {
+					t.Errorf("state does not contain correct version: got: %v ,expected: %v", artifactState.ImageDigest, tt.expectedDigest)
+				}
+				if tt.initialState.version != nil {
+					expectedDirHash, err := dirhash.HashDir(outDir, "", dirhash.Hash1)
+					if err != nil {
+						t.Fatal(err)
+					}
+					expectedDirHashDigest := digest.Digest(expectedDirHash)
+					if artifactState.DirectoryDigest != expectedDirHashDigest {
+						t.Errorf("output directory does not have the expected dirhash epxected %v, got %v", expectedDirHashDigest, artifactState.DirectoryDigest)
+					}
 				}
 			})
 		}
@@ -595,14 +615,22 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
+			dirHash, err := dirhash.HashDir(outDir, "", dirhash.Hash1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			dirHashDigest := digest.Digest(dirHash)
 			s, err := statemanager.New(updaterstate.State{
-				Version: "1",
-				ArtifactStates: func() map[string]string {
+				Version: "2",
+				ArtifactStates: func() map[string]updaterstate.ArtifactState {
 					if tt.initialState.version == nil {
-						return map[string]string{}
+						return map[string]updaterstate.ArtifactState{}
 					}
-					return map[string]string{
-						fmt.Sprintf("(%s,%s)", outDir, repoName): tt.initialState.version.Digest.Encoded(),
+					return map[string]updaterstate.ArtifactState{
+						fmt.Sprintf("(%s,%s)", outDir, repoName): updaterstate.ArtifactState{
+							ImageDigest:     tt.initialState.version.Digest,
+							DirectoryDigest: dirHashDigest,
+						},
 					}
 				}(),
 			}, path.Join(internalDir, "state.json"))
@@ -636,10 +664,59 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 			if err != nil && tt.expectedDigest != nil {
 				t.Fatal(err)
 			}
-			if tt.expectedDigest != nil && *appliedVersion != *tt.expectedDigest {
-				t.Errorf("state does not contain correct version: got: %v ,expected: %v", *appliedVersion, tt.expectedDigest)
+
+			if tt.expectedDigest != nil && appliedVersion.ImageDigest != *tt.expectedDigest {
+				t.Errorf("state does not contain correct version: got: %v ,expected: %v", appliedVersion.ImageDigest, tt.expectedDigest)
+			}
+			if tt.initialState.version != nil {
+				expectedDirHash, err := dirhash.HashDir(outDir, "", dirhash.Hash1)
+				if err != nil {
+					t.Fatal(err)
+				}
+				expectedDirHashDigest := digest.Digest(expectedDirHash)
+				if appliedVersion.DirectoryDigest != expectedDirHashDigest {
+					t.Errorf("output directory does not have the expected dirhash epxected %v, got %v", expectedDirHashDigest, appliedVersion.DirectoryDigest)
+				}
 			}
 		})
+	}
+}
+
+func TestClient_DetectAndCleanOldStateVersion(t *testing.T) {
+	tempDir, err := os.MkdirTemp(t.TempDir(), "doras-state-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// this file should be automatically deleted by the constructor due to being version "1"
+	err = os.WriteFile(path.Join(tempDir, "doras-state.json"), []byte(`{"version":"1"}`), 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// this file should be automatically deleted by the constructor due to being version "1"
+	err = os.WriteFile(path.Join(tempDir, "dummy"), []byte(""), 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = NewClient(WithInternalDirectory(tempDir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateFile, err := os.ReadFile(path.Join(tempDir, "doras-state.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := struct {
+		Version string `json:"version"`
+	}{}
+	err = json.Unmarshal(stateFile, &s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Version != "2" {
+		t.Errorf("state file does not contain expected version: got %v, expected: %v", s.Version, "2")
+	}
+	if _, err := os.Stat(path.Join(tempDir, "dummy")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("expected dummy file to be removed")
 	}
 }
 
