@@ -112,7 +112,7 @@ func (c *Client) PullAsync(target string) (exists bool, err error) {
 		return false, err
 	}
 	if d.DirectoryDigest != digest.Digest(outputDirectoryHash) {
-		log.WithError(err).Debug("detected modifications to output directory, doing a clean pull")
+		log.WithError(err).Warn("detected modifications to output directory, doing a clean pull")
 		return c.pullFullImage(target)
 	}
 	// if we have an initial state we want to use a delta update
