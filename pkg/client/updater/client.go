@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"golang.org/x/mod/sumdb/dirhash"
 	"os"
 	"path"
 	"strings"
@@ -107,7 +108,7 @@ func (c *Client) PullAsync(target string) (exists bool, err error) {
 		return c.pullFullImage(target)
 	}
 	// if we have an initial state we want to use a delta update
-	return c.pullDeltaImageAsync(target, repoName, d)
+	return c.pullDeltaImageAsync(target, repoName, &d.ImageDigest)
 }
 
 func (c *Client) pullDeltaImageAsync(target string, repoName string, currentVersion *digest.Digest) (bool, error) {
@@ -146,8 +147,13 @@ func (c *Client) pullDeltaImageAsync(target string, repoName string, currentVers
 			return false, err
 		}
 	}
+	dirHash, err := dirhash.HashDir(c.opts.OutputDirectory, "", dirhash.Hash1)
+	if err != nil {
+		return false, err
+	}
+	dirHashDigest := digest.Digest(dirHash)
 	err = c.state.ModifyState(func(u *updaterstate.State) error {
-		return u.SetArtifactState(c.opts.OutputDirectory, res.TargetImage)
+		return u.SetArtifactState(c.opts.OutputDirectory, res.TargetImage, dirHashDigest)
 	})
 	if err != nil {
 		return false, err
@@ -231,8 +237,13 @@ func (c *Client) pullFullImage(targetImage string) (bool, error) {
 	}
 	// save the current version to the state
 	currentImage := fmt.Sprintf("%s@%s", repoName, mfD.Digest.String())
+	dirHash, err := dirhash.HashDir(c.opts.OutputDirectory, "", dirhash.Hash1)
+	if err != nil {
+		return false, err
+	}
+	dirHashDigest := digest.Digest(dirHash)
 	err = c.state.ModifyState(func(u *updaterstate.State) error {
-		return u.SetArtifactState(c.opts.OutputDirectory, currentImage)
+		return u.SetArtifactState(c.opts.OutputDirectory, currentImage, dirHashDigest)
 	})
 	if err != nil {
 		return false, err

@@ -2,6 +2,7 @@ package updater
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/samber/lo"
@@ -71,9 +72,18 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	}
 	client.edgeClient = c
 	initialState := updaterstate.State{
-		Version:        "1",
-		ArtifactStates: make(map[string]string),
+		Version:        "2",
+		ArtifactStates: make(map[string]updaterstate.ArtifactState),
 	}
+
+	statePath := path.Join(client.opts.InternalDirectory, "doras-state.json")
+	// detect old state files and remove them
+	// this is purely for compatability reasons
+	err = cleanupLegacyState(err, statePath, client)
+	if err != nil {
+		return nil, err
+	}
+
 	err = os.MkdirAll(client.opts.OutputDirectory, 0755)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
@@ -87,8 +97,13 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create patcher working directory: %w", err)
 	}
-	statePath := path.Join(client.opts.InternalDirectory, "doras-state.json")
+
 	stateManager, err := statemanager.NewFromDisk(initialState, statePath)
+	if err != nil {
+		return nil, err
+	}
+	// make sure state is written to the file in case it was not initialized
+	err = stateManager.Commit()
 	if err != nil {
 		return nil, err
 	}
@@ -102,6 +117,31 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	storageSource := fetcher.NewRepoStorageSource(false, credFunc)
 	client.reg = fetcher.NewArtifactLoader(fetcherDir, storageSource)
 	return client, nil
+}
+
+func cleanupLegacyState(err error, statePath string, client *Client) error {
+	oldState, err := os.ReadFile(statePath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("failed to read old state: %w", err)
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		s := struct {
+			Version        string         `json:"version"`
+			ArtifactStates map[string]any `json:"artifact_states"`
+		}{}
+		err = json.Unmarshal(oldState, &s)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal old state: %w", err)
+		}
+		if s.Version == "1" {
+			log.Infof("Detected version 1 state file, deleting for sanity reasons")
+			err := os.RemoveAll(client.opts.InternalDirectory)
+			if err != nil {
+				return fmt.Errorf("failed to remove old state: %w", err)
+			}
+		}
+	}
+	return nil
 }
 
 // WithRemoteURL adds the URL of a Doras server to the client configuration.

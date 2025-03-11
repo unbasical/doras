@@ -10,12 +10,18 @@ import (
 
 // State represents the state of a doras updater.
 type State struct {
-	Version        string            `json:"version"`
-	ArtifactStates map[string]string `json:"artifact_states"`
+	Version        string                   `json:"version"`
+	ArtifactStates map[string]ArtifactState `json:"artifact_states"`
+}
+
+// ArtifactState represents the state of an image stored in a directory.
+type ArtifactState struct {
+	ImageDigest     digest.Digest `json:"image_digest"`
+	DirectoryDigest digest.Digest `json:"directory_digest"`
 }
 
 // SetArtifactState update the internal state so it knows which version of an image we have in a directory.
-func (s *State) SetArtifactState(artifactDirectory, image string) error {
+func (s *State) SetArtifactState(artifactDirectory, image string, dirHash digest.Digest) error {
 	repoName, dig, isDigest, err := ociutils.ParseOciImageString(image)
 	if err != nil {
 		return err
@@ -24,18 +30,25 @@ func (s *State) SetArtifactState(artifactDirectory, image string) error {
 		return fmt.Errorf("image %s is not an image with digest", image)
 	}
 	k := fmt.Sprintf("(%s,%s)", artifactDirectory, repoName)
-	s.ArtifactStates[k] = strings.TrimPrefix(dig, "@sha256:")
+	parse, err := digest.Parse(strings.TrimPrefix(dig, "@"))
+	if err != nil {
+		return err
+	}
+	artifactState := ArtifactState{
+		ImageDigest:     parse,
+		DirectoryDigest: dirHash,
+	}
+	s.ArtifactStates[k] = artifactState
 	return nil
 }
 
 // GetArtifactState returns the digest which is currently rolled out for a specific version.
-func (s *State) GetArtifactState(artifactDirectory, image string) (*digest.Digest, error) {
+func (s *State) GetArtifactState(artifactDirectory, image string) (ArtifactState, error) {
 	k := fmt.Sprintf("(%s,%s)", artifactDirectory, image)
 	log.Debugf("looking for version with key:%q", k)
-	dig, ok := s.ArtifactStates[k]
+	artifactState, ok := s.ArtifactStates[k]
 	if !ok {
-		return nil, fmt.Errorf("artifact state not found for %s", image)
+		return ArtifactState{}, fmt.Errorf("artifact state not found for %s", image)
 	}
-	d := digest.NewDigestFromEncoded("sha256", dig)
-	return &d, nil
+	return artifactState, nil
 }
