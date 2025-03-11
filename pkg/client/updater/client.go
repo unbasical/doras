@@ -107,6 +107,14 @@ func (c *Client) PullAsync(target string) (exists bool, err error) {
 		log.WithError(err).Debugf("got err:%q while loading state, attempting to load full image", err)
 		return c.pullFullImage(target)
 	}
+	outputDirectoryHash, err := dirhash.HashDir(c.opts.OutputDirectory, "", dirhash.Hash1)
+	if err != nil {
+		return false, err
+	}
+	if d.DirectoryDigest != digest.Digest(outputDirectoryHash) {
+		log.WithError(err).Debug("detected modifications to output directory, doing a clean pull")
+		return c.pullFullImage(target)
+	}
 	// if we have an initial state we want to use a delta update
 	return c.pullDeltaImageAsync(target, repoName, &d.ImageDigest)
 }
