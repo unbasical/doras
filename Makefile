@@ -215,6 +215,9 @@ docker-template: ## Generate a Dockerfile with the updated ENTRYPOINT
 download: ## Download all dependencies for building and testing this project
 	@echo "========== Performing download stage"
 	@GOPRIVATE=$(GOPRIVATE) go mod download
+	@echo "========== Performing tidy stage"
+	@GOPRIVATE=$(GOPRIVATE) go mod tidy
+
 
 template-version: ## Template version file before compilation to include build-context like the revision or tag into the NAME
 	@echo "========== Performing template-version stage"
