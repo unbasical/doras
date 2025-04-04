@@ -81,6 +81,48 @@ func TestLoadEmptyFile(t *testing.T) {
 	}
 }
 
+func TestLoadTruncatedJSON(t *testing.T) {
+	tmpDir := t.TempDir()
+	stateFile := filepath.Join(tmpDir, "truncated.json")
+	// Write a truncated JSON string (missing a closing brace and value)
+	_ = os.WriteFile(stateFile, []byte("{\"Value\":"), 0644)
+	defaultState := TestState{Value: 100}
+	mgr := &Manager[TestState]{
+		state: defaultState,
+		path:  stateFile,
+	}
+	_, err := mgr.Load()
+	if err != nil {
+		t.Fatal("Expected error due to truncated JSON input, got nil")
+	}
+	// Make sure state is kept if we try to load from an erroneous JSON file.
+	gotState := mgr.state
+	if gotState != defaultState {
+		t.Fatalf("Expected default state to be %d, got %d", defaultState, gotState)
+	}
+}
+
+func TestLoadUnexpectedEOF(t *testing.T) {
+	tmpDir := t.TempDir()
+	stateFile := filepath.Join(tmpDir, "unexpected_eof.json")
+	// Write a JSON file with a truncated number literal. The decimal point is left unfinished.
+	_ = os.WriteFile(stateFile, []byte(`{"Value": 1.`), 0644)
+	defaultState := TestState{Value: 100}
+	mgr := &Manager[TestState]{
+		state: defaultState,
+		path:  stateFile,
+	}
+	_, err := mgr.Load()
+	if err != nil {
+		t.Fatal("Expected error due to truncated JSON input, got nil")
+	}
+	// Make sure state is kept if we try to load from an erroneous JSON file.
+	gotState := mgr.state
+	if gotState != defaultState {
+		t.Fatalf("Expected default state to be %d, got %d", defaultState, gotState)
+	}
+}
+
 // TestConcurrentAccess simulates concurrent Commit operations to verify that
 // file locking serializes access to the state file.
 func TestConcurrentAccess(t *testing.T) {

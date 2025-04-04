@@ -94,8 +94,12 @@ func (m *Manager[T]) Load() (*T, error) {
 	err = json.NewDecoder(fp).Decode(&m.state)
 	if err != nil {
 		_ = fp.Close()
-		if errors.Is(err, io.EOF) {
+		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
 			// Return current state if file is empty.
+			return &m.state, nil
+		}
+		var syntaxError *json.SyntaxError
+		if errors.As(err, &syntaxError) {
 			return &m.state, nil
 		}
 		return nil, err
@@ -129,7 +133,8 @@ func (m *Manager[T]) ModifyState(cb func(*T) error) error {
 		err = json.NewDecoder(fp).Decode(&m.state)
 		if err != nil {
 			// cover cases where state file is empty
-			if !errors.Is(err, io.EOF) {
+			var syntaxError *json.SyntaxError
+			if !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.As(err, &syntaxError) {
 				_ = fp.Close()
 				return err
 			}
