@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/gofrs/flock"
 	"golang.org/x/mod/sumdb/dirhash"
 	"hash"
 	"io"
@@ -135,4 +136,60 @@ func getDirHasher(h hash.Hash) func([]string, func(string) (io.ReadCloser, error
 		}
 		return "h1:" + base64.StdEncoding.EncodeToString(h.Sum(nil)), nil
 	}
+}
+
+// LockedFile wraps an *os.File and a file lock using gofrs/flock.
+type LockedFile struct {
+	f    *os.File
+	lock *flock.Flock
+}
+
+// OpenLockedFile opens the file with the specified flags and permissions,
+// acquires an exclusive lock (blocking until it can be obtained), and returns
+// a LockedFile. The lock file is created by appending ".lock" to the filename.
+func OpenLockedFile(path string, flag int, perm os.FileMode) (*LockedFile, error) {
+	// Create a flock instance for the lock file.
+	// Using a separate lock file (e.g., "example.txt.lock") is a common pattern.
+	lock := flock.New(path + ".lock")
+	// Open the target file.
+	f, err := os.OpenFile(path, flag, perm)
+	if err != nil {
+		return nil, err
+	}
+
+	// Acquire an exclusive lock. This call blocks until the lock is acquired.
+	if err = lock.Lock(); err != nil {
+		return nil, errors.Join(err, f.Close())
+	}
+
+	return &LockedFile{
+		f:    f,
+		lock: lock,
+	}, nil
+}
+
+// Stat returns file metadata by delegating to the underlying os.File.
+func (lf *LockedFile) Stat() (os.FileInfo, error) {
+	return lf.f.Stat()
+}
+
+func (lf *LockedFile) Read(p []byte) (int, error) {
+	return lf.f.Read(p)
+}
+
+func (lf *LockedFile) Write(p []byte) (int, error) {
+	return lf.f.Write(p)
+}
+
+// Close releases the lock and then closes the underlying file.
+func (lf *LockedFile) Close() error {
+	// First, release the lock.
+	if err := lf.lock.Unlock(); err != nil {
+		return err
+	}
+	// Then close the file.
+	return errors.Join(
+		lf.f.Sync(),
+		lf.f.Close(),
+	)
 }

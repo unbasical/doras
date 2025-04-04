@@ -18,7 +18,6 @@ import (
 	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
-	"github.com/unbasical/doras/internal/pkg/utils/writerutils"
 	"github.com/unbasical/doras/pkg/constants"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
@@ -210,9 +209,8 @@ func (r *registryImpl) ingest(expected v1.Descriptor, content io.ReadCloser) (st
 
 	// Use a writer that makes sure the changes are flushed to the disk.
 	// This is done to increase robustness against power loss during ingesting which might cause inconsistencies.
-	w := writerutils.NewSafeFileWriter(fp)
 	tr := io.TeeReader(content, h)
-	nNew, err := io.Copy(w, tr)
+	nNew, err := io.Copy(fp, tr)
 	if err != nil {
 		return "", err
 	}
@@ -223,7 +221,7 @@ func (r *registryImpl) ingest(expected v1.Descriptor, content io.ReadCloser) (st
 		return "", errors.New("unexpected digest")
 	}
 	// Do not defer close to make sure file is written to the disk.
-	err = w.Close()
+	err = fp.Close()
 	if err != nil {
 		return "", err
 	}
@@ -236,7 +234,7 @@ func (r *registryImpl) ingest(expected v1.Descriptor, content io.ReadCloser) (st
 	return fPathCompleted, nil
 }
 
-func hashOldContents(content io.ReadCloser, bytesExpected int64, h hash.Hash, fp *os.File) (hash.Hash, error) {
+func hashOldContents(content io.ReadCloser, bytesExpected int64, h hash.Hash, fp *fileutils.LockedFile) (hash.Hash, error) {
 	if bytesExpected == 0 {
 		return h, nil
 	}
@@ -259,8 +257,8 @@ func hashOldContents(content io.ReadCloser, bytesExpected int64, h hash.Hash, fp
 	return h, errSeekNotSupported
 }
 
-func openFileAndGetSize(fPath string) (*os.File, int64, error) {
-	fp, err := os.OpenFile(fPath, os.O_RDWR|os.O_CREATE, 0644)
+func openFileAndGetSize(fPath string) (*fileutils.LockedFile, int64, error) {
+	fp, err := fileutils.OpenLockedFile(fPath, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return nil, 0, err
 	}
