@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"io"
 	"os"
+	"strings"
 )
 
 // Manager is a generic wrapper around a state object T which is serialized to the storage as JSON.
@@ -101,6 +102,10 @@ func (m *Manager[T]) Load() (*T, error) {
 		if errors.As(err, &syntaxError) {
 			return &m.state, nil
 		}
+		if strings.Contains(err.Error(), "unexpected end of JSON input") {
+			log.WithError(err).Info("detected error based on error string")
+			return &m.state, nil
+		}
 		return nil, err
 	}
 	// call sync to make sure it is written to the disk
@@ -140,6 +145,7 @@ func (m *Manager[T]) ModifyState(cb func(*T) error) error {
 			m.state = oldState
 		}
 	}
+	_ = fp.Close()
 	err = cb(&m.state)
 	if err != nil {
 		return err
