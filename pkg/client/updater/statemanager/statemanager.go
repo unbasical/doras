@@ -67,8 +67,7 @@ func (m *Manager[T]) Commit() error {
 		_ = fp.Close()
 		return err
 	}
-	_ = fp.Close()
-	return nil
+	return errors.Join(fp.Sync(), fp.Close())
 }
 
 // Load acquires a shared lock, then reads and decodes the state from the file.
