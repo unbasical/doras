@@ -131,7 +131,11 @@ func cleanupLegacyState(err error, statePath string, client *Client) error {
 		}{}
 		err = json.Unmarshal(oldState, &s)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal old state: %w", err)
+			log.Infof("purging internal directory at %v (failed to unmarshal old state: %v)", client.opts.InternalDirectory, err)
+			err := os.RemoveAll(client.opts.InternalDirectory)
+			if err != nil {
+				return fmt.Errorf("failed to remove old state: %w", err)
+			}
 		}
 		if s.Version == "1" {
 			log.Infof("Detected version 1 state file, deleting for sanity reasons")
