@@ -136,6 +136,7 @@ func cleanupLegacyState(err error, statePath string, client *Client) error {
 			if err != nil {
 				return fmt.Errorf("failed to remove old state: %w", err)
 			}
+			return nil
 		}
 		if s.Version == "1" {
 			log.Infof("Detected version 1 state file, deleting for sanity reasons")
