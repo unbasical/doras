@@ -3,6 +3,7 @@ package bsdiff
 import (
 	"bytes"
 	"io"
+	"io/fs"
 	"os"
 	"testing"
 
@@ -152,6 +153,14 @@ func TestPatcher_PatchFilesystem(t *testing.T) {
 			}
 			if !bytes.Equal(tt.want, got) {
 				t.Fatalf("wanted %v, got %v", tt.want, got)
+			}
+			stat, err := os.Stat(workingDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			expectedPerms := 0755 | fs.ModeDir
+			if stat.Mode() != expectedPerms {
+				t.Fatalf("output directory permissions do not match expected permission: got=%v, expected=%v", stat.Mode(), expectedPerms)
 			}
 		})
 	}

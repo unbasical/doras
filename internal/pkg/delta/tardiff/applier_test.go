@@ -8,6 +8,7 @@ import (
 	"github.com/unbasical/doras/internal/pkg/utils/tarutils"
 	"github.com/unbasical/doras/pkg/algorithm/delta"
 	"io"
+	"io/fs"
 	"os"
 	"testing"
 
@@ -165,6 +166,10 @@ func Test_patcher_PatchFilesystem(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				err = os.Chmod(outDir, 0755)
+				if err != nil {
+					t.Fatal(err)
+				}
 				expectedDir, err := os.MkdirTemp(t.TempDir(), "expected-dir-*")
 				if err != nil {
 					t.Fatal(err)
@@ -182,6 +187,7 @@ func Test_patcher_PatchFilesystem(t *testing.T) {
 					return
 				}
 				patcherDir := t.TempDir()
+
 				a := NewPatcherWithTempDir(patcherDir, keepOldDir)
 				err = a.PatchFilesystem(outDir, bytes.NewReader(tt.args.patch), tt.args.expected)
 				if (err != nil) != tt.wantErr {
@@ -198,6 +204,14 @@ func Test_patcher_PatchFilesystem(t *testing.T) {
 				eq, _ := fileutils.CompareDirectories(outDir, expectedDir)
 				if !eq {
 					t.Fatalf("output directory does not match expected directory")
+				}
+				stat, err := os.Stat(outDir)
+				if err != nil {
+					t.Fatal(err)
+				}
+				expectedPerms := 0755 | fs.ModeDir
+				if stat.Mode() != expectedPerms {
+					t.Fatalf("output directory permissions do not match expected permission: got=%v, expected=%v", stat.Mode(), expectedPerms)
 				}
 			}
 		})
