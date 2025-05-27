@@ -18,6 +18,7 @@ import (
 	"github.com/unbasical/doras/pkg/client/updater/fetcher"
 	"github.com/unbasical/doras/pkg/client/updater/statemanager"
 	"github.com/unbasical/doras/pkg/client/updater/updaterstate"
+	"github.com/unbasical/doras/pkg/client/updater/validator"
 	"golang.org/x/mod/sumdb/dirhash"
 	"io"
 	"oras.land/oras-go/v2"
@@ -25,6 +26,7 @@ import (
 	"path"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestClient_PullAsyncTardiff(t *testing.T) {
@@ -126,7 +128,7 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 					}
 					return &retval, true, nil
 				}},
-				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s})},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, nil)},
 			args: args{
 				target: targetImage,
 			},
@@ -154,7 +156,7 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 					}
 					return &retval, true, nil
 				}},
-				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s})},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, nil)},
 			args: args{
 				target: targetImage,
 			},
@@ -178,7 +180,7 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
 					return nil, false, apicommon.ErrImagesIncompatible
 				}},
-				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s})},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, nil)},
 			args: args{
 				target: targetImage,
 			},
@@ -202,7 +204,7 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
 					return nil, false, apicommon.ErrImagesIdentical
 				}},
-				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s})},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, nil)},
 			args: args{
 				target: targetImage,
 			},
@@ -226,7 +228,7 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
 					return nil, false, errors.New("some error")
 				}},
-				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}),
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, nil),
 			},
 			args: args{
 				target: targetImage,
@@ -251,7 +253,7 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
 					return nil, false, errors.New("some error")
 				}},
-				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s})},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, nil)},
 			args: args{
 				target: "registry.example.org/foo:bar",
 			},
@@ -261,6 +263,247 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 			expectedDigest: nil,
 			initialState: initialState{
 				version: nil,
+			},
+		},
+		{
+			name: "error size limit (initialized)",
+			fields: fields{
+				opts: func() clientOpts {
+					return clientOpts{
+						OutputDirectory:   outDir,
+						InternalDirectory: internalDir,
+					}
+				}(),
+				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
+					retval := apicommon.ReadDeltaResponse{
+						TargetImage: targetImage,
+						DeltaImage:  deltaImage,
+					}
+					return &retval, true, nil
+				}},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, []validator.ManifestValidator{
+					validator.SizeLimitedValidator{Limit: 1},
+				})},
+			args: args{
+				target: targetImage,
+			},
+			wantExists:     false,
+			wantErr:        true,
+			expectedDir:    expectedDirErr,
+			expectedDigest: &currentDescriptor.Digest,
+			initialState: initialState{
+				version: &currentDescriptor,
+			},
+		},
+		{
+			name: "error size limit (uninitialized)",
+			fields: fields{
+				opts: func() clientOpts {
+					return clientOpts{
+						OutputDirectory:   outDir,
+						InternalDirectory: internalDir,
+						Validators: []validator.ManifestValidator{
+							validator.SizeLimitedValidator{Limit: 1},
+						},
+					}
+				}(),
+				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
+					retval := apicommon.ReadDeltaResponse{
+						TargetImage: targetImage,
+						DeltaImage:  deltaImage,
+					}
+					return &retval, true, nil
+				}},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, []validator.ManifestValidator{
+					validator.SizeLimitedValidator{Limit: 1},
+				})},
+			args: args{
+				target: targetImage,
+			},
+			wantExists:     false,
+			wantErr:        true,
+			expectedDir:    expectedDirEmpty,
+			expectedDigest: nil,
+			initialState: initialState{
+				version: nil,
+			},
+		},
+		{
+			name: "success size limit (initialized)",
+			fields: fields{
+				opts: func() clientOpts {
+					return clientOpts{
+						OutputDirectory:   outDir,
+						InternalDirectory: internalDir,
+					}
+				}(),
+				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
+					retval := apicommon.ReadDeltaResponse{
+						TargetImage: targetImage,
+						DeltaImage:  deltaImage,
+					}
+					return &retval, true, nil
+				}},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, []validator.ManifestValidator{
+					validator.SizeLimitedValidator{Limit: 0xffff},
+				})},
+			args: args{
+				target: targetImage,
+			},
+			wantExists:     true,
+			wantErr:        false,
+			expectedDir:    expectedDir,
+			expectedDigest: &targetDescriptor.Digest,
+			initialState: initialState{
+				version: &targetDescriptor,
+			},
+		},
+		{
+			name: "success size limit (uninitialized)",
+			fields: fields{
+				opts: func() clientOpts {
+					return clientOpts{
+						OutputDirectory:   outDir,
+						InternalDirectory: internalDir,
+						Validators: []validator.ManifestValidator{
+							validator.SizeLimitedValidator{Limit: 1},
+						},
+					}
+				}(),
+				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
+					retval := apicommon.ReadDeltaResponse{
+						TargetImage: targetImage,
+						DeltaImage:  deltaImage,
+					}
+					return &retval, true, nil
+				}},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, []validator.ManifestValidator{
+					validator.SizeLimitedValidator{Limit: 0xffff},
+				})},
+			args: args{
+				target: targetImage,
+			},
+			wantExists:     true,
+			wantErr:        false,
+			expectedDir:    expectedDir,
+			expectedDigest: &targetDescriptor.Digest,
+			initialState: initialState{
+				version: nil,
+			},
+		},
+		{
+			name: "success volume limit (uninitialized)",
+			fields: fields{
+				opts: func() clientOpts {
+					return clientOpts{
+						OutputDirectory:   outDir,
+						InternalDirectory: internalDir,
+						Validators: []validator.ManifestValidator{
+							validator.SizeLimitedValidator{Limit: 10000},
+						},
+					}
+				}(),
+				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
+					retval := apicommon.ReadDeltaResponse{
+						TargetImage: targetImage,
+						DeltaImage:  deltaImage,
+					}
+					return &retval, true, nil
+				}},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, []validator.ManifestValidator{
+					validator.VolumeLimitValidator{
+						Limit:    10,
+						Period:   funcutils.Unwrap(time.ParseDuration("24h")),
+						StatsDir: path.Join(t.TempDir(), "volume-limit-uninitialized"),
+					},
+				})},
+			args: args{
+				target: targetImage,
+			},
+			wantExists:     false,
+			wantErr:        true,
+			expectedDir:    expectedDirEmpty,
+			expectedDigest: nil,
+			initialState: initialState{
+				version: nil,
+			},
+		},
+		{
+			name: "error volume limit (uninitialized)",
+			fields: fields{
+				opts: func() clientOpts {
+					return clientOpts{
+						OutputDirectory:   outDir,
+						InternalDirectory: internalDir,
+						Validators: []validator.ManifestValidator{
+							validator.SizeLimitedValidator{Limit: 1},
+						},
+					}
+				}(),
+				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
+					retval := apicommon.ReadDeltaResponse{
+						TargetImage: targetImage,
+						DeltaImage:  deltaImage,
+					}
+					return &retval, true, nil
+				}},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, []validator.ManifestValidator{
+					validator.VolumeLimitValidator{
+						Limit:    10,
+						Period:   funcutils.Unwrap(time.ParseDuration("24h")),
+						StatsDir: path.Join(t.TempDir(), "volume-limit-uninitialized"),
+					},
+				})},
+			args: args{
+				target: targetImage,
+			},
+			wantExists:     false,
+			wantErr:        true,
+			expectedDir:    expectedDirEmpty,
+			expectedDigest: nil,
+			initialState: initialState{
+				version: nil,
+			},
+		},
+		{
+			name: "error volume limit (initialized)",
+			fields: fields{
+				opts: func() clientOpts {
+					return clientOpts{
+						OutputDirectory:   outDir,
+						InternalDirectory: internalDir,
+					}
+				}(),
+				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
+					retval := apicommon.ReadDeltaResponse{
+						TargetImage: targetImage,
+						DeltaImage:  deltaImage,
+					}
+					return &retval, true, nil
+				}},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, []validator.ManifestValidator{
+					validator.VolumeLimitValidator{
+						Limit:  0xffff,
+						Period: funcutils.Unwrap(time.ParseDuration("24h")),
+						StatsDir: func() string {
+							statsDir := path.Join(t.TempDir(), "volume-limit-uninitialized")
+							err := validator.WriteUintToFile(statsDir, 0xffff-1)
+							if err != nil {
+								t.Fatal(err)
+							}
+							return statsDir
+						}(),
+					},
+				})},
+			args: args{
+				target: targetImage,
+			},
+			wantExists:     false,
+			wantErr:        true,
+			expectedDir:    expectedDirErr,
+			expectedDigest: &currentDescriptor.Digest,
+			initialState: initialState{
+				version: &currentDescriptor,
 			},
 		},
 	}
@@ -459,7 +702,7 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 					}
 					return &retval, true, nil
 				}},
-				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s})},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, nil)},
 			args: args{
 				target: targetImage,
 			},
@@ -487,7 +730,7 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 					}
 					return &retval, true, nil
 				}},
-				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s})},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, nil)},
 			args: args{
 				target: targetImage,
 			},
@@ -511,7 +754,7 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
 					return nil, false, apicommon.ErrImagesIncompatible
 				}},
-				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s})},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, nil)},
 			args: args{
 				target: targetImage,
 			},
@@ -535,7 +778,7 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
 					return nil, false, apicommon.ErrImagesIdentical
 				}},
-				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s})},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, nil)},
 			args: args{
 				target: targetImage,
 			},
@@ -559,7 +802,7 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
 					return nil, false, errors.New("some error")
 				}},
-				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}),
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, nil),
 			},
 			args: args{
 				target: targetImage,
@@ -584,9 +827,72 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
 					return nil, false, errors.New("some error")
 				}},
-				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s})},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, nil)},
 			args: args{
 				target: "registry.example.org/foo:bar",
+			},
+			wantExists:     false,
+			wantErr:        true,
+			expectedDir:    expectedDirEmpty,
+			expectedDigest: nil,
+			initialState: initialState{
+				version: nil,
+			},
+		},
+		{
+			name: "error size limit (initialized)",
+			fields: fields{
+				opts: func() clientOpts {
+					return clientOpts{
+						OutputDirectory:   outDir,
+						InternalDirectory: internalDir,
+					}
+				}(),
+				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
+					retval := apicommon.ReadDeltaResponse{
+						TargetImage: targetImage,
+						DeltaImage:  deltaImage,
+					}
+					return &retval, true, nil
+				}},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, []validator.ManifestValidator{
+					validator.SizeLimitedValidator{Limit: 1},
+				})},
+			args: args{
+				target: targetImage,
+			},
+			wantExists:     false,
+			wantErr:        true,
+			expectedDir:    expectedDirErr,
+			expectedDigest: &currentDescriptor.Digest,
+			initialState: initialState{
+				version: &currentDescriptor,
+			},
+		},
+		{
+			name: "error size limit (uninitialized)",
+			fields: fields{
+				opts: func() clientOpts {
+					return clientOpts{
+						OutputDirectory:   outDir,
+						InternalDirectory: internalDir,
+						Validators: []validator.ManifestValidator{
+							validator.SizeLimitedValidator{Limit: 1},
+						},
+					}
+				}(),
+				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
+					retval := apicommon.ReadDeltaResponse{
+						TargetImage: targetImage,
+						DeltaImage:  deltaImage,
+					}
+					return &retval, true, nil
+				}},
+				reg: fetcher.NewArtifactLoader(t.TempDir(), &mockStorageSource{s: s}, []validator.ManifestValidator{
+					validator.SizeLimitedValidator{Limit: 1},
+				})},
+			args: args{
+				target: targetImage,
 			},
 			wantExists:     false,
 			wantErr:        true,

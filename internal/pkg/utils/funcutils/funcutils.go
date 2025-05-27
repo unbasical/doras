@@ -20,3 +20,11 @@ func IdentityFunc[T any](t T) func() T {
 		return t
 	}
 }
+
+// Unwrap returns the value or panics on err.
+func Unwrap[T any](t T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
