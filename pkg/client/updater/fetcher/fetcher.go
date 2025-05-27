@@ -12,6 +12,7 @@ import (
 	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
+	"github.com/unbasical/doras/pkg/client/updater/inspector"
 	"github.com/unbasical/doras/pkg/client/updater/validator"
 	"github.com/unbasical/doras/pkg/constants"
 	"hash"
@@ -34,6 +35,7 @@ type ArtifactLoader interface {
 type registryImpl struct {
 	workingDir   string
 	mfValidators []validator.ManifestValidator
+	inspectors   []inspector.ArtifactInspector
 	StorageSource
 }
 
@@ -65,11 +67,12 @@ func NewRepoStorageSource(insecureAllowHttp bool, credentialFunc auth.Credential
 
 // NewArtifactLoader returns an artifact loader that fetches artifacts via the provided StorageSource.
 // It implements the ability to pick up interrupted fetches.
-func NewArtifactLoader(workingDir string, storageSource StorageSource, validators []validator.ManifestValidator) ArtifactLoader {
+func NewArtifactLoader(workingDir string, storageSource StorageSource, validators []validator.ManifestValidator, inspectors []inspector.ArtifactInspector) ArtifactLoader {
 	return &registryImpl{
 		workingDir:    workingDir,
 		StorageSource: storageSource,
 		mfValidators:  validators,
+		inspectors:    inspectors,
 	}
 }
 
@@ -109,6 +112,10 @@ func (r *registryImpl) resolveAndLoad(image string) (v1.Descriptor, ociutils.Man
 	mf, err := ociutils.ParseManifestJSON(mfReader)
 	if err != nil {
 		return v1.Descriptor{}, ociutils.Manifest{}, nil, err
+	}
+	err = errors.Join(lo.Map(r.inspectors, func(v inspector.ArtifactInspector, _ int) error { return v.InspectManifest(mf) })...)
+	if err != nil {
+		return v1.Descriptor{}, ociutils.Manifest{}, nil, fmt.Errorf("at least one inspector failed: %w", err)
 	}
 	err = errors.Join(lo.Map(r.mfValidators, func(v validator.ManifestValidator, _ int) error { return v.Validate(&mfD, mf) })...)
 	if err != nil {
@@ -213,7 +220,15 @@ func (r *registryImpl) ingest(expected v1.Descriptor, content io.ReadCloser) (st
 		// we start from 0 if we cannot seek
 		n = 0
 	}
-
+	for _, ins := range r.inspectors {
+		content, err = ins.InspectContents(content)
+		if err != nil {
+			return "", err
+		}
+	}
+	defer func() {
+		_ = content.Close()
+	}()
 	// Use a writer that makes sure the changes are flushed to the disk.
 	// This is done to increase robustness against power loss during ingesting which might cause inconsistencies.
 	tr := io.TeeReader(content, h)

@@ -10,6 +10,7 @@ import (
 	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 	"github.com/unbasical/doras/pkg/backoff"
 	"github.com/unbasical/doras/pkg/client/updater/fetcher"
+	"github.com/unbasical/doras/pkg/client/updater/inspector"
 	"github.com/unbasical/doras/pkg/client/updater/statemanager"
 	"github.com/unbasical/doras/pkg/client/updater/updaterstate"
 	"github.com/unbasical/doras/pkg/client/updater/validator"
@@ -32,6 +33,7 @@ type clientOpts struct {
 	InsecureAllowHTTP  bool
 	KeepOldDir         bool
 	Validators         []validator.ManifestValidator
+	Inspectors         []inspector.ArtifactInspector
 }
 
 // NewClient creates a new Doras update client with the provided options.
@@ -117,7 +119,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	}
 
 	storageSource := fetcher.NewRepoStorageSource(false, credFunc)
-	client.reg = fetcher.NewArtifactLoader(fetcherDir, storageSource, client.opts.Validators)
+	client.reg = fetcher.NewArtifactLoader(fetcherDir, storageSource, client.opts.Validators, client.opts.Inspectors)
 	return client, nil
 }
 

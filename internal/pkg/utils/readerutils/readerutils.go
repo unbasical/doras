@@ -5,6 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -99,4 +100,31 @@ func (f *CleanupReadCloser) Close() error {
 		f.reader.Close(),
 		f.cleanupFunc(),
 	)
+}
+
+// CountingReader is a wrapper around io.ReadCloser that tracks the total number of bytes read using an atomic counter.
+type CountingReader struct {
+	bytesRead *atomic.Uint64
+	rc        io.ReadCloser
+}
+
+// NewCountingReader creates a wrapper around io.ReadCloser that tracks the total bytes read using an atomic counter.
+func NewCountingReader(rc io.ReadCloser, bytesRead *atomic.Uint64) io.ReadCloser {
+	return &CountingReader{
+		rc:        rc,
+		bytesRead: bytesRead,
+	}
+}
+
+func (c *CountingReader) Read(p []byte) (n int, err error) {
+	n, err = c.rc.Read(p)
+	if err != nil {
+		return n, err
+	}
+	c.bytesRead.Add(uint64(n))
+	return n, nil
+}
+
+func (c *CountingReader) Close() error {
+	return c.rc.Close()
 }

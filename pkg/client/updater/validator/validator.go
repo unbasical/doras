@@ -4,14 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
-	"github.com/unbasical/doras/internal/pkg/utils/observer"
 	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
-	"sync/atomic"
 	"time"
 )
 
@@ -40,19 +37,26 @@ type VolumeLimitValidator struct {
 }
 
 func (v VolumeLimitValidator) consumedVolume() (uint64, error) {
-	entries, err := os.ReadDir(v.StatsDir)
+	return SumUpDownloadStats(v.StatsDir, v.Period)
+}
+
+// SumUpDownloadStats calculates the sum of uint64 values from files in statsDir modified within the given period.
+// Files older than the period are deleted, and errors during operations are returned where applicable.
+// The opposite function is inspector.WriteUintToFile.
+func SumUpDownloadStats(statsDir string, period time.Duration) (uint64, error) {
+	entries, err := os.ReadDir(statsDir)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return 0, nil
 		}
-		return 0, fmt.Errorf("failed to read directory %s: %w", v.StatsDir, err)
+		return 0, fmt.Errorf("failed to read directory %s: %w", statsDir, err)
 	}
 
 	now := time.Now().UTC()
 	var sum uint64
 
 	for _, entry := range entries {
-		fullPath := filepath.Join(v.StatsDir, entry.Name())
+		fullPath := filepath.Join(statsDir, entry.Name())
 
 		info, err := entry.Info()
 		if err != nil {
@@ -63,7 +67,7 @@ func (v VolumeLimitValidator) consumedVolume() (uint64, error) {
 		age := now.Sub(info.ModTime().UTC())
 
 		// Delete files older than maxAge
-		if age > v.Period {
+		if age > period {
 			if err := os.Remove(fullPath); err != nil {
 				return sum, fmt.Errorf("failed to delete old file %s: %w", fullPath, err)
 			}
@@ -106,6 +110,7 @@ func checkSizeLimit(desc *v1.Descriptor, mf *ociutils.Manifest, baseSize, limit 
 
 // WriteUintToFile creates a file in the specified directory with the current UTC Unix time
 // as its name and writes the provided uint64 value into it.
+// The opposite function is validator.SumUpDownloadStats.
 func WriteUintToFile(dir string, value uint64) error {
 	// Ensure the directory exists (creates it if necessary)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -131,21 +136,4 @@ func WriteUintToFile(dir string, value uint64) error {
 		f.Truncate(int64(n)),
 		f.Sync(),
 	)
-}
-
-// ObserveDownloadStats periodically observes a uint64 atomic value and writes it to a file in the specified directory.
-// dir specifies the directory where the observation results are stored.
-// p is a pointer to the atomic uint64 value to be observed.
-// stop is a channel to signal when the periodic observation should stop.
-// Returns an error if any occurs during the observation or file writing process.
-func ObserveDownloadStats(dir string, p *atomic.Uint64, stop <-chan any) error {
-	o := observer.IntervalObserver[*atomic.Uint64]{
-		Interval: funcutils.Unwrap(time.ParseDuration("15s")),
-		F: func(p *atomic.Uint64) error {
-			loaded := p.Load()
-			return WriteUintToFile(dir, loaded)
-		},
-		Observable: p,
-	}
-	return o.Observe(stop)
 }
