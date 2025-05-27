@@ -231,3 +231,10 @@ func WithManifestValidators(validators []validator.ManifestValidator) func(clien
 		c.opts.Validators = validators
 	}
 }
+
+// WithArtifactInspectors configures a Client with a list of ArtifactInspector instances to be used for artifact inspection.
+func WithArtifactInspectors(inspectors []inspector.ArtifactInspector) func(client *Client) {
+	return func(c *Client) {
+		c.opts.Inspectors = inspectors
+	}
+}
