@@ -15,25 +15,31 @@ import (
 	"time"
 )
 
+// ManifestValidator defines an interface for validating an OCI manifest against specific criteria or rules.
 type ManifestValidator interface {
 	Validate(desc *v1.Descriptor, mf *ociutils.Manifest) error
 }
 
+// SizeLimitedValidator ensures that the size of an artifact does not exceed a specified limit.
+// Limit specifies the maximum allowed size in bytes.
 type SizeLimitedValidator struct {
 	Limit uint64
 }
 
+// Validate checks if the total size of the artifact does not exceed the configured size limit.
+// It returns an error if the size exceeds the limit or nil otherwise.
 func (s SizeLimitedValidator) Validate(desc *v1.Descriptor, mf *ociutils.Manifest) error {
 	return checkSizeLimit(desc, mf, 0, s.Limit)
 }
 
+// VolumeLimitValidator validates volume usage against a specified limit within a given time period and directory.
 type VolumeLimitValidator struct {
 	StatsDir string
 	Limit    uint64
 	Period   time.Duration
 }
 
-func (v VolumeLimitValidator) ConsumedVolume() (uint64, error) {
+func (v VolumeLimitValidator) consumedVolume() (uint64, error) {
 	entries, err := os.ReadDir(v.StatsDir)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -78,8 +84,9 @@ func (v VolumeLimitValidator) ConsumedVolume() (uint64, error) {
 	return sum, nil
 }
 
+// Validate checks if the combined size of the descriptor and manifest exceeds the configured volume limit.
 func (v VolumeLimitValidator) Validate(desc *v1.Descriptor, mf *ociutils.Manifest) error {
-	consumed, err := v.ConsumedVolume()
+	consumed, err := v.consumedVolume()
 	if err != nil {
 		return err
 	}
@@ -126,6 +133,11 @@ func WriteUintToFile(dir string, value uint64) error {
 	)
 }
 
+// ObserveDownloadStats periodically observes a uint64 atomic value and writes it to a file in the specified directory.
+// dir specifies the directory where the observation results are stored.
+// p is a pointer to the atomic uint64 value to be observed.
+// stop is a channel to signal when the periodic observation should stop.
+// Returns an error if any occurs during the observation or file writing process.
 func ObserveDownloadStats(dir string, p *atomic.Uint64, stop <-chan any) error {
 	o := observer.IntervalObserver[*atomic.Uint64]{
 		Interval: funcutils.Unwrap(time.ParseDuration("15s")),
