@@ -72,7 +72,7 @@ func ObserveDownloadStats(dir string, p *atomic.Uint64, stop <-chan any) error {
 	o := observer.IntervalObserver[*atomic.Uint64]{
 		Interval: funcutils.Unwrap(time.ParseDuration("15s")),
 		F: func(p *atomic.Uint64) error {
-			loaded := p.Load()
+			loaded := p.Swap(0)
 			return validator.WriteUintToFile(dir, loaded)
 		},
 		Observable: p,
