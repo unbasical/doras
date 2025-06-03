@@ -10,8 +10,10 @@ import (
 	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 	"github.com/unbasical/doras/pkg/backoff"
 	"github.com/unbasical/doras/pkg/client/updater/fetcher"
+	"github.com/unbasical/doras/pkg/client/updater/inspector"
 	"github.com/unbasical/doras/pkg/client/updater/statemanager"
 	"github.com/unbasical/doras/pkg/client/updater/updaterstate"
+	"github.com/unbasical/doras/pkg/client/updater/validator"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/credentials"
 	"os"
@@ -30,6 +32,8 @@ type clientOpts struct {
 	CredFuncs          []auth.CredentialFunc
 	InsecureAllowHTTP  bool
 	KeepOldDir         bool
+	Validators         []validator.ManifestValidator
+	Inspectors         []inspector.ArtifactInspector
 }
 
 // NewClient creates a new Doras update client with the provided options.
@@ -115,7 +119,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	}
 
 	storageSource := fetcher.NewRepoStorageSource(false, credFunc)
-	client.reg = fetcher.NewArtifactLoader(fetcherDir, storageSource)
+	client.reg = fetcher.NewArtifactLoader(fetcherDir, storageSource, client.opts.Validators, client.opts.Inspectors)
 	return client, nil
 }
 
@@ -164,7 +168,7 @@ func WithOutputDirectory(outputDirectory string) func(*Client) {
 }
 
 // WithInternalDirectory sets the client configurations local working directory.
-// It stores things such as the updaters internal state.
+// It stores things such as the updater's internal state.
 func WithInternalDirectory(internalDirectory string) func(*Client) {
 	return func(c *Client) {
 		c.opts.InternalDirectory = internalDirectory
@@ -218,5 +222,19 @@ func WithInsecureAllowHTTP(insecureAllowHTTP bool) func(*Client) {
 func WithKeepOldDir(keepOldDir bool) func(*Client) {
 	return func(c *Client) {
 		c.opts.KeepOldDir = keepOldDir
+	}
+}
+
+// WithManifestValidators adds a collection of validators to the client which inspect the manifest before fetching the artifact.
+func WithManifestValidators(validators []validator.ManifestValidator) func(client *Client) {
+	return func(c *Client) {
+		c.opts.Validators = validators
+	}
+}
+
+// WithArtifactInspectors configures a Client with a list of ArtifactInspector instances to be used for artifact inspection.
+func WithArtifactInspectors(inspectors []inspector.ArtifactInspector) func(client *Client) {
+	return func(c *Client) {
+		c.opts.Inspectors = inspectors
 	}
 }

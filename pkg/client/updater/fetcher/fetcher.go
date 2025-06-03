@@ -5,12 +5,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"hash"
-	"io"
-	"os"
-	"path"
-	"strings"
-
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/samber/lo"
@@ -18,11 +12,18 @@ import (
 	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
 	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
+	"github.com/unbasical/doras/pkg/client/updater/inspector"
+	"github.com/unbasical/doras/pkg/client/updater/validator"
 	"github.com/unbasical/doras/pkg/constants"
+	"hash"
+	"io"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
+	"os"
+	"path"
+	"strings"
 )
 
 // ArtifactLoader is used to load artifacts from a registry.
@@ -32,7 +33,9 @@ type ArtifactLoader interface {
 }
 
 type registryImpl struct {
-	workingDir string
+	workingDir   string
+	mfValidators []validator.ManifestValidator
+	inspectors   []inspector.ArtifactInspector
 	StorageSource
 }
 
@@ -64,10 +67,12 @@ func NewRepoStorageSource(insecureAllowHttp bool, credentialFunc auth.Credential
 
 // NewArtifactLoader returns an artifact loader that fetches artifacts via the provided StorageSource.
 // It implements the ability to pick up interrupted fetches.
-func NewArtifactLoader(workingDir string, storageSource StorageSource) ArtifactLoader {
+func NewArtifactLoader(workingDir string, storageSource StorageSource, validators []validator.ManifestValidator, inspectors []inspector.ArtifactInspector) ArtifactLoader {
 	return &registryImpl{
 		workingDir:    workingDir,
 		StorageSource: storageSource,
+		mfValidators:  validators,
+		inspectors:    inspectors,
 	}
 }
 
@@ -108,6 +113,14 @@ func (r *registryImpl) resolveAndLoad(image string) (v1.Descriptor, ociutils.Man
 	if err != nil {
 		return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 	}
+	err = errors.Join(lo.Map(r.inspectors, func(v inspector.ArtifactInspector, _ int) error { return v.InspectManifest(mf) })...)
+	if err != nil {
+		return v1.Descriptor{}, ociutils.Manifest{}, nil, fmt.Errorf("at least one inspector failed: %w", err)
+	}
+	err = errors.Join(lo.Map(r.mfValidators, func(v validator.ManifestValidator, _ int) error { return v.Validate(&mfD, mf) })...)
+	if err != nil {
+		return v1.Descriptor{}, ociutils.Manifest{}, nil, fmt.Errorf("at least one validator failed: %w", err)
+	}
 	// TODO: also support older manifest versions
 	var artifacts []v1.Descriptor
 	if len(mf.Layers) > 0 {
@@ -118,6 +131,7 @@ func (r *registryImpl) resolveAndLoad(image string) (v1.Descriptor, ociutils.Man
 
 	res := make([]LoadResult, 0, len(artifacts))
 	for _, d := range artifacts {
+		// add stats here
 		rc, err := src.Fetch(context.Background(), d)
 		if err != nil {
 			return v1.Descriptor{}, ociutils.Manifest{}, nil, err
@@ -206,7 +220,15 @@ func (r *registryImpl) ingest(expected v1.Descriptor, content io.ReadCloser) (st
 		// we start from 0 if we cannot seek
 		n = 0
 	}
-
+	for _, ins := range r.inspectors {
+		content, err = ins.InspectContents(content)
+		if err != nil {
+			return "", err
+		}
+	}
+	defer func() {
+		_ = content.Close()
+	}()
 	// Use a writer that makes sure the changes are flushed to the disk.
 	// This is done to increase robustness against power loss during ingesting which might cause inconsistencies.
 	tr := io.TeeReader(content, h)
