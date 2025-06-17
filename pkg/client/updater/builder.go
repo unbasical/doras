@@ -46,7 +46,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 			OutputDirectory:      ".",
 			InternalDirectory:    "~/.local/share/doras",
 			DockerConfigPath:     filepath.Join(os.Getenv("HOME"), ".docker", "config.json"),
-			OutputDirPermissions: 0755,
+			OutputDirPermissions: 0777,
 		},
 		backoff: backoff.DefaultBackoff(),
 	}
