@@ -189,7 +189,7 @@ func Test_patcher_PatchFilesystem(t *testing.T) {
 				}
 				patcherDir := t.TempDir()
 
-				a := NewPatcherWithTempDir(patcherDir, keepOldDir, 0755)
+				a := NewPatcherWithTempDir(patcherDir, keepOldDir, 0777)
 				err = a.PatchFilesystem(outDir, bytes.NewReader(tt.args.patch), tt.args.expected)
 				if (err != nil) != tt.wantErr {
 					t.Fatalf("PatchFilesystem() error = %v, wantErr %v", err, tt.wantErr)
@@ -210,8 +210,8 @@ func Test_patcher_PatchFilesystem(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				expectedPerms := 0755 | fs.ModeDir
-				if stat.Mode() != expectedPerms {
+				expectedPerms := 0777 | fs.ModeDir
+				if tt.wantErr == false && stat.Mode() != expectedPerms {
 					t.Fatalf("output directory permissions do not match expected permission: got=%v, expected=%v", stat.Mode(), expectedPerms)
 				}
 			}

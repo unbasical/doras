@@ -52,6 +52,10 @@ func (a *applier) PatchFilesystem(artifactDir string, patch io.Reader, expected 
 	if err != nil {
 		return err
 	}
+	err = os.Chmod(artifactDir, a.outputDirPermissions)
+	if err != nil {
+		return err
+	}
 	defer func() {
 		// this removes the temp dir if there is an error elsewhere
 		// if there is no error elsewhere this will cause an error on removal (as intended)
