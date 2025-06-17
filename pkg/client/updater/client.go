@@ -194,6 +194,7 @@ func (c *Client) patchArtifact(d fetcher.LoadResult) error {
 	return nil
 }
 
+//nolint:revive
 func (c *Client) pullFullImage(targetImage string) (bool, error) {
 	log.Info("attempting to load full artifact")
 	repoName, _, _, err := ociutils.ParseOciImageString(targetImage)
@@ -245,6 +246,10 @@ func (c *Client) pullFullImage(targetImage string) (bool, error) {
 	}
 	// replace output directory once we fully populated the directory
 	err = fileutils.ReplaceDirectory(extractDir, c.opts.OutputDirectory)
+	if err != nil {
+		return false, err
+	}
+	err = os.Chmod(c.opts.OutputDirectory, c.opts.OutputDirPermissions)
 	if err != nil {
 		return false, err
 	}
