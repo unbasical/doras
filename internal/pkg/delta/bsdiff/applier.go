@@ -3,11 +3,12 @@ package bsdiff
 import (
 	"crypto/sha256"
 	"fmt"
-	"github.com/samber/lo"
-	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 	"io"
 	"os"
 	"path"
+
+	"github.com/samber/lo"
+	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 
 	"github.com/opencontainers/go-digest"
 	"github.com/unbasical/doras/pkg/algorithm/delta"

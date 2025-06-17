@@ -5,6 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"path"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/unbasical/doras/internal/pkg/api/apicommon"
@@ -21,13 +28,7 @@ import (
 	"github.com/unbasical/doras/pkg/client/updater/updaterstate"
 	"github.com/unbasical/doras/pkg/client/updater/validator"
 	"golang.org/x/mod/sumdb/dirhash"
-	"io"
 	"oras.land/oras-go/v2"
-	"os"
-	"path"
-	"strings"
-	"testing"
-	"time"
 )
 
 func TestClient_PullAsyncTardiff(t *testing.T) {
@@ -123,8 +124,9 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -151,8 +153,9 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -179,8 +182,9 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -203,8 +207,9 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -227,8 +232,9 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -252,8 +258,9 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -276,8 +283,9 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -311,6 +319,7 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 						Validators: []validator.ManifestValidator{
 							validator.SizeLimitedValidator{Limit: 1},
 						},
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -339,8 +348,9 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -374,6 +384,7 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 						Validators: []validator.ManifestValidator{
 							validator.SizeLimitedValidator{Limit: 1},
 						},
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -407,6 +418,7 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 						Validators: []validator.ManifestValidator{
 							validator.SizeLimitedValidator{Limit: 10000},
 						},
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -444,6 +456,7 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 						Validators: []validator.ManifestValidator{
 							validator.SizeLimitedValidator{Limit: 1},
 						},
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -476,8 +489,9 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -517,8 +531,9 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -554,8 +569,9 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {

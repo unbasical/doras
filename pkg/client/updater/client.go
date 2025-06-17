@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"golang.org/x/mod/sumdb/dirhash"
 	"os"
 	"path"
 	"strings"
+
+	"golang.org/x/mod/sumdb/dirhash"
 
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -83,7 +84,7 @@ func (c *Client) getPatcherChoice(d *v1.Descriptor, patcherTmpDir string) (algor
 	case "bsdiff":
 		choice.Patcher = bsdiff.NewPatcherWithTempDir(patcherTmpDir)
 	case "tardiff":
-		choice.Patcher = tardiff.NewPatcherWithTempDir(patcherTmpDir, c.opts.KeepOldDir)
+		choice.Patcher = tardiff.NewPatcherWithTempDir(patcherTmpDir, c.opts.KeepOldDir, c.opts.OutputDirPermissions)
 	default:
 		return algorithmchoice.PatcherChoice{}, fmt.Errorf("unsupported patcher: %s", split[0])
 	}

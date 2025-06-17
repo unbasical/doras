@@ -2,11 +2,12 @@ package tardiff
 
 import (
 	"compress/gzip"
-	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
+
+	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 
 	tarpatch "github.com/containers/tar-diff/pkg/tar-patch"
 	"github.com/opencontainers/go-digest"
@@ -21,8 +22,9 @@ import (
 )
 
 type applier struct {
-	tmpDir     string
-	keepOldDir bool
+	tmpDir               string
+	keepOldDir           bool
+	outputDirPermissions os.FileMode
 }
 
 func (a *applier) PatchFilesystem(artifactDir string, patch io.Reader, expected *digest.Digest) error {
@@ -46,7 +48,7 @@ func (a *applier) PatchFilesystem(artifactDir string, patch io.Reader, expected 
 	if err != nil {
 		return err
 	}
-	err = os.Chmod(extractDir, 0755)
+	err = os.Chmod(extractDir, a.outputDirPermissions)
 	if err != nil {
 		return err
 	}
@@ -105,15 +107,17 @@ func (a *applier) replaceInPlace(artifactDir string, extractDir string) error {
 // NewPatcher return a tardiff delta.Patcher.
 func NewPatcher() delta.Patcher {
 	return &applier{
-		tmpDir: os.TempDir(),
+		tmpDir:               os.TempDir(),
+		outputDirPermissions: 0755,
 	}
 }
 
 // NewPatcherWithTempDir return a tardiff delta.Patcher.
-func NewPatcherWithTempDir(tmpDir string, keepOldDir bool) delta.Patcher {
+func NewPatcherWithTempDir(tmpDir string, keepOldDir bool, outputDirPermissions os.FileMode) delta.Patcher {
 	return &applier{
-		tmpDir:     tmpDir,
-		keepOldDir: keepOldDir,
+		tmpDir:               tmpDir,
+		keepOldDir:           keepOldDir,
+		outputDirPermissions: outputDirPermissions,
 	}
 }
 

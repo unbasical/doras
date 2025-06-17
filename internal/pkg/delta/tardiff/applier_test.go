@@ -3,14 +3,15 @@ package tardiff
 import (
 	"bytes"
 	"compress/gzip"
-	"github.com/opencontainers/go-digest"
-	gzip2 "github.com/unbasical/doras/internal/pkg/compression/gzip"
-	"github.com/unbasical/doras/internal/pkg/utils/tarutils"
-	"github.com/unbasical/doras/pkg/algorithm/delta"
 	"io"
 	"io/fs"
 	"os"
 	"testing"
+
+	"github.com/opencontainers/go-digest"
+	gzip2 "github.com/unbasical/doras/internal/pkg/compression/gzip"
+	"github.com/unbasical/doras/internal/pkg/utils/tarutils"
+	"github.com/unbasical/doras/pkg/algorithm/delta"
 
 	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 )
@@ -188,7 +189,7 @@ func Test_patcher_PatchFilesystem(t *testing.T) {
 				}
 				patcherDir := t.TempDir()
 
-				a := NewPatcherWithTempDir(patcherDir, keepOldDir)
+				a := NewPatcherWithTempDir(patcherDir, keepOldDir, 0755)
 				err = a.PatchFilesystem(outDir, bytes.NewReader(tt.args.patch), tt.args.expected)
 				if (err != nil) != tt.wantErr {
 					t.Fatalf("PatchFilesystem() error = %v, wantErr %v", err, tt.wantErr)
