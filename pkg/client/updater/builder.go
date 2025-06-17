@@ -170,6 +170,13 @@ func WithOutputDirectory(outputDirectory string) func(*Client) {
 	}
 }
 
+// WithOutputDirPermissions allows users to control the permissions of the output directory.
+func WithOutputDirPermissions(outputDirPermissions os.FileMode) func(*Client) {
+	return func(c *Client) {
+		c.opts.OutputDirPermissions = outputDirPermissions
+	}
+}
+
 // WithInternalDirectory sets the client configurations local working directory.
 // It stores things such as the updater's internal state.
 func WithInternalDirectory(internalDirectory string) func(*Client) {
