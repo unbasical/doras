@@ -90,7 +90,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	log.Infof("using output dir permissions: %o", client.opts.OutputDirPermissions)
 	err = os.MkdirAll(client.opts.OutputDirectory, client.opts.OutputDirPermissions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
