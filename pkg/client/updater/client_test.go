@@ -794,8 +794,9 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -822,8 +823,9 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -850,8 +852,9 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -874,8 +877,9 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -898,8 +902,9 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -923,8 +928,9 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -947,8 +953,9 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 			fields: fields{
 				opts: func() clientOpts {
 					return clientOpts{
-						OutputDirectory:   outDir,
-						InternalDirectory: internalDir,
+						OutputDirectory:      outDir,
+						InternalDirectory:    internalDir,
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {
@@ -982,6 +989,7 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 						Validators: []validator.ManifestValidator{
 							validator.SizeLimitedValidator{Limit: 1},
 						},
+						OutputDirPermissions: 0755,
 					}
 				}(),
 				edgeClient: &mockApiClient{f: func() (res *apicommon.ReadDeltaResponse, exists bool, err error) {

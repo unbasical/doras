@@ -217,6 +217,10 @@ func (c *Client) pullFullImage(targetImage string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	err = os.Chmod(extractDir, c.opts.OutputDirPermissions)
+	if err != nil {
+		return false, err
+	}
 	defer func() {
 		// remove the extract dir if it has not been removed yet
 		_ = os.RemoveAll(extractDir)

@@ -116,7 +116,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	}
 	client.state = stateManager
 	fetcherDir := path.Join(client.opts.InternalDirectory, "fetcher")
-	err = os.Mkdir(fetcherDir, 0755)
+	err = os.Mkdir(fetcherDir, client.opts.OutputDirPermissions)
 	if err != nil && !errors.Is(err, os.ErrExist) {
 		return nil, err
 	}
