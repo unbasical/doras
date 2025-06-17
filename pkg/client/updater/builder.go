@@ -91,19 +91,27 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 		return nil, err
 	}
 	stat, err := os.Stat(client.opts.OutputDirectory)
-	if err != nil {
-		log.Errorf("error with stat of %q: %v", client.opts.OutputDirectory, err)
+	if errors.Is(err, os.ErrNotExist) {
+		log.Infof(
+			"creating output-directory at: %q with permissions: %o",
+			client.opts.OutputDirectory,
+			client.opts.OutputDirPermissions,
+		)
 	}
-	log.Infof("using output dir permissions: %o", client.opts.OutputDirPermissions)
 	err = os.MkdirAll(client.opts.OutputDirectory, client.opts.OutputDirPermissions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
 	}
 	stat, err = os.Stat(client.opts.OutputDirectory)
-	if err == nil {
-		log.Infof("output dir permissions: %o", stat.Mode())
-	} else {
-		log.Errorf("fstat err: %v", err)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat output directory: %w", err)
+	}
+	if stat.Mode() != client.opts.OutputDirPermissions|os.ModeDir {
+		log.Warn("got output directory permissions that do not match expected, running chmod")
+		err := os.Chmod(client.opts.OutputDirectory, client.opts.OutputDirPermissions)
+		if err != nil {
+			return nil, fmt.Errorf("failed to chmod output directory: %w", err)
+		}
 	}
 	err = os.MkdirAll(client.opts.InternalDirectory, 0755)
 	if err != nil {
