@@ -98,6 +98,8 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	stat, err := os.Stat(client.opts.OutputDirectory)
 	if err == nil {
 		log.Infof("output dir permissions: %o", stat.Mode())
+	} else {
+		log.Errorf("fstat err: %v", err)
 	}
 	err = os.MkdirAll(client.opts.InternalDirectory, 0755)
 	if err != nil {
