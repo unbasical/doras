@@ -95,6 +95,10 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
 	}
+	stat, err := os.Stat(client.opts.OutputDirectory)
+	if err == nil {
+		log.Infof("output dir permissions: %o", stat.Mode())
+	}
 	err = os.MkdirAll(client.opts.InternalDirectory, 0755)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create internal directory: %w", err)
