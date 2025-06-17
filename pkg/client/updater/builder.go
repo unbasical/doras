@@ -39,6 +39,8 @@ type clientOpts struct {
 }
 
 // NewClient creates a new Doras update client with the provided options.
+//
+//nolint:revive
 func NewClient(options ...func(*Client)) (*Client, error) {
 	// init defaults
 	client := &Client{
