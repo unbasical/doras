@@ -90,12 +90,16 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	stat, err := os.Stat(client.opts.OutputDirectory)
+	if errors.Is(err, os.ErrNotExist) {
+		log.Infof("creating directory: %s", client.opts.OutputDirectory)
+	}
 	log.Infof("using output dir permissions: %o", client.opts.OutputDirPermissions)
 	err = os.MkdirAll(client.opts.OutputDirectory, client.opts.OutputDirPermissions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
 	}
-	stat, err := os.Stat(client.opts.OutputDirectory)
+	stat, err = os.Stat(client.opts.OutputDirectory)
 	if err == nil {
 		log.Infof("output dir permissions: %o", stat.Mode())
 	} else {
