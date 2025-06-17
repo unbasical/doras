@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
+
 	"github.com/samber/lo"
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
@@ -16,24 +20,22 @@ import (
 	"github.com/unbasical/doras/pkg/client/updater/validator"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/credentials"
-	"os"
-	"path"
-	"path/filepath"
 
 	"github.com/unbasical/doras/pkg/client/edgeapi"
 )
 
 type clientOpts struct {
-	RemoteURL          string
-	OutputDirectory    string
-	InternalDirectory  string
-	DockerConfigPath   string
-	AcceptedAlgorithms []string
-	CredFuncs          []auth.CredentialFunc
-	InsecureAllowHTTP  bool
-	KeepOldDir         bool
-	Validators         []validator.ManifestValidator
-	Inspectors         []inspector.ArtifactInspector
+	RemoteURL            string
+	OutputDirectory      string
+	OutputDirPermissions os.FileMode
+	InternalDirectory    string
+	DockerConfigPath     string
+	AcceptedAlgorithms   []string
+	CredFuncs            []auth.CredentialFunc
+	InsecureAllowHTTP    bool
+	KeepOldDir           bool
+	Validators           []validator.ManifestValidator
+	Inspectors           []inspector.ArtifactInspector
 }
 
 // NewClient creates a new Doras update client with the provided options.
@@ -41,9 +43,10 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	// init defaults
 	client := &Client{
 		opts: clientOpts{
-			OutputDirectory:   ".",
-			InternalDirectory: "~/.local/share/doras",
-			DockerConfigPath:  filepath.Join(os.Getenv("HOME"), ".docker", "config.json"),
+			OutputDirectory:      ".",
+			InternalDirectory:    "~/.local/share/doras",
+			DockerConfigPath:     filepath.Join(os.Getenv("HOME"), ".docker", "config.json"),
+			OutputDirPermissions: 0755,
 		},
 		backoff: backoff.DefaultBackoff(),
 	}
@@ -88,7 +91,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 		return nil, err
 	}
 
-	err = os.MkdirAll(client.opts.OutputDirectory, 0755)
+	err = os.MkdirAll(client.opts.OutputDirectory, client.opts.OutputDirPermissions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
 	}
