@@ -46,7 +46,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 			OutputDirectory:      ".",
 			InternalDirectory:    "~/.local/share/doras",
 			DockerConfigPath:     filepath.Join(os.Getenv("HOME"), ".docker", "config.json"),
-			OutputDirPermissions: 0755,
+			OutputDirPermissions: 0777,
 		},
 		backoff: backoff.DefaultBackoff(),
 	}
@@ -90,10 +90,28 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	stat, err := os.Stat(client.opts.OutputDirectory)
+	if errors.Is(err, os.ErrNotExist) {
+		log.Infof(
+			"creating output-directory at: %q with permissions: %o",
+			client.opts.OutputDirectory,
+			client.opts.OutputDirPermissions,
+		)
+	}
 	err = os.MkdirAll(client.opts.OutputDirectory, client.opts.OutputDirPermissions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
+	}
+	stat, err = os.Stat(client.opts.OutputDirectory)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat output directory: %w", err)
+	}
+	if stat.Mode() != client.opts.OutputDirPermissions|os.ModeDir {
+		log.Warn("got output directory permissions that do not match expected, running chmod")
+		err := os.Chmod(client.opts.OutputDirectory, client.opts.OutputDirPermissions)
+		if err != nil {
+			return nil, fmt.Errorf("failed to chmod output directory: %w", err)
+		}
 	}
 	err = os.MkdirAll(client.opts.InternalDirectory, 0755)
 	if err != nil {
