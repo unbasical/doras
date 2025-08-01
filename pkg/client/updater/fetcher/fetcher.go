@@ -137,7 +137,7 @@ func (r *registryImpl) resolveAndLoad(image string) (v1.Descriptor, ociutils.Man
 		if err != nil {
 			return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 		}
-		fPath, err := r.ingest(d, rc, "")
+		fPath, err := r.ingest(d, rc, image)
 		if err != nil {
 			return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 		}
