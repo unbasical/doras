@@ -96,7 +96,7 @@ func (r *registryImpl) resolveAndLoad(image string) (v1.Descriptor, ociutils.Man
 		return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 	}
 	tag = strings.TrimPrefix(tag, "@")
-	src, err := r.StorageSource.GetTarget(name)
+	src, err := r.GetTarget(name)
 	if err != nil {
 		return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 	}

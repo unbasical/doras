@@ -612,8 +612,8 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if tt.initialState.version != nil {
-					p := descriptorsToPaths[tt.initialState.version.Digest]
+				if tt.version != nil {
+					p := descriptorsToPaths[tt.version.Digest]
 					err := tarutils.ExtractCompressedTar(outDir, "", p, nil, gzip2.NewDecompressor())
 					if err != nil {
 						t.Fatal(err)
@@ -627,12 +627,12 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 				s, err := statemanager.New(updaterstate.State{
 					Version: "2",
 					ArtifactStates: func() map[string]updaterstate.ArtifactState {
-						if tt.initialState.version == nil {
+						if tt.version == nil {
 							return map[string]updaterstate.ArtifactState{}
 						}
 						return map[string]updaterstate.ArtifactState{
 							fmt.Sprintf("(%s,%s)", outDir, repoName): updaterstate.ArtifactState{
-								ImageDigest:     tt.initialState.version.Digest,
+								ImageDigest:     tt.version.Digest,
 								DirectoryDigest: dirHashDigest,
 							},
 						}
@@ -672,7 +672,7 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 				if tt.expectedDigest != nil && artifactState.ImageDigest != *tt.expectedDigest {
 					t.Errorf("state does not contain correct version: got: %v ,expected: %v", artifactState.ImageDigest, tt.expectedDigest)
 				}
-				if tt.initialState.version != nil {
+				if tt.version != nil {
 					expectedDirHash, err := dirhash.HashDir(outDir, "", dirhash.Hash1)
 					if err != nil {
 						t.Fatal(err)
@@ -1024,8 +1024,8 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if tt.initialState.version != nil {
-				data := descriptorsToData[tt.initialState.version.Digest]
+			if tt.version != nil {
+				data := descriptorsToData[tt.version.Digest]
 				_ = os.Remove(path.Join(outDir, "artifact"))
 				err := os.WriteFile(path.Join(outDir, "artifact"), []byte(data), 0777)
 				if err != nil {
@@ -1040,12 +1040,12 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 			s, err := statemanager.New(updaterstate.State{
 				Version: "2",
 				ArtifactStates: func() map[string]updaterstate.ArtifactState {
-					if tt.initialState.version == nil {
+					if tt.version == nil {
 						return map[string]updaterstate.ArtifactState{}
 					}
 					return map[string]updaterstate.ArtifactState{
 						fmt.Sprintf("(%s,%s)", outDir, repoName): updaterstate.ArtifactState{
-							ImageDigest:     tt.initialState.version.Digest,
+							ImageDigest:     tt.version.Digest,
 							DirectoryDigest: dirHashDigest,
 						},
 					}
@@ -1085,7 +1085,7 @@ func TestClient_PullAsyncBsdiff(t *testing.T) {
 			if tt.expectedDigest != nil && appliedVersion.ImageDigest != *tt.expectedDigest {
 				t.Errorf("state does not contain correct version: got: %v ,expected: %v", appliedVersion.ImageDigest, tt.expectedDigest)
 			}
-			if tt.initialState.version != nil {
+			if tt.version != nil {
 				expectedDirHash, err := dirhash.HashDir(outDir, "", dirhash.Hash1)
 				if err != nil {
 					t.Fatal(err)

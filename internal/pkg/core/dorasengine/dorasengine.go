@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"sync"
+
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/unbasical/doras/internal/pkg/core/metrics"
 	apidelegate "github.com/unbasical/doras/internal/pkg/delegates/api"
@@ -11,8 +14,6 @@ import (
 	registrydelegate "github.com/unbasical/doras/internal/pkg/delegates/registry"
 	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 	"oras.land/oras-go/v2/registry/remote/auth"
-	"strings"
-	"sync"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/unbasical/doras/internal/pkg/algorithmchoice"
@@ -28,6 +29,8 @@ type Engine interface {
 	HandleReadDelta(apiDeletgate apidelegate.APIDelegate)
 	Stop(ctx context.Context)
 }
+
+type contextKey string
 
 type engine struct {
 	registry          registrydelegate.RegistryDelegate
@@ -60,7 +63,7 @@ func (d *engine) Stop(ctx context.Context) {
 }
 
 func (d *engine) HandleReadDelta(apiDeletgate apidelegate.APIDelegate) {
-	ctx := context.WithValue(context.Background(), "wg", d.wg)
+	ctx := context.WithValue(context.Background(), contextKey("wg"), d.wg)
 	readDelta(ctx, d.registry, d.delegate, apiDeletgate, d.requireClientAuth)
 }
 
@@ -82,7 +85,7 @@ func checkRepoCompatability(a, b string) error {
 
 //nolint:revive // This rule is disabled to get around complexity linter errors. Reducing the complexity of this function is difficult. Refer to the Doras specs in the file docs/delta-creation-spec.md for more information on the semantics of this god function.
 func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, delegate deltadelegate.DeltaDelegate, apiDelegate apidelegate.APIDelegate, requireClientAuth bool) {
-	wg, ok := ctx.Value("wg").(*sync.WaitGroup)
+	wg, ok := ctx.Value(contextKey("wg")).(*sync.WaitGroup)
 	if !ok {
 		panic("missing wait group in context")
 	}
@@ -259,8 +262,8 @@ func readDelta(ctx context.Context, registry registrydelegate.RegistryDelegate, 
 	}
 
 	// asynchronously create delta
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 		defer funcutils.PanicOrLogOnErr(rcTo.Close, false, "failed to close reader")
 		defer funcutils.PanicOrLogOnErr(rcFrom.Close, false, "failed to close reader")

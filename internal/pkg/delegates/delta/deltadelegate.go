@@ -84,11 +84,11 @@ func extractDigest(image string) (*digest.Digest, error) {
 }
 
 func (d *delegate) CreateDelta(ctx context.Context, from, to io.ReadCloser, manifOpts registrydelegate.DeltaManifestOptions, dst registrydelegate.RegistryDelegate) error {
-	deltaReader, err := manifOpts.Differ.Diff(from, to)
+	deltaReader, err := manifOpts.Diff(from, to)
 	if err != nil {
 		return err
 	}
-	compressedDelta, err := manifOpts.Compressor.Compress(deltaReader)
+	compressedDelta, err := manifOpts.Compress(deltaReader)
 	if err != nil {
 		return err
 	}

@@ -5,10 +5,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	error2 "github.com/unbasical/doras/internal/pkg/error"
-	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
-	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
-	"github.com/unbasical/doras/internal/pkg/utils/readerutils"
 	"io"
 	"net/http"
 	"os"
@@ -16,6 +12,11 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	error2 "github.com/unbasical/doras/internal/pkg/error"
+	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
+	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
+	"github.com/unbasical/doras/internal/pkg/utils/readerutils"
 
 	auth2 "github.com/unbasical/doras/internal/pkg/auth"
 
@@ -487,7 +488,7 @@ func Test_readDelta(t *testing.T) {
 			// This is necessary due to the asynchronous nature of the readDelta function,
 			// which spawns a go routine.
 			wg := &sync.WaitGroup{}
-			ctx := context.WithValue(context.Background(), "wg", wg)
+			ctx := context.WithValue(context.Background(), contextKey("wg"), wg)
 			registryMock.ioLatency = tt.args.latency
 			for {
 				readDelta(ctx, tt.args.registry, tt.args.delegate, &tt.args.apiDelegate, false)
@@ -610,7 +611,7 @@ func Test_readDelta_Token(t *testing.T) {
 			// This is necessary due to the asynchronous nature of the readDelta function,
 			// which spawns a go routine.
 			wg := &sync.WaitGroup{}
-			ctx := context.WithValue(context.Background(), "wg", wg)
+			ctx := context.WithValue(context.Background(), contextKey("wg"), wg)
 			for {
 				readDelta(ctx, tt.args.registry, tt.args.delegate, &tt.args.apiDelegate, true)
 				if tt.args.apiDelegate.hasHandledCallback {

@@ -88,11 +88,11 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	statePath := path.Join(client.opts.InternalDirectory, "doras-state.json")
 	// detect old state files and remove them
 	// this is purely for compatability reasons
-	err = cleanupLegacyState(err, statePath, client)
+	err = cleanupLegacyState(statePath, client)
 	if err != nil {
 		return nil, err
 	}
-	stat, err := os.Stat(client.opts.OutputDirectory)
+	_, err = os.Stat(client.opts.OutputDirectory)
 	if errors.Is(err, os.ErrNotExist) {
 		log.Infof(
 			"creating output-directory at: %q with permissions: %o",
@@ -104,7 +104,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
 	}
-	stat, err = os.Stat(client.opts.OutputDirectory)
+	stat, err := os.Stat(client.opts.OutputDirectory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to stat output directory: %w", err)
 	}
@@ -146,7 +146,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	return client, nil
 }
 
-func cleanupLegacyState(err error, statePath string, client *Client) error {
+func cleanupLegacyState(statePath string, client *Client) error {
 	oldState, err := os.ReadFile(statePath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("failed to read old state: %w", err)
