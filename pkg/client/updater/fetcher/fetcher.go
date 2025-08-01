@@ -5,6 +5,12 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"hash"
+	"io"
+	"os"
+	"path"
+	"strings"
+
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/samber/lo"
@@ -15,15 +21,10 @@ import (
 	"github.com/unbasical/doras/pkg/client/updater/inspector"
 	"github.com/unbasical/doras/pkg/client/updater/validator"
 	"github.com/unbasical/doras/pkg/constants"
-	"hash"
-	"io"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
-	"os"
-	"path"
-	"strings"
 )
 
 // ArtifactLoader is used to load artifacts from a registry.
@@ -136,7 +137,7 @@ func (r *registryImpl) resolveAndLoad(image string) (v1.Descriptor, ociutils.Man
 		if err != nil {
 			return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 		}
-		fPath, err := r.ingest(d, rc)
+		fPath, err := r.ingest(d, rc, "")
 		if err != nil {
 			return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 		}
@@ -197,7 +198,7 @@ func (r *registryImpl) ensureSubDir(p string) (string, error) {
 	return dir, nil
 }
 
-func (r *registryImpl) ingest(expected v1.Descriptor, content io.ReadCloser) (string, error) {
+func (r *registryImpl) ingest(expected v1.Descriptor, content io.ReadCloser, image string) (string, error) {
 	// TODO: evaluate if we can use flocks to avoid conflicts when two instances want to fetch the same artifact
 	// Make sure directories exist and construct paths.
 	fPathDownload, fPathCompleted, err := r.setupIngestDirAndReturnPaths(expected)
@@ -220,6 +221,7 @@ func (r *registryImpl) ingest(expected v1.Descriptor, content io.ReadCloser) (st
 		// we start from 0 if we cannot seek
 		n = 0
 	}
+	log.Infof("[%v] starting download from: %v", image, n)
 	for _, ins := range r.inspectors {
 		content, err = ins.InspectContents(content)
 		if err != nil {

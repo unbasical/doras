@@ -21,7 +21,7 @@ func Test_registryImpl_ingest(t *testing.T) {
 			Digest: digest.FromBytes(data),
 			Size:   int64(len(data)),
 		}
-		fPath, err := reg.ingest(d, io.NopCloser(bytes.NewReader(data)))
+		fPath, err := reg.ingest(d, io.NopCloser(bytes.NewReader(data)), "")
 		if err != nil {
 			t.Fatal(err)
 			return
@@ -51,7 +51,7 @@ func Test_registryImpl_ingest(t *testing.T) {
 			Digest: digest.FromBytes(data[:2]),
 			Size:   int64(len(data)),
 		}
-		_, err := reg.ingest(d, io.NopCloser(bytes.NewReader(data)))
+		_, err := reg.ingest(d, io.NopCloser(bytes.NewReader(data)), "")
 		if err == nil {
 			t.Error("accepted invalid digest")
 		}
@@ -65,7 +65,7 @@ func Test_registryImpl_ingest(t *testing.T) {
 			Digest: digest.FromBytes(data),
 			Size:   int64(len(data)) - 1,
 		}
-		_, err := reg.ingest(d, io.NopCloser(bytes.NewReader(data)))
+		_, err := reg.ingest(d, io.NopCloser(bytes.NewReader(data)), "")
 		if err == nil {
 			t.Error("accepted invalid size")
 		}
@@ -96,7 +96,7 @@ func Test_registryImpl_ingest(t *testing.T) {
 			t.Error(err)
 		}
 		seekable := &NopSeeker{Reader: io.NopCloser(bytes.NewReader(data[3:]))}
-		fPathGot, err := reg.ingest(d, seekable)
+		fPathGot, err := reg.ingest(d, seekable, "")
 		if err != nil {
 			t.Error(err)
 		}
@@ -143,7 +143,7 @@ func Test_registryImpl_ingest(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		fPathGot, err := reg.ingest(d, io.NopCloser(bytes.NewReader(data)))
+		fPathGot, err := reg.ingest(d, io.NopCloser(bytes.NewReader(data)), "")
 		if err != nil {
 			t.Error(err)
 		}
@@ -191,7 +191,7 @@ func Test_registryImpl_ingest(t *testing.T) {
 			t.Error(err)
 		}
 		seekable := &NopSeeker{Reader: io.NopCloser(bytes.NewReader(data[3:]))}
-		_, err = reg.ingest(d, seekable)
+		_, err = reg.ingest(d, seekable, "")
 		if err == nil {
 			t.Error("accepted invalid digest")
 		}
@@ -222,7 +222,7 @@ func Test_registryImpl_ingest(t *testing.T) {
 			t.Error(err)
 		}
 		seekable := &NopSeeker{Reader: io.NopCloser(bytes.NewReader(data[4:]))}
-		_, err = reg.ingest(d, seekable)
+		_, err = reg.ingest(d, seekable, "")
 		if err == nil {
 			t.Error("accepted invalid length")
 		}
