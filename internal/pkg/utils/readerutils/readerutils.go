@@ -2,11 +2,12 @@ package readerutils
 
 import (
 	"errors"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func ChainedCloser(this io.ReadCloser, other io.Closer) io.ReadCloser {

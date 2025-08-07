@@ -3,13 +3,14 @@ package validator
 import (
 	"errors"
 	"fmt"
-	"github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"time"
+
+	"github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/unbasical/doras/internal/pkg/utils/ociutils"
 )
 
 // ManifestValidator defines an interface for validating an OCI manifest against specific criteria or rules.
@@ -26,7 +27,11 @@ type SizeLimitedValidator struct {
 // Validate checks if the total size of the artifact does not exceed the configured size limit.
 // It returns an error if the size exceeds the limit or nil otherwise.
 func (s SizeLimitedValidator) Validate(desc *v1.Descriptor, mf *ociutils.Manifest) error {
-	return checkSizeLimit(desc, mf, 0, s.Limit)
+	err := checkSizeLimit(desc, mf, 0, s.Limit)
+	if err != nil {
+		return fmt.Errorf("artifact size exceeds configured limit: %w", err)
+	}
+	return nil
 }
 
 // VolumeLimitValidator validates volume usage against a specified limit within a given time period and directory.
@@ -66,14 +71,13 @@ func SumUpDownloadStats(statsDir string, period time.Duration) (uint64, error) {
 		// Calculate file age
 		age := now.Sub(info.ModTime().UTC())
 
-		// Delete files older than maxAge
-		if age > period {
+		// Delete files older than maxAge and files from the future
+		if age > period || age < 0 {
 			if err := os.Remove(fullPath); err != nil {
 				return sum, fmt.Errorf("failed to delete old file %s: %w", fullPath, err)
 			}
 			continue
 		}
-
 		// Read and parse the file's uint64 value
 		data, err := os.ReadFile(fullPath)
 		if err != nil {
@@ -94,7 +98,11 @@ func (v VolumeLimitValidator) Validate(desc *v1.Descriptor, mf *ociutils.Manifes
 	if err != nil {
 		return err
 	}
-	return checkSizeLimit(desc, mf, consumed, v.Limit)
+	err = checkSizeLimit(desc, mf, consumed, v.Limit)
+	if err != nil {
+		return fmt.Errorf("exceeded download volume limit (%v/%v): %w", v.Limit, v.Period, err)
+	}
+	return nil
 }
 
 func checkSizeLimit(desc *v1.Descriptor, mf *ociutils.Manifest, baseSize, limit uint64) error {
