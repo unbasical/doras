@@ -48,6 +48,7 @@ func (v VolumeLimitValidator) consumedVolume() (uint64, error) {
 // SumUpDownloadStats calculates the sum of uint64 values from files in statsDir modified within the given period.
 // Files older than the period are deleted, and errors during operations are returned where applicable.
 // The opposite function is inspector.WriteUintToFile.
+// nolint:revive // pass cognitive complexity lint, in my opinion the complexity of this function is acceptable
 func SumUpDownloadStats(statsDir string, period time.Duration) (uint64, error) {
 	entries, err := os.ReadDir(statsDir)
 	if err != nil {
