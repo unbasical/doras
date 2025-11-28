@@ -198,8 +198,8 @@ func (r *registryImpl) ensureSubDir(p string) (string, error) {
 	return dir, nil
 }
 
+//revive:disable:cognitive-complexity
 func (r *registryImpl) ingest(expected v1.Descriptor, content io.ReadCloser, image string) (string, error) {
-	// TODO: evaluate if we can use flocks to avoid conflicts when two instances want to fetch the same artifact
 	// Make sure directories exist and construct paths.
 	fPathDownload, fPathCompleted, err := r.setupIngestDirAndReturnPaths(expected)
 	if err != nil {
@@ -213,10 +213,9 @@ func (r *registryImpl) ingest(expected v1.Descriptor, content io.ReadCloser, ima
 	if n > expected.Size {
 		return "", fmt.Errorf("existing file is larger than expected size, existing: %d, expected: %d", n, expected.Size)
 	}
-	var h = sha256.New()
 
 	// Make sure pre-existing content is written to the hasher.
-	h, err = hashOldContents(content, n, h, fp)
+	h, err := hashOldContents(content, n, sha256.New(), fp)
 	if err != nil {
 		if !errors.Is(err, errSeekNotSupported) {
 			return "", err
@@ -249,11 +248,9 @@ func (r *registryImpl) ingest(expected v1.Descriptor, content io.ReadCloser, ima
 	if digest.NewDigest("sha256", h) != expected.Digest {
 		return "", errors.New("unexpected digest")
 	}
-	// Do not defer close to make sure file is written to the disk.
-	err = fp.Close()
-	if err != nil {
-		return "", err
-	}
+	// Do not defer close to make sure file is written to the disk. This triggers a sync.
+	_ = fp.Close()
+
 	// Move to new completed dir
 	// This happens after the file was downloaded and written to the disk entirely.
 	err = fileutils.ReplaceFile(fPathDownload, fPathCompleted)
