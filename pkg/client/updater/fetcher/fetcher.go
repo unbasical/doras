@@ -210,6 +210,9 @@ func (r *registryImpl) ingest(expected v1.Descriptor, content io.ReadCloser, ima
 	if err != nil {
 		return "", err
 	}
+	if n > expected.Size {
+		return "", fmt.Errorf("existing file is larger than expected size, existing: %d, expected: %d", n, expected.Size)
+	}
 	var h = sha256.New()
 
 	// Make sure pre-existing content is written to the hasher.
@@ -233,13 +236,15 @@ func (r *registryImpl) ingest(expected v1.Descriptor, content io.ReadCloser, ima
 	}()
 	// Use a writer that makes sure the changes are flushed to the disk.
 	// This is done to increase robustness against power loss during ingesting which might cause inconsistencies.
-	tr := io.TeeReader(content, h)
-	nNew, err := io.Copy(fp, tr)
-	if err != nil {
-		return "", err
-	}
-	if bytesRead := nNew + n; bytesRead != expected.Size {
-		return "", errors.New("unexpected EOF")
+	if n < expected.Size {
+		tr := io.TeeReader(content, h)
+		nNew, err := io.Copy(fp, tr)
+		if err != nil {
+			return "", err
+		}
+		if bytesRead := nNew + n; bytesRead != expected.Size {
+			return "", errors.New("unexpected EOF")
+		}
 	}
 	if digest.NewDigest("sha256", h) != expected.Digest {
 		return "", errors.New("unexpected digest")
