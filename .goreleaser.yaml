@@ -85,7 +85,7 @@ kos:
     creation_time: "{{.CommitTimestamp}}"
     ko_data_creation_time: "{{.CommitTimestamp}}"
     bare: true
-    sbom: spdx
+    sbom: cyclonedx
     ldflags:
       - "-s -w -X main.version={{.Tag}}"
   - id: doras-cli
@@ -105,18 +105,18 @@ kos:
     creation_time: "{{.CommitTimestamp}}"
     ko_data_creation_time: "{{.CommitTimestamp}}"
     bare: true
-    sbom: spdx
+    sbom: cyclonedx
 
 sboms:
   - documents:
-      - "${artifact}.spdx.sbom.json"
+      - "${artifact}.cyclonedx.sbom.json"
     cmd: syft
     args: ["$artifact", "--output", "spdx-json=$document"]
     artifacts: binary
     ids:
       - doras-server
       - doras-cli
-
+    args: ["$artifact", "--output", "cyclonedx-json=$document"]
 
 changelog:
   sort: asc
