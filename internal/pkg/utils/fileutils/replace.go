@@ -3,10 +3,11 @@ package fileutils
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/gofrs/flock"
-	log "github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
+
+	"github.com/gofrs/flock"
+	log "github.com/sirupsen/logrus"
 )
 
 // getLockFile computes a unique lock file path based on the canonical absolute path of newPath.
@@ -35,6 +36,18 @@ func releaseLock(lock *flock.Flock) error {
 	return lock.Unlock()
 }
 
+// fsyncDir opens a directory and fsyncs it to flush directory entries to disk.
+func fsyncDir(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = d.Close()
+	}()
+	return d.Sync()
+}
+
 // ReplaceFile atomically replaces the file at targetPath with the file at currentPath,
 // using a unique lock file based on targetPath.
 func ReplaceFile(currentPath, targetPath string) error {
@@ -46,7 +59,13 @@ func ReplaceFile(currentPath, targetPath string) error {
 	defer func() {
 		_ = releaseLock(lock)
 	}()
-	return os.Rename(currentPath, targetPath)
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil {
+		return err
+	}
+	if err := os.Rename(currentPath, targetPath); err != nil {
+		return err
+	}
+	return fsyncDir(filepath.Dir(targetPath))
 }
 
 // ReplaceDirectory atomically replaces the directory at targetPath with the directory at currentPath.
@@ -69,5 +88,11 @@ func ReplaceDirectory(currentPath, targetPath string) error {
 	} else if !os.IsNotExist(err) {
 		return err
 	}
-	return os.Rename(currentPath, targetPath)
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil {
+		return err
+	}
+	if err := os.Rename(currentPath, targetPath); err != nil {
+		return err
+	}
+	return fsyncDir(filepath.Dir(targetPath))
 }

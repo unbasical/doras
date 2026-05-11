@@ -154,28 +154,13 @@ func (r *registryImpl) ResolveAndLoadToPath(image, outputDir string) (v1.Descrip
 	if err != nil {
 		return v1.Descriptor{}, ociutils.Manifest{}, nil, err
 	}
-	// make sure we have valid paths before moving any files around
-	err = errors.Join(lo.Map(res, func(a LoadResult, _ int) error {
-		p := a.D.Annotations[constants.OciImageTitle]
-		if p == "" {
-			return fmt.Errorf("empty path")
-		}
-		if path.IsAbs(p) {
-			return fmt.Errorf("%q is absolute path", p)
-		}
-		return nil
-	})...)
-	if err != nil {
-		return v1.Descriptor{}, ociutils.Manifest{}, nil, err
-	}
 	// move files to the correct location
 	for i, a := range res {
 		p := a.D.Annotations[constants.OciImageTitle]
-
 		log.Debugf("%q", p)
-		targetPath := path.Join(outputDir, p)
-		if targetPath == outputDir {
-			targetPath = path.Join(targetPath, "archive")
+		targetPath, err := fileutils.EnsureSubPath(outputDir, p)
+		if err != nil {
+			return v1.Descriptor{}, ociutils.Manifest{}, nil, fmt.Errorf("invalid artifact path: %w", err)
 		}
 		log.Debugf("attempting to move to %q", targetPath)
 		err = fileutils.ReplaceFile(a.Path, targetPath)
