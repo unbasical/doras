@@ -19,7 +19,7 @@ func TestEnsureSubPath(t *testing.T) {
 		{name: "deep traversal rejected", base: "/a/b", rel: "c/../../d.txt", wantErr: true},
 		{name: "absolute rejected", base: "/a/b", rel: "/etc/passwd", wantErr: true},
 		{name: "empty rejected", base: "/a/b", rel: "", wantErr: true},
-		{name: "dot resolves to base rejected", base: "/a/b", rel: ".", wantErr: true},
+		{name: "dot resolves to base", base: "/a/b", rel: ".", want: "/a/b"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

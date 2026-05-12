@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/opencontainers/go-digest"
@@ -161,6 +162,9 @@ func (r *registryImpl) ResolveAndLoadToPath(image, outputDir string) (v1.Descrip
 		targetPath, err := fileutils.EnsureSubPath(outputDir, p)
 		if err != nil {
 			return v1.Descriptor{}, ociutils.Manifest{}, nil, fmt.Errorf("invalid artifact path: %w", err)
+		}
+		if targetPath == filepath.Clean(outputDir) {
+			targetPath = filepath.Join(targetPath, "archive")
 		}
 		log.Debugf("attempting to move to %q", targetPath)
 		err = fileutils.ReplaceFile(a.Path, targetPath)

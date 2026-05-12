@@ -22,8 +22,5 @@ func EnsureSubPath(base, rel string) (string, error) {
 	if !strings.HasPrefix(cleanJoined+string(filepath.Separator), cleanBase) {
 		return "", fmt.Errorf("path %q escapes base directory %q", rel, base)
 	}
-	if cleanJoined == filepath.Clean(base) {
-		return "", fmt.Errorf("path %q resolves to base directory", rel)
-	}
 	return cleanJoined, nil
 }
