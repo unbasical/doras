@@ -87,9 +87,6 @@ func (a *applier) replaceInPlace(artifactDir string, extractDir string) error {
 	}
 	// replace files in the target dir with the ones from the extraction dir
 	for _, entry := range entriesExtractDir {
-		if entry.IsDir() {
-			panic("keepOldDir is not currently not supported with nested directories")
-		}
 		err := fileutils.ReplaceFile(path.Join(extractDir, entry.Name()), filepath.Join(artifactDir, entry.Name()))
 		if err != nil {
 			return err
