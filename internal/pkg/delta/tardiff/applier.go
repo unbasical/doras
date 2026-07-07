@@ -16,6 +16,7 @@ import (
 	"github.com/unbasical/doras/internal/pkg/utils/tarutils"
 	"github.com/unbasical/doras/internal/pkg/utils/writerutils"
 	"github.com/unbasical/doras/pkg/algorithm/delta"
+	"github.com/unbasical/doras/pkg/constants"
 
 	"github.com/unbasical/doras/internal/pkg/delta/tarfsdatasource"
 	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
@@ -29,7 +30,7 @@ type applier struct {
 
 func (a *applier) PatchFilesystem(artifactDir string, patch io.Reader, expected *digest.Digest) error {
 	datasource := tarpatch.NewFilesystemDataSource(artifactDir)
-	tempfile, err := os.CreateTemp(a.tmpDir, "tarpatch-temp-*")
+	tempfile, err := os.CreateTemp(a.tmpDir, constants.TempPrefixTarpatch+"*")
 	if err != nil {
 		return err
 	}
@@ -44,7 +45,7 @@ func (a *applier) PatchFilesystem(artifactDir string, patch io.Reader, expected 
 	if err != nil {
 		return err
 	}
-	extractDir, err := os.MkdirTemp(a.tmpDir, "tar-extract-dir-*")
+	extractDir, err := os.MkdirTemp(a.tmpDir, constants.TempPrefixTarExtract+"*")
 	if err != nil {
 		return err
 	}

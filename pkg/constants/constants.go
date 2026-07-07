@@ -37,3 +37,35 @@ const OrasContentUnpack = "io.deis.oras.content.unpack"
 
 // OciImageTitle is used to extract the titles of container layers from annotations.
 const OciImageTitle = "org.opencontainers.image.title"
+
+// Temp-dir/file name prefixes used during patch operations.
+//
+// These are the single source of truth shared between the temp creation sites
+// (the updater client and the delta applier implementations) and the updater's
+// startup cleanup routine, so the two cannot drift out of sync if a prefix is
+// ever renamed.
+//
+// Convention: os.MkdirTemp / os.CreateTemp callers append "*" to form the glob
+// pattern (e.g. TempPrefixDeltas + "*"). The cleanup routine matches leftover
+// entries via strings.HasPrefix using the bare prefix.
+const (
+	// TempPrefixDeltas is used for the temp dir holding fetched delta artifacts.
+	// Created directly under the internal directory.
+	TempPrefixDeltas = "deltas-"
+	// TempPrefixIntermediate is used for the temp dir holding fetched full-image
+	// artifacts before extraction. Created directly under the internal directory.
+	TempPrefixIntermediate = "intermediate-"
+	// TempPrefixExtract is used for the temp dir a full image is extracted into
+	// before it replaces the output directory. Created under the internal directory.
+	TempPrefixExtract = "extract-"
+
+	// TempPrefixTarpatch is used for the temp file holding a fully applied tardiff
+	// patch. Created under the patcher directory.
+	TempPrefixTarpatch = "tarpatch-temp-"
+	// TempPrefixTarExtract is used for the temp dir a patched tar is extracted into.
+	// Created under the patcher directory.
+	TempPrefixTarExtract = "tar-extract-dir-"
+	// TempPrefixBsdiff is used for the temp file holding an applied bsdiff patch.
+	// Created under the patcher directory.
+	TempPrefixBsdiff = "bsdiff-temp-"
+)

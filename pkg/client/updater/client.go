@@ -138,7 +138,7 @@ func (c *Client) pullDeltaImageAsync(target string, repoName string, currentVers
 		return false, nil
 	}
 	log.Info("attempting delta update")
-	deltaDir, err := os.MkdirTemp(c.opts.InternalDirectory, "deltas-*")
+	deltaDir, err := os.MkdirTemp(c.opts.InternalDirectory, constants.TempPrefixDeltas+"*")
 	if err != nil {
 		return false, err
 	}
@@ -201,7 +201,7 @@ func (c *Client) pullFullImage(targetImage string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	intermediateDir, err := os.MkdirTemp(c.opts.InternalDirectory, "intermediate-*")
+	intermediateDir, err := os.MkdirTemp(c.opts.InternalDirectory, constants.TempPrefixIntermediate+"*")
 	if err != nil {
 		return false, err
 	}
@@ -214,7 +214,7 @@ func (c *Client) pullFullImage(targetImage string) (bool, error) {
 		return false, err
 	}
 	// this directory gets filled with all artifacts and replaces the output directory once completed
-	extractDir, err := os.MkdirTemp(c.opts.InternalDirectory, "extract-*")
+	extractDir, err := os.MkdirTemp(c.opts.InternalDirectory, constants.TempPrefixExtract+"*")
 	if err != nil {
 		return false, err
 	}
