@@ -125,6 +125,11 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 		return nil, fmt.Errorf("failed to create patcher working directory: %w", err)
 	}
 
+	// Sweep leftover temporary artifacts from previous pulls that were interrupted
+	// before their deferred cleanup could run (reboot, OOM kill, disk-full). This
+	// prevents unbounded accumulation of large temp files in the internal directory.
+	cleanupStaleTempArtifacts(client.opts.InternalDirectory, client.patcherTmpDir)
+
 	stateManager, err := statemanager.NewFromDisk(initialState, statePath)
 	if err != nil {
 		return nil, err

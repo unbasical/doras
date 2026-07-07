@@ -12,6 +12,7 @@ import (
 
 	"github.com/opencontainers/go-digest"
 	"github.com/unbasical/doras/pkg/algorithm/delta"
+	"github.com/unbasical/doras/pkg/constants"
 
 	bspatchdep "github.com/gabstv/go-bsdiff/pkg/bspatch"
 	"github.com/unbasical/doras/internal/pkg/utils/funcutils"
@@ -59,7 +60,7 @@ func (a *patcher) PatchFilesystem(artifactDir string, patch io.Reader, expected 
 	}
 	defer funcutils.PanicOrLogOnErr(fpOld.Close, false, "failed to close file")
 
-	fpTemp, err := os.CreateTemp(a.tmpDir, "bsdiff-temp-*")
+	fpTemp, err := os.CreateTemp(a.tmpDir, constants.TempPrefixBsdiff+"*")
 	if err != nil {
 		return err
 	}

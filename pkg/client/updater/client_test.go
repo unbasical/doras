@@ -612,6 +612,15 @@ func TestClient_PullAsyncTardiff(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				// Reset the download-stats directory between iterations. The two
+				// keepOldDir runs share the same statsDir, and stat files are named
+				// by whole-second timestamps; without this, two runs straddling a
+				// second boundary accumulate and double the summed byte count.
+				// RemoveAll (not CleanDirectory) tolerates the dir not existing yet,
+				// since the stats observer creates it lazily on first write.
+				if err = os.RemoveAll(statsDir); err != nil {
+					t.Fatal(err)
+				}
 				if tt.version != nil {
 					p := descriptorsToPaths[tt.version.Digest]
 					err := tarutils.ExtractCompressedTar(outDir, "", p, nil, gzip2.NewDecompressor())

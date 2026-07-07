@@ -91,7 +91,7 @@ func CompareDirectoriesHasher(dir1, dir2 string, h hash.Hash) (bool, error) {
 // It assumes that proto is a pointer to a struct.
 func cloneHash(h hash.Hash) hash.Hash {
 	v := reflect.ValueOf(h)
-	if v.Kind() != reflect.Ptr {
+	if v.Kind() != reflect.Pointer {
 		panic("provided hash is not a pointer")
 	}
 	newInstance := reflect.New(v.Elem().Type()).Interface().(hash.Hash)
