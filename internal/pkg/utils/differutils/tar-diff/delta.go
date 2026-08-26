@@ -1,3 +1,4 @@
+//nolint:revive // vendored file
 package tar_diff
 
 import (
