@@ -1,11 +1,12 @@
-//nolint:revive
+//nolint:revive // vendored file
 package tar_diff
 
 import (
 	"encoding/binary"
-	"github.com/containers/tar-diff/pkg/common"
-	"github.com/klauspost/compress/zstd"
 	"io"
+
+	"github.com/containers/tar-diff/pkg/protocol"
+	"github.com/klauspost/compress/zstd"
 )
 
 const (
@@ -20,7 +21,7 @@ type deltaWriter struct {
 }
 
 func newDeltaWriter(writer io.Writer, compressionLevel int) (*deltaWriter, error) {
-	_, err := writer.Write(common.DeltaHeader[:])
+	_, err := writer.Write(protocol.DeltaHeader[:])
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +57,7 @@ func (d *deltaWriter) FlushBuffer() error {
 	if len(d.buffer) == 0 {
 		return nil
 	}
-	err := d.writeOp(common.DeltaOpData, uint64(len(d.buffer)), d.buffer)
+	err := d.writeOp(protocol.DeltaOpData, uint64(len(d.buffer)), d.buffer)
 	d.buffer = d.buffer[:0]
 	return err
 }
@@ -64,6 +65,10 @@ func (d *deltaWriter) FlushBuffer() error {
 func (d *deltaWriter) Close() error {
 	if d.writer == nil {
 		return nil
+	}
+	// Flush any buffered data before closing to prevent data loss
+	if err := d.FlushBuffer(); err != nil {
+		return err
 	}
 	err := d.writer.Close()
 	d.writer = nil
@@ -75,9 +80,8 @@ func (d *deltaWriter) WriteContent(data []byte) error {
 
 	if len(d.buffer) >= deltaDataChunkSize {
 		return d.FlushBuffer()
-	} else {
-		return nil
 	}
+	return nil
 }
 
 // Switches to new file if needed and ensures we're at the start of it
@@ -88,7 +92,7 @@ func (d *deltaWriter) SetCurrentFile(filename string) error {
 		if err != nil {
 			return err
 		}
-		err = d.writeOp(common.DeltaOpOpen, uint64(len(nameBytes)), nameBytes)
+		err = d.writeOp(protocol.DeltaOpOpen, uint64(len(nameBytes)), nameBytes)
 		if err != nil {
 			return err
 		}
@@ -109,7 +113,7 @@ func (d *deltaWriter) Seek(pos uint64) error {
 		return err
 	}
 
-	err = d.writeOp(common.DeltaOpSeek, pos, nil)
+	err = d.writeOp(protocol.DeltaOpSeek, pos, nil)
 	if err != nil {
 		return err
 	}
@@ -125,7 +129,7 @@ func (d *deltaWriter) SeekForward(pos uint64) error {
 		return err
 	}
 
-	err = d.writeOp(common.DeltaOpSeek, d.currentPos, nil)
+	err = d.writeOp(protocol.DeltaOpSeek, d.currentPos, nil)
 	if err != nil {
 		return err
 	}
@@ -138,7 +142,7 @@ func (d *deltaWriter) CopyFile(size uint64) error {
 		return err
 	}
 
-	err = d.writeOp(common.DeltaOpCopy, size, nil)
+	err = d.writeOp(protocol.DeltaOpCopy, size, nil)
 	if err != nil {
 		return err
 	}
@@ -153,7 +157,7 @@ func (d *deltaWriter) WriteAddContent(data []byte) error {
 	}
 
 	size := uint64(len(data))
-	err = d.writeOp(common.DeltaOpAddData, size, data)
+	err = d.writeOp(protocol.DeltaOpAddData, size, data)
 	if err != nil {
 		return err
 	}
