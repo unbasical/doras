@@ -130,4 +130,30 @@ func TestCompareDirectories(t *testing.T) {
 			t.Errorf("Expected directories to be different due to extra file, but they were reported as equal")
 		}
 	})
+
+	t.Run("Extra Empty Directory", func(t *testing.T) {
+		files := map[string]string{
+			"file1.txt":        "hello",
+			"subdir/file2.txt": "world",
+		}
+		dir1 := createTempDirWithFiles(t, files)
+		defer func() {
+			_ = os.RemoveAll(dir1)
+		}()
+		dir2 := createTempDirWithFiles(t, files)
+		defer func() {
+			_ = os.RemoveAll(dir2)
+		}()
+		if err := os.Mkdir(filepath.Join(dir2, "leftover"), 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		equal, err := CompareDirectoriesHasher(dir1, dir2, sha256.New())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if equal {
+			t.Errorf("Expected directories to be different due to extra empty directory, but they were reported as equal")
+		}
+	})
 }
