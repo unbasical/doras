@@ -111,6 +111,11 @@ func ReplaceDirectoryInPlace(currentPath, targetPath string) error {
 	return mergeDirectory(currentPath, targetPath)
 }
 
+// mergeDirectory moves the content of src into dst so that dst ends up with the same tree as src.
+// dst and directories present in both trees are kept, everything else is replaced, entries missing in src are removed.
+// src is consumed. The merge is not atomic and not locked, both paths must be on the same filesystem.
+//
+//nolint:revive // Splitting the cases into helpers lowers the score but does not make the merge easier to follow.
 func mergeDirectory(src, dst string) error {
 	srcEntries, err := os.ReadDir(src)
 	if err != nil {
