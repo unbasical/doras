@@ -1,11 +1,14 @@
 package tardiff
 
 import (
+	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/opencontainers/go-digest"
@@ -66,6 +69,153 @@ func TestApplier_Apply(t *testing.T) {
 
 			if !bytes.Equal(data, want) {
 				t.Errorf("Bspatch()\ngot = %v,\n want %v", data, want)
+			}
+		})
+	}
+}
+
+type tarEntry struct {
+	name    string
+	content string
+	dir     bool
+}
+
+func writeTarGz(t *testing.T, path string, entries []tarEntry) {
+	t.Helper()
+	var buf bytes.Buffer
+	gzw := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gzw)
+	for _, e := range entries {
+		hdr := &tar.Header{Name: e.name, Mode: 0644, Typeflag: tar.TypeReg, Size: int64(len(e.content))}
+		if e.dir {
+			hdr = &tar.Header{Name: e.name + "/", Mode: 0755, Typeflag: tar.TypeDir}
+		}
+		if err := tw.WriteHeader(hdr); err != nil {
+			t.Fatal(err)
+		}
+		if !e.dir {
+			if _, err := tw.Write([]byte(e.content)); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := gzw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func Test_patcher_PatchFilesystem_NestedDirectories(t *testing.T) {
+	from := []tarEntry{
+		{name: "top.txt", content: "top v1"},
+		{name: "changed", dir: true},
+		{name: "changed/file.txt", content: "changed v1"},
+		{name: "changed/sub", dir: true},
+		{name: "changed/sub/deep.txt", content: "deep v1"},
+		{name: "unchanged", dir: true},
+		{name: "unchanged/file.txt", content: "unchanged"},
+		{name: "removed", dir: true},
+		{name: "removed/file.txt", content: "removed"},
+		{name: "file-to-dir", content: "was a file"},
+		{name: "dir-to-file", dir: true},
+		{name: "dir-to-file/file.txt", content: "was a dir"},
+	}
+	to := []tarEntry{
+		{name: "top.txt", content: "top v2"},
+		{name: "changed", dir: true},
+		{name: "changed/file.txt", content: "changed v2"},
+		{name: "changed/sub", dir: true},
+		{name: "changed/sub/deep.txt", content: "deep v2"},
+		{name: "changed/sub/added.txt", content: "added"},
+		{name: "unchanged", dir: true},
+		{name: "unchanged/file.txt", content: "unchanged"},
+		{name: "file-to-dir", dir: true},
+		{name: "file-to-dir/file.txt", content: "now a dir"},
+		{name: "dir-to-file", content: "now a file"},
+		{name: "added", dir: true},
+		{name: "added/file.txt", content: "added"},
+	}
+	fixtures := t.TempDir()
+	fromPath := fixtures + "/from.tar.gz"
+	toPath := fixtures + "/to.tar.gz"
+	writeTarGz(t, fromPath, from)
+	writeTarGz(t, toPath, to)
+
+	expectedDir := t.TempDir()
+	if err := tarutils.ExtractCompressedTar(expectedDir, "", toPath, nil, gzip2.NewDecompressor()); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, keepOldDir := range []bool{true, false} {
+		t.Run(fmt.Sprintf("keepOldDir=%t", keepOldDir), func(t *testing.T) {
+			fromFp, err := os.Open(fromPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = fromFp.Close() }()
+			toFp, err := os.Open(toPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = toFp.Close() }()
+			patch, err := NewCreator().Diff(fromFp, toFp)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = patch.Close() }()
+
+			outDir := t.TempDir()
+			if err := tarutils.ExtractCompressedTar(outDir, "", fromPath, nil, gzip2.NewDecompressor()); err != nil {
+				t.Fatal(err)
+			}
+
+			patcherDir := t.TempDir()
+			before, err := os.Stat(outDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			keptDirBefore, err := os.Stat(filepath.Join(outDir, "changed", "sub"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			a := NewPatcherWithTempDir(patcherDir, keepOldDir, 0755)
+			if err := a.PatchFilesystem(outDir, patch, nil); err != nil {
+				t.Fatalf("PatchFilesystem() error = %v", err)
+			}
+			eq, err := fileutils.CompareDirectories(outDir, expectedDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !eq {
+				t.Fatal("output directory does not match expected directory")
+			}
+			if !keepOldDir {
+				return
+			}
+			after, err := os.Stat(outDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !os.SameFile(before, after) {
+				t.Error("output directory was replaced, expected it to be kept")
+			}
+			keptDirAfter, err := os.Stat(filepath.Join(outDir, "changed", "sub"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !os.SameFile(keptDirBefore, keptDirAfter) {
+				t.Error("nested directory was replaced, expected it to be kept")
+			}
+			if _, err := os.Lstat(filepath.Join(outDir, "removed")); !os.IsNotExist(err) {
+				t.Errorf("expected removed directory to be gone, got err = %v", err)
+			}
+			if info, err := os.Lstat(filepath.Join(outDir, "dir-to-file")); err != nil || !info.Mode().IsRegular() {
+				t.Errorf("expected dir-to-file to be a regular file, got info = %v, err = %v", info, err)
 			}
 		})
 	}
