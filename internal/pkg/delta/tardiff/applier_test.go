@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/opencontainers/go-digest"
@@ -174,6 +175,14 @@ func Test_patcher_PatchFilesystem_NestedDirectories(t *testing.T) {
 			}
 
 			patcherDir := t.TempDir()
+			before, err := os.Stat(outDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			keptDirBefore, err := os.Stat(filepath.Join(outDir, "changed", "sub"))
+			if err != nil {
+				t.Fatal(err)
+			}
 			a := NewPatcherWithTempDir(patcherDir, keepOldDir, 0755)
 			if err := a.PatchFilesystem(outDir, patch, nil); err != nil {
 				t.Fatalf("PatchFilesystem() error = %v", err)
@@ -184,6 +193,29 @@ func Test_patcher_PatchFilesystem_NestedDirectories(t *testing.T) {
 			}
 			if !eq {
 				t.Fatal("output directory does not match expected directory")
+			}
+			if !keepOldDir {
+				return
+			}
+			after, err := os.Stat(outDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !os.SameFile(before, after) {
+				t.Error("output directory was replaced, expected it to be kept")
+			}
+			keptDirAfter, err := os.Stat(filepath.Join(outDir, "changed", "sub"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !os.SameFile(keptDirBefore, keptDirAfter) {
+				t.Error("nested directory was replaced, expected it to be kept")
+			}
+			if _, err := os.Lstat(filepath.Join(outDir, "removed")); !os.IsNotExist(err) {
+				t.Errorf("expected removed directory to be gone, got err = %v", err)
+			}
+			if info, err := os.Lstat(filepath.Join(outDir, "dir-to-file")); err != nil || !info.Mode().IsRegular() {
+				t.Errorf("expected dir-to-file to be a regular file, got info = %v, err = %v", info, err)
 			}
 		})
 	}

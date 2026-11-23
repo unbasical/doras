@@ -4,8 +4,6 @@ import (
 	"compress/gzip"
 	"io"
 	"os"
-	"path"
-	"path/filepath"
 
 	"github.com/unbasical/doras/internal/pkg/utils/fileutils"
 
@@ -67,41 +65,11 @@ func (a *applier) PatchFilesystem(artifactDir string, patch io.Reader, expected 
 		return err
 	}
 	if a.keepOldDir {
-		return a.replaceInPlace(artifactDir, extractDir)
+		return fileutils.ReplaceDirectoryInPlace(extractDir, artifactDir)
 	}
 	err = fileutils.ReplaceDirectory(extractDir, artifactDir)
 	if err != nil {
 		return err
-	}
-	return nil
-}
-
-func (a *applier) replaceInPlace(artifactDir string, extractDir string) error {
-	artifactNames := make(map[string]any)
-	entriesArtifactDir, err := os.ReadDir(artifactDir)
-	if err != nil {
-		return err
-	}
-	entriesExtractDir, err := os.ReadDir(extractDir)
-	if err != nil {
-		return err
-	}
-	// replace files in the target dir with the ones from the extraction dir
-	for _, entry := range entriesExtractDir {
-		err := fileutils.ReplaceFile(path.Join(extractDir, entry.Name()), filepath.Join(artifactDir, entry.Name()))
-		if err != nil {
-			return err
-		}
-		artifactNames[entry.Name()] = nil
-	}
-	// remove files that are not present in the new artifact
-	for _, entry := range entriesArtifactDir {
-		if _, ok := artifactNames[entry.Name()]; !ok {
-			err = os.Remove(filepath.Join(artifactDir, entry.Name()))
-			if err != nil {
-				return err
-			}
-		}
 	}
 	return nil
 }
