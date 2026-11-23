@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 
@@ -84,7 +85,42 @@ func CompareDirectoriesHasher(dir1, dir2 string, h hash.Hash) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return dirHash == dirHash2, nil
+	if dirHash != dirHash2 {
+		return false, nil
+	}
+	// dirhash only covers files, compare the directory structure separately to detect empty directories
+	dirs1, err := listDirectories(dir1)
+	if err != nil {
+		return false, err
+	}
+	dirs2, err := listDirectories(dir2)
+	if err != nil {
+		return false, err
+	}
+	return slices.Equal(dirs1, dirs2), nil
+}
+
+// listDirectories returns the sorted paths of all directories below root, relative to root.
+func listDirectories(root string) ([]string, error) {
+	var dirs []string
+	err := filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() && p != root {
+			rel, err := filepath.Rel(root, p)
+			if err != nil {
+				return err
+			}
+			dirs = append(dirs, filepath.ToSlash(rel))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	sort.Strings(dirs)
+	return dirs, nil
 }
 
 // cloneHash creates a new instance of the underlying hash type by using reflection.
